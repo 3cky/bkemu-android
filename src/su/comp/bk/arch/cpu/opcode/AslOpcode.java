@@ -1,5 +1,5 @@
 /*
- * Created: 05.04.2012
+ * Created: 09.04.2012
  *
  * Copyright (C) 2012 Victor Antonovich (v.antonovich@gmail.com)
  *
@@ -19,27 +19,37 @@
  */
 package su.comp.bk.arch.cpu.opcode;
 
+import su.comp.bk.arch.Computer;
 import su.comp.bk.arch.cpu.Cpu;
 import su.comp.bk.arch.cpu.addressing.AddressingMode;
 
 /**
- * CLR operation.
+ * Arithmetic shift left operation.
  */
-public class ClrOpcode extends SingleOperandOpcode {
+public class AslOpcode extends SingleOperandOpcode {
 
-    public final static int OPCODE = 05000;
+    public final static short OPCODE = 06300;
 
-    public ClrOpcode(Cpu cpu) {
+    public AslOpcode(Cpu cpu) {
         super(cpu);
     }
 
     @Override
-    protected void executeSingleOperand(boolean isByteMode, int operandRegister,
-            AddressingMode operandAddressingMode) {
+    protected void executeSingleOperand(boolean isByteMode, int singleOperandRegister,
+            AddressingMode singleOperandAddressingMode) {
         Cpu cpu = getCpu();
-        cpu.clearPswFlags();
-        cpu.setPswFlagZ();
-        operandAddressingMode.writeAddressedValue(isByteMode, operandRegister, 0);
+        int data = singleOperandAddressingMode.readAddressedValue(isByteMode,
+                singleOperandRegister);
+        if (data != Computer.BUS_ERROR) {
+            boolean carryFlag = (data & (isByteMode ? 0200 : 0100000)) != 0;
+            data <<= 1;
+            cpu.setPswFlagZ(isByteMode, data);
+            cpu.setPswFlagN(isByteMode, data);
+            cpu.setPswFlagC(carryFlag);
+            cpu.setPswFlagV(carryFlag != cpu.isPswFlagSet(Cpu.PSW_FLAG_N));
+            singleOperandAddressingMode.writeAddressedValue(isByteMode,
+                    singleOperandRegister, data);
+        }
     }
 
 }

@@ -1,5 +1,5 @@
 /*
- * Created: 05.04.2012
+ * Created: 09.04.2012
  *
  * Copyright (C) 2012 Victor Antonovich (v.antonovich@gmail.com)
  *
@@ -23,23 +23,25 @@ import su.comp.bk.arch.cpu.Cpu;
 import su.comp.bk.arch.cpu.addressing.AddressingMode;
 
 /**
- * CLR operation.
+ * Move from PSW operation.
  */
-public class ClrOpcode extends SingleOperandOpcode {
+public class MfpsOpcode extends SingleOperandOpcode {
 
-    public final static int OPCODE = 05000;
+    public final static int OPCODE = 0106700;
 
-    public ClrOpcode(Cpu cpu) {
+    public MfpsOpcode(Cpu cpu) {
         super(cpu);
     }
 
     @Override
-    protected void executeSingleOperand(boolean isByteMode, int operandRegister,
-            AddressingMode operandAddressingMode) {
+    protected void executeSingleOperand(boolean isByteMode, int singleOperandRegister,
+            AddressingMode singleOperandAddressingMode) {
         Cpu cpu = getCpu();
-        cpu.clearPswFlags();
-        cpu.setPswFlagZ();
-        operandAddressingMode.writeAddressedValue(isByteMode, operandRegister, 0);
+        int psw = (byte) cpu.getPswState();
+        cpu.clearPswFlagV();
+        cpu.setPswFlagN(true, psw);
+        cpu.setPswFlagZ(true, psw);
+        singleOperandAddressingMode.writeAddressedValue(true, singleOperandRegister, psw);
     }
 
 }

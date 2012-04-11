@@ -1,5 +1,5 @@
 /*
- * Created: 05.04.2012
+ * Created: 09.04.2012
  *
  * Copyright (C) 2012 Victor Antonovich (v.antonovich@gmail.com)
  *
@@ -19,27 +19,38 @@
  */
 package su.comp.bk.arch.cpu.opcode;
 
+import su.comp.bk.arch.Computer;
 import su.comp.bk.arch.cpu.Cpu;
 import su.comp.bk.arch.cpu.addressing.AddressingMode;
 
 /**
- * CLR operation.
+ * Move to PSW operation.
  */
-public class ClrOpcode extends SingleOperandOpcode {
+public class MtpsOpcode extends SingleOperandOpcode {
 
-    public final static int OPCODE = 05000;
+    public final static int OPCODE = 0106400;
 
-    public ClrOpcode(Cpu cpu) {
+    public MtpsOpcode(Cpu cpu) {
         super(cpu);
     }
 
     @Override
-    protected void executeSingleOperand(boolean isByteMode, int operandRegister,
-            AddressingMode operandAddressingMode) {
+    protected void executeSingleOperand(boolean isByteMode, int singleOperandRegister,
+            AddressingMode singleOperandAddressingMode) {
         Cpu cpu = getCpu();
-        cpu.clearPswFlags();
-        cpu.setPswFlagZ();
-        operandAddressingMode.writeAddressedValue(isByteMode, operandRegister, 0);
+        int data = singleOperandAddressingMode.readAddressedValue(true,
+                singleOperandRegister);
+        if (data != Computer.BUS_ERROR) {
+            int psw = cpu.getPswState();
+            if ((psw & Cpu.PSW_FLAG_H) != 0) {
+                // HALT mode
+                psw = data | Cpu.PSW_FLAG_H;
+            } else {
+                // USER mode, preserve T flag
+                psw = (psw & Cpu.PSW_FLAG_T) | (data & ~Cpu.PSW_FLAG_T);
+            }
+            cpu.setPswState((short) psw);
+        }
     }
 
 }

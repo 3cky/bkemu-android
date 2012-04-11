@@ -23,13 +23,13 @@ import su.comp.bk.arch.cpu.Cpu;
 import su.comp.bk.arch.cpu.addressing.AddressingMode;
 
 /**
- * CLR operation.
+ * Sign extension operation.
  */
-public class ClrOpcode extends SingleOperandOpcode {
+public class SxtOpcode extends SingleOperandOpcode {
 
-    public final static int OPCODE = 05000;
+    public final static int OPCODE = 06700;
 
-    public ClrOpcode(Cpu cpu) {
+    public SxtOpcode(Cpu cpu) {
         super(cpu);
     }
 
@@ -37,9 +37,11 @@ public class ClrOpcode extends SingleOperandOpcode {
     protected void executeSingleOperand(boolean isByteMode, int operandRegister,
             AddressingMode operandAddressingMode) {
         Cpu cpu = getCpu();
-        cpu.clearPswFlags();
-        cpu.setPswFlagZ();
-        operandAddressingMode.writeAddressedValue(isByteMode, operandRegister, 0);
+        boolean negativeFlag = cpu.isPswFlagSet(Cpu.PSW_FLAG_N);
+        cpu.setPswFlagZ(!negativeFlag);
+        cpu.clearPswFlagV();
+        int data = negativeFlag ? 0177777 : 0;
+        operandAddressingMode.writeAddressedValue(false, operandRegister, data);
     }
 
 }

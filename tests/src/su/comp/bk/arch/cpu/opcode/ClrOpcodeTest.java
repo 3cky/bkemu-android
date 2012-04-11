@@ -40,25 +40,25 @@ public class ClrOpcodeTest {
         computer.addDevice(new Sel1RegisterSystemBits(0100000));
         computer.addMemory(new RandomAccessMemory(01000, 3));
         computer.addMemory(new ReadOnlyMemory(0100000, new short[] {
-                ClrOpcode.OPCODE_CLR, // CLR R0
-                (short) (ClrOpcode.OPCODE_CLR | Opcode.BYTE_OPERATION_FLAG), // CLRB R0
-                ClrOpcode.OPCODE_CLR | 010, // CLR (R0)
-                (short) (ClrOpcode.OPCODE_CLR | 010 | Opcode.BYTE_OPERATION_FLAG), // CLRB (R0)
-                ClrOpcode.OPCODE_CLR | 020, // CLR (R0)+
-                (short) (ClrOpcode.OPCODE_CLR | 020 | Opcode.BYTE_OPERATION_FLAG), // CLRB (R0)+
-                ClrOpcode.OPCODE_CLR | 030, // CLR @(R0)+
-                (short) (ClrOpcode.OPCODE_CLR | 030 | Opcode.BYTE_OPERATION_FLAG), // CLRB @(R0)+
-                ClrOpcode.OPCODE_CLR | 040, // CLR -(R0)
-                (short) (ClrOpcode.OPCODE_CLR | 040 | Opcode.BYTE_OPERATION_FLAG), // CLRB -(R0)
-                ClrOpcode.OPCODE_CLR | 050, // CLR -@(R0)
-                (short) (ClrOpcode.OPCODE_CLR | 050 | Opcode.BYTE_OPERATION_FLAG), // CLRB -@(R0)
-                ClrOpcode.OPCODE_CLR | 060, // CLR X(R0)
+                ClrOpcode.OPCODE, // CLR R0
+                (short) (ClrOpcode.OPCODE | Opcode.BYTE_OPERATION_FLAG), // CLRB R0
+                ClrOpcode.OPCODE | 010, // CLR (R0)
+                (short) (ClrOpcode.OPCODE | 010 | Opcode.BYTE_OPERATION_FLAG), // CLRB (R0)
+                ClrOpcode.OPCODE | 020, // CLR (R0)+
+                (short) (ClrOpcode.OPCODE | 020 | Opcode.BYTE_OPERATION_FLAG), // CLRB (R0)+
+                ClrOpcode.OPCODE | 030, // CLR @(R0)+
+                (short) (ClrOpcode.OPCODE | 030 | Opcode.BYTE_OPERATION_FLAG), // CLRB @(R0)+
+                ClrOpcode.OPCODE | 040, // CLR -(R0)
+                (short) (ClrOpcode.OPCODE | 040 | Opcode.BYTE_OPERATION_FLAG), // CLRB -(R0)
+                ClrOpcode.OPCODE | 050, // CLR -@(R0)
+                (short) (ClrOpcode.OPCODE | 050 | Opcode.BYTE_OPERATION_FLAG), // CLRB -@(R0)
+                ClrOpcode.OPCODE | 060, // CLR X(R0)
                 -2, // X
-                (short) (ClrOpcode.OPCODE_CLR | 060 | Opcode.BYTE_OPERATION_FLAG), // CLRB X(R0)
+                (short) (ClrOpcode.OPCODE | 060 | Opcode.BYTE_OPERATION_FLAG), // CLRB X(R0)
                 -1, // X
-                ClrOpcode.OPCODE_CLR | 070, // CLR @X(R0)
+                ClrOpcode.OPCODE | 070, // CLR @X(R0)
                 -2, // X
-                (short) (ClrOpcode.OPCODE_CLR | 070 | Opcode.BYTE_OPERATION_FLAG), // CLRB @X(R0)
+                (short) (ClrOpcode.OPCODE | 070 | Opcode.BYTE_OPERATION_FLAG), // CLRB @X(R0)
                 -1, // X
                 }));
         computer.reset();

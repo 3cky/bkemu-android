@@ -19,27 +19,34 @@
  */
 package su.comp.bk.arch.cpu.opcode;
 
+import su.comp.bk.arch.Computer;
 import su.comp.bk.arch.cpu.Cpu;
 import su.comp.bk.arch.cpu.addressing.AddressingMode;
+import su.comp.bk.arch.cpu.addressing.AutoincrementAddressingMode;
 
 /**
- * CLR operation.
+ * MARK operation.
  */
-public class ClrOpcode extends SingleOperandOpcode {
+public class MarkOpcode extends BaseOpcode {
 
-    public final static int OPCODE = 05000;
+    public final static int OPCODE = 06400;
 
-    public ClrOpcode(Cpu cpu) {
+    public MarkOpcode(Cpu cpu) {
         super(cpu);
     }
 
     @Override
-    protected void executeSingleOperand(boolean isByteMode, int operandRegister,
-            AddressingMode operandAddressingMode) {
+    public void execute() {
         Cpu cpu = getCpu();
-        cpu.clearPswFlags();
-        cpu.setPswFlagZ();
-        operandAddressingMode.writeAddressedValue(isByteMode, operandRegister, 0);
+        int n = getInstruction() & 077;
+        cpu.writeRegister(false, Cpu.SP, cpu.readRegister(false, Cpu.PC) + (n << 1));
+        cpu.writeRegister(false, Cpu.PC, cpu.readRegister(false, Cpu.R5));
+        AddressingMode autoincrementMode = cpu.getAddressingMode(AutoincrementAddressingMode.CODE);
+        autoincrementMode.preAddressingAction(false, Cpu.SP);
+        int value = cpu.pop();
+        if (value != Computer.BUS_ERROR) {
+            cpu.writeRegister(false, Cpu.R5, value);
+        }
     }
 
 }

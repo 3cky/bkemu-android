@@ -1,5 +1,5 @@
 /*
- * Created: 05.04.2012
+ * Created: 09.04.2012
  *
  * Copyright (C) 2012 Victor Antonovich (v.antonovich@gmail.com)
  *
@@ -19,27 +19,35 @@
  */
 package su.comp.bk.arch.cpu.opcode;
 
+import su.comp.bk.arch.Computer;
 import su.comp.bk.arch.cpu.Cpu;
 import su.comp.bk.arch.cpu.addressing.AddressingMode;
 
 /**
- * CLR operation.
+ * Swap bytes of word operation.
  */
-public class ClrOpcode extends SingleOperandOpcode {
+public class SwabOpcode extends SingleOperandOpcode {
 
-    public final static int OPCODE = 05000;
+    public final static short OPCODE = 0300;
 
-    public ClrOpcode(Cpu cpu) {
+    public SwabOpcode(Cpu cpu) {
         super(cpu);
     }
 
     @Override
-    protected void executeSingleOperand(boolean isByteMode, int operandRegister,
-            AddressingMode operandAddressingMode) {
+    protected void executeSingleOperand(boolean isByteMode, int singleOperandRegister,
+            AddressingMode singleOperandAddressingMode) {
         Cpu cpu = getCpu();
-        cpu.clearPswFlags();
-        cpu.setPswFlagZ();
-        operandAddressingMode.writeAddressedValue(isByteMode, operandRegister, 0);
+        int data = singleOperandAddressingMode.readAddressedValue(false,
+                singleOperandRegister);
+        if (data != Computer.BUS_ERROR) {
+            data = (data & 0377) << 8 | (data & 0177400) >> 8;
+            cpu.clearPswFlags();
+            cpu.setPswFlagN(true, data);
+            cpu.setPswFlagZ(true, data);
+            singleOperandAddressingMode.writeAddressedValue(false,
+                    singleOperandRegister, data);
+        }
     }
 
 }
