@@ -19,6 +19,7 @@
  */
 package su.comp.bk.arch.cpu.opcode;
 
+import su.comp.bk.arch.Computer;
 import su.comp.bk.arch.cpu.Cpu;
 import su.comp.bk.arch.cpu.addressing.AddressingMode;
 

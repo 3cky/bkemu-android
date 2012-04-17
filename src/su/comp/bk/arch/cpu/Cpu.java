@@ -30,24 +30,47 @@ import su.comp.bk.arch.cpu.addressing.IndexDeferredAddressingMode;
 import su.comp.bk.arch.cpu.addressing.RegisterAddressingMode;
 import su.comp.bk.arch.cpu.addressing.RegisterDeferredAddressingMode;
 import su.comp.bk.arch.cpu.opcode.AdcOpcode;
+import su.comp.bk.arch.cpu.opcode.AddOpcode;
 import su.comp.bk.arch.cpu.opcode.AslOpcode;
 import su.comp.bk.arch.cpu.opcode.AsrOpcode;
+import su.comp.bk.arch.cpu.opcode.BccOpcode;
+import su.comp.bk.arch.cpu.opcode.BcsOpcode;
+import su.comp.bk.arch.cpu.opcode.BeqOpcode;
+import su.comp.bk.arch.cpu.opcode.BgeOpcode;
+import su.comp.bk.arch.cpu.opcode.BgtOpcode;
+import su.comp.bk.arch.cpu.opcode.BhiOpcode;
+import su.comp.bk.arch.cpu.opcode.BicOpcode;
+import su.comp.bk.arch.cpu.opcode.BisOpcode;
+import su.comp.bk.arch.cpu.opcode.BitOpcode;
+import su.comp.bk.arch.cpu.opcode.BleOpcode;
+import su.comp.bk.arch.cpu.opcode.BlosOpcode;
+import su.comp.bk.arch.cpu.opcode.BltOpcode;
+import su.comp.bk.arch.cpu.opcode.BmiOpcode;
+import su.comp.bk.arch.cpu.opcode.BneOpcode;
+import su.comp.bk.arch.cpu.opcode.BplOpcode;
+import su.comp.bk.arch.cpu.opcode.BrOpcode;
+import su.comp.bk.arch.cpu.opcode.BvcOpcode;
+import su.comp.bk.arch.cpu.opcode.BvsOpcode;
 import su.comp.bk.arch.cpu.opcode.ClrOpcode;
+import su.comp.bk.arch.cpu.opcode.CmpOpcode;
 import su.comp.bk.arch.cpu.opcode.ComOpcode;
 import su.comp.bk.arch.cpu.opcode.ConditionCodeOpcodes;
 import su.comp.bk.arch.cpu.opcode.DecOpcode;
 import su.comp.bk.arch.cpu.opcode.IncOpcode;
 import su.comp.bk.arch.cpu.opcode.MarkOpcode;
 import su.comp.bk.arch.cpu.opcode.MfpsOpcode;
+import su.comp.bk.arch.cpu.opcode.MovOpcode;
 import su.comp.bk.arch.cpu.opcode.MtpsOpcode;
 import su.comp.bk.arch.cpu.opcode.NegOpcode;
 import su.comp.bk.arch.cpu.opcode.Opcode;
 import su.comp.bk.arch.cpu.opcode.RolOpcode;
 import su.comp.bk.arch.cpu.opcode.RorOpcode;
 import su.comp.bk.arch.cpu.opcode.SbcOpcode;
+import su.comp.bk.arch.cpu.opcode.SubOpcode;
 import su.comp.bk.arch.cpu.opcode.SwabOpcode;
 import su.comp.bk.arch.cpu.opcode.SxtOpcode;
 import su.comp.bk.arch.cpu.opcode.TstOpcode;
+import su.comp.bk.arch.cpu.opcode.XorOpcode;
 
 /**
  * PDP-11 compatible 1801VM1 CPU implementation.
@@ -172,6 +195,41 @@ public class Cpu {
         addOpcode(new MarkOpcode(this), MarkOpcode.OPCODE, MarkOpcode.OPCODE + 077);
         addOpcode(new MfpsOpcode(this), MfpsOpcode.OPCODE, MfpsOpcode.OPCODE + 077);
         addOpcode(new MtpsOpcode(this), MtpsOpcode.OPCODE, MtpsOpcode.OPCODE + 077);
+        // Branch opcodes
+        addOpcode(new BrOpcode(this), BrOpcode.OPCODE, BrOpcode.OPCODE + 0377);
+        addOpcode(new BneOpcode(this), BneOpcode.OPCODE, BneOpcode.OPCODE + 0377);
+        addOpcode(new BeqOpcode(this), BeqOpcode.OPCODE, BeqOpcode.OPCODE + 0377);
+        addOpcode(new BgeOpcode(this), BgeOpcode.OPCODE, BgeOpcode.OPCODE + 0377);
+        addOpcode(new BltOpcode(this), BltOpcode.OPCODE, BltOpcode.OPCODE + 0377);
+        addOpcode(new BgtOpcode(this), BgtOpcode.OPCODE, BgtOpcode.OPCODE + 0377);
+        addOpcode(new BleOpcode(this), BleOpcode.OPCODE, BleOpcode.OPCODE + 0377);
+        addOpcode(new BplOpcode(this), BplOpcode.OPCODE, BplOpcode.OPCODE + 0377);
+        addOpcode(new BmiOpcode(this), BmiOpcode.OPCODE, BmiOpcode.OPCODE + 0377);
+        addOpcode(new BhiOpcode(this), BhiOpcode.OPCODE, BhiOpcode.OPCODE + 0377);
+        addOpcode(new BlosOpcode(this), BlosOpcode.OPCODE, BlosOpcode.OPCODE + 0377);
+        addOpcode(new BvcOpcode(this), BvcOpcode.OPCODE, BvcOpcode.OPCODE + 0377);
+        addOpcode(new BvsOpcode(this), BvsOpcode.OPCODE, BvsOpcode.OPCODE + 0377);
+        addOpcode(new BccOpcode(this), BccOpcode.OPCODE, BccOpcode.OPCODE + 0377);
+        addOpcode(new BcsOpcode(this), BcsOpcode.OPCODE, BcsOpcode.OPCODE + 0377);
+        // Double operand opcodes
+        addOpcode(new MovOpcode(this), MovOpcode.OPCODE, MovOpcode.OPCODE + 07777);
+        addOpcode(new MovOpcode(this), MovOpcode.OPCODE | Opcode.BYTE_OPERATION_FLAG,
+                (MovOpcode.OPCODE | Opcode.BYTE_OPERATION_FLAG) + 07777);
+        addOpcode(new CmpOpcode(this), CmpOpcode.OPCODE, CmpOpcode.OPCODE + 07777);
+        addOpcode(new CmpOpcode(this), CmpOpcode.OPCODE | Opcode.BYTE_OPERATION_FLAG,
+                (CmpOpcode.OPCODE | Opcode.BYTE_OPERATION_FLAG) + 07777);
+        addOpcode(new BitOpcode(this), BitOpcode.OPCODE, BitOpcode.OPCODE + 07777);
+        addOpcode(new BitOpcode(this), BitOpcode.OPCODE | Opcode.BYTE_OPERATION_FLAG,
+                (BitOpcode.OPCODE | Opcode.BYTE_OPERATION_FLAG) + 07777);
+        addOpcode(new BicOpcode(this), BicOpcode.OPCODE, BicOpcode.OPCODE + 07777);
+        addOpcode(new BicOpcode(this), BicOpcode.OPCODE | Opcode.BYTE_OPERATION_FLAG,
+                (BicOpcode.OPCODE | Opcode.BYTE_OPERATION_FLAG) + 07777);
+        addOpcode(new BisOpcode(this), BisOpcode.OPCODE, BisOpcode.OPCODE + 07777);
+        addOpcode(new BisOpcode(this), BisOpcode.OPCODE | Opcode.BYTE_OPERATION_FLAG,
+                (BisOpcode.OPCODE | Opcode.BYTE_OPERATION_FLAG) + 07777);
+        addOpcode(new AddOpcode(this), AddOpcode.OPCODE, AddOpcode.OPCODE + 07777);
+        addOpcode(new SubOpcode(this), SubOpcode.OPCODE, SubOpcode.OPCODE + 07777);
+        addOpcode(new XorOpcode(this), XorOpcode.OPCODE, XorOpcode.OPCODE + 0777);
     }
 
     private void addOpcode(Opcode opcode, int startOpcode, int endOpcode) {
