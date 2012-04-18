@@ -26,14 +26,12 @@ import su.comp.bk.arch.cpu.Cpu;
  * Index addressing mode: X(Rn).
  * Rn+X is the address of the operand.
  */
-public class IndexAddressingMode implements AddressingMode {
+public class IndexAddressingMode extends BaseAddressingMode {
 
     public final static int CODE = 6;
 
-    private final Cpu cpu;
-
     public IndexAddressingMode(Cpu cpu) {
-        this.cpu = cpu;
+        super(cpu);
     }
 
     @Override
@@ -42,45 +40,20 @@ public class IndexAddressingMode implements AddressingMode {
     }
 
     @Override
-    public int readAddressedValue(boolean isByteAddressing, int register) {
-        int addressedValue = Computer.BUS_ERROR;
-        // Read value of register
-        int registerValue = cpu.readRegister(false, register);
-        // Read address of X
-        int indexAddress = cpu.readRegister(false, Cpu.PC);
-        // Read value of X
-        int indexValue = cpu.readMemory(false, indexAddress);
-        if (indexValue != Computer.BUS_ERROR) {
-            addressedValue = cpu.readMemory(isByteAddressing,
-                    (registerValue + (short) indexValue) & 0177777);
-        }
-        return addressedValue;
-    }
-
-    @Override
-    public boolean writeAddressedValue(boolean isByteAddressing, int register, int value) {
-        boolean isWritten = false;
-        // Read value of register
-        int registerValue = cpu.readRegister(false, register);
-        // Read address of X
-        int indexAddress = cpu.readRegister(false, Cpu.PC);
-        // Read value of X
-        int indexValue = cpu.readMemory(false, indexAddress);
-        if (indexValue != Computer.BUS_ERROR) {
-            isWritten = cpu.writeMemory(isByteAddressing,
-                    (registerValue + (short) indexValue) & 0177777, value);
-        }
-        return isWritten;
-    }
-
-    @Override
-    public void preAddressingAction(boolean isByteAddressing, int register) {
-        // Do nothing
-    }
-
-    @Override
     public void postAddressingAction(boolean isByteAddressing, int register) {
         cpu.incrementRegister(false, Cpu.PC);
+    }
+
+    @Override
+    public int getAddress(int register) {
+        // Read value of register
+        int registerValue = cpu.readRegister(false, register);
+        // Read address of X
+        int indexAddress = cpu.readRegister(false, Cpu.PC);
+        // Read value of X
+        int indexValue = cpu.readMemory(false, indexAddress);
+        return (indexValue != Computer.BUS_ERROR) ? (registerValue + (short) indexValue) & 0177777
+                : Computer.BUS_ERROR;
     }
 
 }

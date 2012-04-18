@@ -25,14 +25,12 @@ import su.comp.bk.arch.cpu.Cpu;
  * Autodecrement addressing mode: -(Rn).
  * Decrement Rn, then use it as the address.
  */
-public class AutodecrementAddressingMode implements AddressingMode {
+public class AutodecrementAddressingMode extends BaseAddressingMode {
 
     public final static int CODE = 4;
 
-    private final Cpu cpu;
-
     public AutodecrementAddressingMode(Cpu cpu) {
-        this.cpu = cpu;
+        super(cpu);
     }
 
     @Override
@@ -41,25 +39,13 @@ public class AutodecrementAddressingMode implements AddressingMode {
     }
 
     @Override
-    public int readAddressedValue(boolean isByteAddressing, int register) {
-        int address = cpu.readRegister(false, register);
-        return cpu.readMemory(isByteAddressing, address);
-    }
-
-    @Override
-    public boolean writeAddressedValue(boolean isByteAddressing, int register, int value) {
-        int address = cpu.readRegister(false, register);
-        return cpu.writeMemory(isByteAddressing, address, value);
-    }
-
-    @Override
     public void preAddressingAction(boolean isByteAddressing, int register) {
         cpu.decrementRegister(isByteAddressing, register);
     }
 
     @Override
-    public void postAddressingAction(boolean isByteAddressing, int register) {
-        // Do nothing
+    public int getAddress(int register) {
+        return cpu.readRegister(false, register);
     }
 
 }

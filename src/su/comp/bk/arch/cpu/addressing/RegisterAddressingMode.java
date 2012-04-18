@@ -19,20 +19,19 @@
  */
 package su.comp.bk.arch.cpu.addressing;
 
+import su.comp.bk.arch.Computer;
 import su.comp.bk.arch.cpu.Cpu;
 
 /**
  * Register addressing mode: Rn.
  * The operand is in Rn.
  */
-public class RegisterAddressingMode implements AddressingMode {
+public class RegisterAddressingMode extends BaseAddressingMode {
 
     public final static int CODE = 0;
 
-    private final Cpu cpu;
-
     public RegisterAddressingMode(Cpu cpu) {
-        this.cpu = cpu;
+        super(cpu);
     }
 
     @Override
@@ -52,14 +51,8 @@ public class RegisterAddressingMode implements AddressingMode {
     }
 
     @Override
-    public void preAddressingAction(boolean isByteAddressing, int register) {
-        // Do nothing
-
-    }
-
-    @Override
-    public void postAddressingAction(boolean isByteAddressing, int register) {
-        // Do nothing
+    public int getAddress(int register) {
+        return Computer.BUS_ERROR; // no address for register addressing mode
     }
 
 }

@@ -26,14 +26,12 @@ import su.comp.bk.arch.cpu.Cpu;
  * Index deferred addressing mode: @X(Rn).
  * Rn+X is the address of the address.
  */
-public class IndexDeferredAddressingMode implements AddressingMode {
+public class IndexDeferredAddressingMode extends BaseAddressingMode {
 
     public final static int CODE = 7;
 
-    private final Cpu cpu;
-
     public IndexDeferredAddressingMode(Cpu cpu) {
-        this.cpu = cpu;
+        super(cpu);
     }
 
     @Override
@@ -42,49 +40,20 @@ public class IndexDeferredAddressingMode implements AddressingMode {
     }
 
     @Override
-    public int readAddressedValue(boolean isByteAddressing, int register) {
-        int addressedValue = Computer.BUS_ERROR;
-        // Read value of register
-        int registerValue = cpu.readRegister(false, register);
-        // Read address of X
-        int indexAddress = cpu.readRegister(false, Cpu.PC);
-        // Read value of X
-        int indexValue = cpu.readMemory(false, indexAddress);
-        if (indexValue != Computer.BUS_ERROR) {
-            int address = cpu.readMemory(false, (registerValue + (short) indexValue) & 0177777);
-            if (address != Computer.BUS_ERROR) {
-                addressedValue = cpu.readMemory(isByteAddressing, address);
-            }
-        }
-        return addressedValue;
-    }
-
-    @Override
-    public boolean writeAddressedValue(boolean isByteAddressing, int register, int value) {
-        boolean isWritten = false;
-        // Read value of register
-        int registerValue = cpu.readRegister(false, register);
-        // Read address of X
-        int indexAddress = cpu.readRegister(false, Cpu.PC);
-        // Read value of X
-        int indexValue = cpu.readMemory(false, indexAddress);
-        if (indexValue != Computer.BUS_ERROR) {
-            int address = cpu.readMemory(false, (registerValue + (short) indexValue) & 0177777);
-            if (address != Computer.BUS_ERROR) {
-                isWritten = cpu.writeMemory(isByteAddressing, address, value);
-            }
-        }
-        return isWritten;
-    }
-
-    @Override
-    public void preAddressingAction(boolean isByteAddressing, int register) {
-        // Do nothing
-    }
-
-    @Override
     public void postAddressingAction(boolean isByteAddressing, int register) {
         cpu.incrementRegister(false, Cpu.PC);
+    }
+
+    @Override
+    public int getAddress(int register) {
+        // Read value of register
+        int registerValue = cpu.readRegister(false, register);
+        // Read address of X
+        int indexAddress = cpu.readRegister(false, Cpu.PC);
+        // Read value of X
+        int indexValue = cpu.readMemory(false, indexAddress);
+        return (indexValue != Computer.BUS_ERROR) ?  cpu.readMemory(false,
+                (registerValue + (short) indexValue) & 0177777) : Computer.BUS_ERROR;
     }
 
 }

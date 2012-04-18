@@ -19,21 +19,18 @@
  */
 package su.comp.bk.arch.cpu.addressing;
 
-import su.comp.bk.arch.Computer;
 import su.comp.bk.arch.cpu.Cpu;
 
 /**
  * Autoincrement deferred addressing mode: @(Rn)+.
  * Rn contains the address of the address, then increment Rn by 2.
  */
-public class AutoincrementDeferredAddressingMode implements AddressingMode {
+public class AutoincrementDeferredAddressingMode extends BaseAddressingMode {
 
     public final static int CODE = 3;
 
-    private final Cpu cpu;
-
     public AutoincrementDeferredAddressingMode(Cpu cpu) {
-        this.cpu = cpu;
+        super(cpu);
     }
 
     @Override
@@ -42,34 +39,14 @@ public class AutoincrementDeferredAddressingMode implements AddressingMode {
     }
 
     @Override
-    public int readAddressedValue(boolean isByteAddressing, int register) {
-        int addressedValue = cpu.readRegister(false, register);
-        addressedValue = cpu.readMemory(false, addressedValue);
-        if (addressedValue != Computer.BUS_ERROR) {
-            addressedValue = cpu.readMemory(isByteAddressing, addressedValue);
-        }
-        return addressedValue;
-    }
-
-    @Override
-    public boolean writeAddressedValue(boolean isByteAddressing, int register, int value) {
-        boolean isWritten = false;
-        int address = cpu.readRegister(false, register);
-        address = cpu.readMemory(false, address);
-        if (address != Computer.BUS_ERROR) {
-            isWritten = cpu.writeMemory(isByteAddressing, address, value);
-        }
-        return isWritten;
-    }
-
-    @Override
-    public void preAddressingAction(boolean isByteAddressing, int register) {
-        // Do nothing
-    }
-
-    @Override
     public void postAddressingAction(boolean isByteAddressing, int register) {
         cpu.incrementRegister(false, register);
+    }
+
+    @Override
+    public int getAddress(int register) {
+        int address = cpu.readRegister(false, register);
+        return cpu.readMemory(false, address);
     }
 
 }

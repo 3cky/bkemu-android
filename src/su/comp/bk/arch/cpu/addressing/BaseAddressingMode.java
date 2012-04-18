@@ -1,5 +1,5 @@
 /*
- * Created: 01.04.2012
+ * Created: 18.04.2012
  *
  * Copyright (C) 2012 Victor Antonovich (v.antonovich@gmail.com)
  *
@@ -19,34 +19,45 @@
  */
 package su.comp.bk.arch.cpu.addressing;
 
+import su.comp.bk.arch.Computer;
 import su.comp.bk.arch.cpu.Cpu;
 
 /**
- * Autodecrement deferred addressing mode: @-(Rn).
- * Decrement Rn by 2, then use it as the address of the address.
+ * Base addressing mode class.
  */
-public class AutodecrementDeferredAddressingMode extends BaseAddressingMode {
+public abstract class BaseAddressingMode implements AddressingMode {
 
-    public final static int CODE = 5;
+    protected final Cpu cpu;
 
-    public AutodecrementDeferredAddressingMode(Cpu cpu) {
-        super(cpu);
+    public BaseAddressingMode(Cpu cpu) {
+        this.cpu = cpu;
     }
 
     @Override
-    public int getCode() {
-        return CODE;
+    public int readAddressedValue(boolean isByteAddressing, int register) {
+        int address = getAddress(register);
+        return (address != Computer.BUS_ERROR) ? cpu.readMemory(isByteAddressing, address)
+                : Computer.BUS_ERROR;
+    }
+
+    @Override
+    public boolean writeAddressedValue(boolean isByteAddressing, int register, int value) {
+        boolean isWritten = false;
+        int address = getAddress(register);
+        if (address != Computer.BUS_ERROR) {
+            isWritten = cpu.writeMemory(isByteAddressing, address, value);
+        }
+        return isWritten;
     }
 
     @Override
     public void preAddressingAction(boolean isByteAddressing, int register) {
-        cpu.decrementRegister(false, register);
+        // Do nothing
     }
 
     @Override
-    public int getAddress(int register) {
-        int address = cpu.readRegister(false, register);
-        return cpu.readMemory(false, address);
+    public void postAddressingAction(boolean isByteAddressing, int register) {
+        // Do nothing
     }
 
 }

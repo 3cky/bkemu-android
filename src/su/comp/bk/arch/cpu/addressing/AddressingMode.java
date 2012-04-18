@@ -47,11 +47,18 @@ public interface AddressingMode {
     void postAddressingAction(boolean isByteAddressing, int register);
 
     /**
+     * Get address for this addressing mode.
+     * @param register register number (0-7)
+     * @return address for this addressing mode or Computer.BUS_ERROR
+     */
+    int getAddress(int register);
+
+    /**
      * Read value addressed by this addressing mode.
      * @param isByteAddressing <code>true</code> to get byte value, <code>false</code> to get
      * word value
      * @param register register number (0-7)
-     * @return value addressed by this addressing mode or Computer.INVALID_ADDRESS in case
+     * @return value addressed by this addressing mode or Computer.BUS_ERROR in case
      * if no memory/device is mapped to addressed location
      */
     int readAddressedValue(boolean isByteAddressing, int register);

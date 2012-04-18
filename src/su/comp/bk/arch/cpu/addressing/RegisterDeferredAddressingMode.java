@@ -25,14 +25,12 @@ import su.comp.bk.arch.cpu.Cpu;
  * Register deferred addressing mode: (Rn).
  * Rn contains the address of the operand.
  */
-public class RegisterDeferredAddressingMode implements AddressingMode {
+public class RegisterDeferredAddressingMode extends BaseAddressingMode {
 
     public final static int CODE = 1;
 
-    private final Cpu cpu;
-
     public RegisterDeferredAddressingMode(Cpu cpu) {
-        this.cpu = cpu;
+        super(cpu);
     }
 
     @Override
@@ -41,26 +39,8 @@ public class RegisterDeferredAddressingMode implements AddressingMode {
     }
 
     @Override
-    public int readAddressedValue(boolean isByteAddressing, int register) {
-        int address = cpu.readRegister(false, register);
-        return cpu.readMemory(isByteAddressing, address);
-    }
-
-    @Override
-    public boolean writeAddressedValue(boolean isByteAddressing, int register, int value) {
-        int address = cpu.readRegister(false, register);
-        return cpu.writeMemory(isByteAddressing, address, value);
-    }
-
-    @Override
-    public void preAddressingAction(boolean isByteAddressing, int register) {
-        // Do nothing
-
-    }
-
-    @Override
-    public void postAddressingAction(boolean isByteAddressing, int register) {
-        // Do nothing
+    public int getAddress(int register) {
+        return cpu.readRegister(false, register);
     }
 
 }
