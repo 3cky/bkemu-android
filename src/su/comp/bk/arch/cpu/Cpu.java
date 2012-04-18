@@ -57,6 +57,7 @@ import su.comp.bk.arch.cpu.opcode.ComOpcode;
 import su.comp.bk.arch.cpu.opcode.ConditionCodeOpcodes;
 import su.comp.bk.arch.cpu.opcode.DecOpcode;
 import su.comp.bk.arch.cpu.opcode.IncOpcode;
+import su.comp.bk.arch.cpu.opcode.JmpOpcode;
 import su.comp.bk.arch.cpu.opcode.MarkOpcode;
 import su.comp.bk.arch.cpu.opcode.MfpsOpcode;
 import su.comp.bk.arch.cpu.opcode.MovOpcode;
@@ -230,6 +231,8 @@ public class Cpu {
         addOpcode(new AddOpcode(this), AddOpcode.OPCODE, AddOpcode.OPCODE + 07777);
         addOpcode(new SubOpcode(this), SubOpcode.OPCODE, SubOpcode.OPCODE + 07777);
         addOpcode(new XorOpcode(this), XorOpcode.OPCODE, XorOpcode.OPCODE + 0777);
+        // Jump and subroutine opcodes
+        addOpcode(new JmpOpcode(this), JmpOpcode.OPCODE, JmpOpcode.OPCODE + 077);
     }
 
     private void addOpcode(Opcode opcode, int startOpcode, int endOpcode) {
