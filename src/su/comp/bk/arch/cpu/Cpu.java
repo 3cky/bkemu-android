@@ -58,6 +58,7 @@ import su.comp.bk.arch.cpu.opcode.ConditionCodeOpcodes;
 import su.comp.bk.arch.cpu.opcode.DecOpcode;
 import su.comp.bk.arch.cpu.opcode.IncOpcode;
 import su.comp.bk.arch.cpu.opcode.JmpOpcode;
+import su.comp.bk.arch.cpu.opcode.JsrOpcode;
 import su.comp.bk.arch.cpu.opcode.MarkOpcode;
 import su.comp.bk.arch.cpu.opcode.MfpsOpcode;
 import su.comp.bk.arch.cpu.opcode.MovOpcode;
@@ -66,7 +67,9 @@ import su.comp.bk.arch.cpu.opcode.NegOpcode;
 import su.comp.bk.arch.cpu.opcode.Opcode;
 import su.comp.bk.arch.cpu.opcode.RolOpcode;
 import su.comp.bk.arch.cpu.opcode.RorOpcode;
+import su.comp.bk.arch.cpu.opcode.RtsOpcode;
 import su.comp.bk.arch.cpu.opcode.SbcOpcode;
+import su.comp.bk.arch.cpu.opcode.SobOpcode;
 import su.comp.bk.arch.cpu.opcode.SubOpcode;
 import su.comp.bk.arch.cpu.opcode.SwabOpcode;
 import su.comp.bk.arch.cpu.opcode.SxtOpcode;
@@ -212,6 +215,7 @@ public class Cpu {
         addOpcode(new BvsOpcode(this), BvsOpcode.OPCODE, BvsOpcode.OPCODE + 0377);
         addOpcode(new BccOpcode(this), BccOpcode.OPCODE, BccOpcode.OPCODE + 0377);
         addOpcode(new BcsOpcode(this), BcsOpcode.OPCODE, BcsOpcode.OPCODE + 0377);
+        addOpcode(new SobOpcode(this), SobOpcode.OPCODE, SobOpcode.OPCODE + 077);
         // Double operand opcodes
         addOpcode(new MovOpcode(this), MovOpcode.OPCODE, MovOpcode.OPCODE + 07777);
         addOpcode(new MovOpcode(this), MovOpcode.OPCODE | Opcode.BYTE_OPERATION_FLAG,
@@ -233,6 +237,8 @@ public class Cpu {
         addOpcode(new XorOpcode(this), XorOpcode.OPCODE, XorOpcode.OPCODE + 0777);
         // Jump and subroutine opcodes
         addOpcode(new JmpOpcode(this), JmpOpcode.OPCODE, JmpOpcode.OPCODE + 077);
+        addOpcode(new JsrOpcode(this), JsrOpcode.OPCODE, JsrOpcode.OPCODE + 0777);
+        addOpcode(new RtsOpcode(this), RtsOpcode.OPCODE, RtsOpcode.OPCODE + 7);
     }
 
     private void addOpcode(Opcode opcode, int startOpcode, int endOpcode) {
@@ -402,10 +408,12 @@ public class Cpu {
      * both always incremented by 2).
      * @param isByteMode <code>true</code> to increment by 1, <code>false</code> to increment by 2
      * @param register register number to increment (only three LSB are taken in account)
+     * @return register value after operation
      */
-    public void incrementRegister(boolean isByteMode, int register) {
+    public int incrementRegister(boolean isByteMode, int register) {
         register &= 7;
         registers[register] += (isByteMode && register != SP && register != PC) ? 1 : 2;
+        return readRegister(isByteMode, register);
     }
 
     /**
@@ -413,10 +421,12 @@ public class Cpu {
      * both always decremented by 2).
      * @param isByteMode <code>true</code> to decrement by 1, <code>false</code> to decrement by 2
      * @param register register number to decrement (only three LSB are taken in account)
+     * @return register value after operation
      */
-    public void decrementRegister(boolean isByteMode, int register) {
+    public int decrementRegister(boolean isByteMode, int register) {
         register &= 7;
         registers[register] -= (isByteMode && register != SP && register != PC) ? 1 : 2;
+        return readRegister(isByteMode, register);
     }
 
     /**
@@ -426,7 +436,7 @@ public class Cpu {
      * SP pointing to address which is not mapped to memory or device
      */
     public boolean push(int value) {
-        AddressingMode pushMode = getAddressingMode(AutoincrementAddressingMode.CODE);
+        AddressingMode pushMode = getAddressingMode(AutodecrementAddressingMode.CODE);
         pushMode.preAddressingAction(false, Cpu.SP);
         boolean isPushed = pushMode.writeAddressedValue(false, Cpu.SP, value);
         if (isPushed) {

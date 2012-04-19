@@ -403,4 +403,22 @@ public class BranchOpcodesTest {
         assertEquals(0100010, computer.getCpu().readRegister(false, Cpu.PC));
     }
 
+    /**
+     * SOB operation tests.
+     */
+    @Test
+    public void testSobInstructionExecute() {
+        computer.addMemory(new ReadOnlyMemory(0100000, new short[] {
+                SobOpcode.OPCODE | 1             // 0100000: SOB R0, 0100000
+        }));
+        computer.reset();
+        computer.getCpu().writeRegister(false, Cpu.R0, 3);
+        computer.getCpu().executeSingleInstruction();
+        assertEquals(0100000, computer.getCpu().readRegister(false, Cpu.PC));
+        computer.getCpu().executeSingleInstruction();
+        assertEquals(0100000, computer.getCpu().readRegister(false, Cpu.PC));
+        computer.getCpu().executeSingleInstruction();
+        assertEquals(0100002, computer.getCpu().readRegister(false, Cpu.PC));
+    }
+
 }

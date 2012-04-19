@@ -24,17 +24,22 @@ import su.comp.bk.arch.cpu.Cpu;
 import su.comp.bk.arch.cpu.addressing.AddressingMode;
 
 /**
- * Jump instruction.
+ * Jump to subroutine instruction.
  */
-public class JmpOpcode extends BaseOpcode {
+public class JsrOpcode extends BaseOpcode {
 
-    public final static int OPCODE = 0100;
+    public final static int OPCODE = 04000;
 
+    private int linkageRegister;
     private int addressingRegister;
     private AddressingMode addressingMode;
 
-    public JmpOpcode(Cpu cpu) {
+    public JsrOpcode(Cpu cpu) {
         super(cpu);
+    }
+
+    private void decodeLinkageRegister() {
+        this.linkageRegister = (getInstruction() >> 6) & 7;
     }
 
     private void decodeAddressingRegister() {
@@ -50,15 +55,23 @@ public class JmpOpcode extends BaseOpcode {
         super.decode(instruction);
         decodeAddressingRegister();
         decodeAddressingMode();
+        decodeLinkageRegister();
     }
 
     @Override
     public void execute() {
         addressingMode.preAddressingAction(false, addressingRegister);
-        int jumpAddress = addressingMode.getAddress(addressingRegister);
+        int subroutineAddress = addressingMode.getAddress(addressingRegister);
         addressingMode.postAddressingAction(false, addressingRegister);
-        if (jumpAddress != Computer.BUS_ERROR) {
-            getCpu().writeRegister(false, Cpu.PC, jumpAddress);
+        if (subroutineAddress != Computer.BUS_ERROR) {
+            Cpu cpu = getCpu();
+            // Push linkage register to stack
+            if (cpu.push(cpu.readRegister(false, linkageRegister))) {
+                // Write PC value to linkage register
+                cpu.writeRegister(false, linkageRegister, cpu.readRegister(false, Cpu.PC));
+                // Write subroutine address to PC
+                cpu.writeRegister(false, Cpu.PC, subroutineAddress);
+            }
         }
     }
 
