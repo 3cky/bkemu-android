@@ -48,6 +48,7 @@ import su.comp.bk.arch.cpu.opcode.BltOpcode;
 import su.comp.bk.arch.cpu.opcode.BmiOpcode;
 import su.comp.bk.arch.cpu.opcode.BneOpcode;
 import su.comp.bk.arch.cpu.opcode.BplOpcode;
+import su.comp.bk.arch.cpu.opcode.BptOpcode;
 import su.comp.bk.arch.cpu.opcode.BrOpcode;
 import su.comp.bk.arch.cpu.opcode.BvcOpcode;
 import su.comp.bk.arch.cpu.opcode.BvsOpcode;
@@ -56,7 +57,10 @@ import su.comp.bk.arch.cpu.opcode.CmpOpcode;
 import su.comp.bk.arch.cpu.opcode.ComOpcode;
 import su.comp.bk.arch.cpu.opcode.ConditionCodeOpcodes;
 import su.comp.bk.arch.cpu.opcode.DecOpcode;
+import su.comp.bk.arch.cpu.opcode.EmtOpcode;
+import su.comp.bk.arch.cpu.opcode.HaltOpcode;
 import su.comp.bk.arch.cpu.opcode.IncOpcode;
+import su.comp.bk.arch.cpu.opcode.IotOpcode;
 import su.comp.bk.arch.cpu.opcode.JmpOpcode;
 import su.comp.bk.arch.cpu.opcode.JsrOpcode;
 import su.comp.bk.arch.cpu.opcode.MarkOpcode;
@@ -65,15 +69,20 @@ import su.comp.bk.arch.cpu.opcode.MovOpcode;
 import su.comp.bk.arch.cpu.opcode.MtpsOpcode;
 import su.comp.bk.arch.cpu.opcode.NegOpcode;
 import su.comp.bk.arch.cpu.opcode.Opcode;
+import su.comp.bk.arch.cpu.opcode.ResetOpcode;
 import su.comp.bk.arch.cpu.opcode.RolOpcode;
 import su.comp.bk.arch.cpu.opcode.RorOpcode;
+import su.comp.bk.arch.cpu.opcode.RtiOpcode;
 import su.comp.bk.arch.cpu.opcode.RtsOpcode;
+import su.comp.bk.arch.cpu.opcode.RttOpcode;
 import su.comp.bk.arch.cpu.opcode.SbcOpcode;
 import su.comp.bk.arch.cpu.opcode.SobOpcode;
 import su.comp.bk.arch.cpu.opcode.SubOpcode;
 import su.comp.bk.arch.cpu.opcode.SwabOpcode;
 import su.comp.bk.arch.cpu.opcode.SxtOpcode;
+import su.comp.bk.arch.cpu.opcode.TrapOpcode;
 import su.comp.bk.arch.cpu.opcode.TstOpcode;
+import su.comp.bk.arch.cpu.opcode.WaitOpcode;
 import su.comp.bk.arch.cpu.opcode.XorOpcode;
 
 /**
@@ -85,6 +94,11 @@ public class Cpu {
     public final static int REG_SEL1 = 0177716;
     /** SEL2 I/O register address */
     public final static int REG_SEL2 = 0177714;
+
+    /** HALT mode PC store register */
+    public final static int REG_HALT_PC = 0177674;
+    /** HALT mode PSW store register */
+    public final static int REG_HALT_PSW = 0177676;
 
     /** Register R0 */
     public final static int R0 = 0;
@@ -115,6 +129,30 @@ public class Cpu {
     // Addressing modes lookup table
     private final AddressingMode[] addressingModes = new AddressingMode[8];
 
+    /** Bus error trap vector address */
+    public static final int TRAP_VECTOR_BUS_ERROR = 004;
+    /** Reserved opcode trap vector address */
+    public static final int TRAP_VECTOR_RESERVED_OPCODE = 010;
+    /** Breakpoint trap vector address */
+    public static final int TRAP_VECTOR_BPT = 014;
+    /** IOT instruction trap vector address */
+    public static final int TRAP_VECTOR_IOT = 020;
+    /** Power fail trap vector address */
+    public static final int TRAP_VECTOR_ACLO = 024;
+    /** EMT instruction trap vector address */
+    public static final int TRAP_VECTOR_EMT = 030;
+    /** TRAP instruction trap vector address */
+    public static final int TRAP_VECTOR_TRAP = 034;
+
+    // Bus error flag
+    private boolean isBusError;
+
+    // Halt mode flag
+    private boolean isHaltMode;
+
+    // Interrupt wait mode flag
+    private boolean isInterruptWaitMode;
+
     /** PSW: Carry */
     public final static int PSW_FLAG_C = 1;
     /** PSW: Arithmetic overflow */
@@ -127,8 +165,6 @@ public class Cpu {
     public final static int PSW_FLAG_T = 020;
     /** PSW: Priority */
     public final static int PSW_FLAG_P = 0200;
-    /** PSW: Halt */
-    public final static int PSW_FLAG_H = 0400;
 
     // Processor Status Word (PSW)
     private short processorStatusWord;
@@ -239,6 +275,16 @@ public class Cpu {
         addOpcode(new JmpOpcode(this), JmpOpcode.OPCODE, JmpOpcode.OPCODE + 077);
         addOpcode(new JsrOpcode(this), JsrOpcode.OPCODE, JsrOpcode.OPCODE + 0777);
         addOpcode(new RtsOpcode(this), RtsOpcode.OPCODE, RtsOpcode.OPCODE + 7);
+        // Control opcodes
+        addOpcode(new HaltOpcode(this), HaltOpcode.OPCODE, HaltOpcode.OPCODE);
+        addOpcode(new WaitOpcode(this), WaitOpcode.OPCODE, WaitOpcode.OPCODE);
+        addOpcode(new RtiOpcode(this), RtiOpcode.OPCODE, RtiOpcode.OPCODE);
+        addOpcode(new BptOpcode(this), BptOpcode.OPCODE, BptOpcode.OPCODE);
+        addOpcode(new IotOpcode(this), IotOpcode.OPCODE, IotOpcode.OPCODE);
+        addOpcode(new ResetOpcode(this), ResetOpcode.OPCODE, ResetOpcode.OPCODE);
+        addOpcode(new RttOpcode(this), RttOpcode.OPCODE, RttOpcode.OPCODE);
+        addOpcode(new EmtOpcode(this), EmtOpcode.OPCODE, EmtOpcode.OPCODE);
+        addOpcode(new TrapOpcode(this), TrapOpcode.OPCODE, TrapOpcode.OPCODE);
     }
 
     private void addOpcode(Opcode opcode, int startOpcode, int endOpcode) {
@@ -376,6 +422,133 @@ public class Cpu {
     }
 
     /**
+     * Get bus error flag state.
+     * @return <code>true</code> if was bus error, <code>false</code> otherwise
+     */
+    public boolean isBusError() {
+        return this.isBusError;
+    }
+
+    /**
+     * Set bus error flag state.
+     */
+    public void setBusError() {
+        this.isBusError = true;
+    }
+
+    /**
+     * Clear bus error flag state.
+     */
+    public void clearBusError() {
+        this.isBusError = false;
+    }
+
+    /**
+     * Get halt mode flag state.
+     * @return <code>true</code> if CPU is in halt mode , <code>false</code> otherwise
+     */
+    public boolean isHaltMode() {
+        return this.isHaltMode;
+    }
+
+    /**
+     * Set halt mode flag state.
+     */
+    public void setHaltMode() {
+        this.isHaltMode = true;
+    }
+
+    /**
+     * Clear halt mode flag state.
+     */
+    public void clearHaltMode() {
+        this.isHaltMode = false;
+    }
+
+    /**
+     * Get interrupt wait mode flag state.
+     * @return <code>true</code> if processor in interrupt wait mode, <code>false</code> otherwise
+     */
+    public boolean isInterruptWaitMode() {
+        return this.isInterruptWaitMode;
+    }
+
+    /**
+     * Set interrupt wait mode flag state.
+     */
+    public void setInterruptWaitMode() {
+        this.isInterruptWaitMode = true;
+    }
+
+    /**
+     * Clear interrupt wait mode flag state.
+     */
+    public void clearInterruptWaitMode() {
+        this.isInterruptWaitMode = false;
+    }
+
+    /**
+     * Execute 1801VM1-specific halt mode entering sequence
+     */
+    public void enterHaltMode() {
+        // Set bit 3 in SEL1 register
+        int sel1 = readMemory(false, REG_SEL1);
+        if (sel1 != Computer.BUS_ERROR) {
+            sel1 |= 010;
+            if (writeMemory(false, REG_SEL1, sel1) &&
+                    // Store PSW to 0177676
+                    writeMemory(false, REG_HALT_PSW, getPswState()) &&
+                    // Store PC to 0177674
+                    writeMemory(false, REG_HALT_PC, readRegister(false, PC)) &&
+                    // Trap to HALT handler
+                    processTrap((sel1 & 0177400) + 2, false)) {
+                setHaltMode();
+            }
+        }
+    }
+
+    /**
+     * Process trap with given vector address.
+     * @param trapVectorAddress trap vector address
+     * @param pushReturnState <code>true</code> to push PC/PSW state to stack,
+     * <code>false</code> to not push
+     * @return <code>true</code> if trap vector successfully loaded
+     * or <false> if bus error happens while vector loading
+     */
+    public boolean processTrap(int trapVectorAddress, boolean pushReturnState) {
+        boolean isVectorLoaded = false;
+        if (!pushReturnState || (push(getPswState()) && push(readRegister(false, PC)))) {
+            int trapAddress = readMemory(false, trapVectorAddress);
+            if (trapAddress != Computer.BUS_ERROR) {
+                writeRegister(false, PC, trapAddress);
+                int trapPsw = readMemory(false, trapVectorAddress + 2);
+                if (trapPsw != Computer.BUS_ERROR) {
+                    setPswState((short) (trapPsw & 0377));
+                    isVectorLoaded = true;
+                }
+            }
+        }
+        return isVectorLoaded;
+    }
+
+    /**
+     * Return from trap.
+     * @param isTraceTrap <code>true</code> in case of return from trace interrupt,
+     * <code>false</code> otherwise
+     */
+    public void returnFromTrap(boolean isTraceTrap) {
+        int pc = pop();
+        if (pc != Computer.BUS_ERROR) {
+            writeRegister(false, PC, pc);
+            int psw = pop();
+            if (psw != Computer.BUS_ERROR) {
+                setPswState((short) (psw & 0377));
+                // TODO process isReturnFromTraceTrap flag
+            }
+        }
+    }
+
+    /**
      * Read register value in byte or word mode.
      * @param isByteMode <code>true</code> to read in byte mode (without sign extension!),
      * <code>false</code> to read in word mode
@@ -468,7 +641,11 @@ public class Cpu {
      * not mapped to memory or register
      */
     public int readMemory(boolean isByteMode, int address) {
-        return computer.readMemory(isByteMode, address);
+        int value = computer.readMemory(isByteMode, address);
+        if (value == Computer.BUS_ERROR) {
+            setBusError();
+        }
+        return value;
     }
 
     /**
@@ -480,20 +657,32 @@ public class Cpu {
      * given address is not mapped to memory or register
      */
     public boolean writeMemory(boolean isByteMode, int address, int value) {
-        return computer.writeMemory(isByteMode, address, value);
+        boolean isWritten = computer.writeMemory(isByteMode, address, value);
+        if (!isWritten) {
+            setBusError();
+        }
+        return isWritten;
     }
 
     /**
      * Reset processor state.
      */
     public void reset() {
-        setPswState((short) 0340);
+        resetDevices();
         int sel1RegisterValue = readMemory(false, REG_SEL1);
         if (sel1RegisterValue != Computer.BUS_ERROR) {
             writeRegister(false, PC, sel1RegisterValue & 0177400);
         } else {
             // FIXME Deal with bus error while read startup address
         }
+    }
+
+    /**
+     * Reset computer devices.
+     */
+    public void resetDevices() {
+        computer.resetDevices();
+        setPswState((short) 0340);
     }
 
     /**

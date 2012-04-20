@@ -1,5 +1,5 @@
 /*
- * Created: 31.03.2012
+ * Created: 19.04.2012
  *
  * Copyright (C) 2012 Victor Antonovich (v.antonovich@gmail.com)
  *
@@ -17,44 +17,24 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package su.comp.bk.arch.cpu.addressing;
+package su.comp.bk.arch.cpu.opcode;
 
-import su.comp.bk.arch.Computer;
 import su.comp.bk.arch.cpu.Cpu;
 
 /**
- * Register addressing mode: Rn.
- * The operand is in Rn.
+ * Emulator trap operation.
  */
-public class RegisterAddressingMode extends BaseAddressingMode {
+public class EmtOpcode extends BaseOpcode {
 
-    public final static int CODE = 0;
+    public final static int OPCODE = 0104000;
 
-    public RegisterAddressingMode(Cpu cpu) {
+    public EmtOpcode(Cpu cpu) {
         super(cpu);
     }
 
     @Override
-    public int getCode() {
-        return CODE;
-    }
-
-    @Override
-    public int readAddressedValue(boolean isByteAddressing, int register) {
-        return cpu.readRegister(isByteAddressing, register);
-    }
-
-    @Override
-    public boolean writeAddressedValue(boolean isByteAddressing, int register, int value) {
-        cpu.writeRegister(isByteAddressing, register, value);
-        return true;
-    }
-
-    @Override
-    public int getAddress(int register) {
-        // No address for register addressing mode
-        cpu.setBusError();
-        return Computer.BUS_ERROR;
+    public void execute() {
+        getCpu().processTrap(Cpu.TRAP_VECTOR_EMT, true);
     }
 
 }
