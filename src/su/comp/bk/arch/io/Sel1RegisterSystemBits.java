@@ -30,7 +30,7 @@ public class Sel1RegisterSystemBits implements Device {
     // Write to register flag bit mask
     public final static int WRITE_FLAG = (1 << 2);
 
-    private final int[] addresses = { Cpu.REG_SEL1 };
+    private final static int[] addresses = { Cpu.REG_SEL1 };
 
     // System register state, read only
     private int state;
