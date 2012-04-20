@@ -109,7 +109,6 @@ public class Computer {
      * Reset computer state.
      */
     public void reset() {
-        resetDevices();
         getCpu().reset();
     }
 
