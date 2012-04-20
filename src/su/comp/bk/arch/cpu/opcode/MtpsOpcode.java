@@ -42,13 +42,8 @@ public class MtpsOpcode extends SingleOperandOpcode {
                 singleOperandRegister);
         if (data != Computer.BUS_ERROR) {
             int psw = cpu.getPswState();
-            if ((psw & Cpu.PSW_FLAG_H) != 0) {
-                // HALT mode
-                psw = data | Cpu.PSW_FLAG_H;
-            } else {
-                // USER mode, preserve T flag
-                psw = (psw & Cpu.PSW_FLAG_T) | (data & ~Cpu.PSW_FLAG_T);
-            }
+            // Preserve T flag and high byte states
+            psw = (psw & (0177400 | Cpu.PSW_FLAG_T)) | (data & ~Cpu.PSW_FLAG_T);
             cpu.setPswState((short) psw);
         }
     }
