@@ -24,12 +24,8 @@ import static org.junit.Assert.*;
 import org.junit.Test;
 
 import su.comp.bk.arch.cpu.Cpu;
-import su.comp.bk.arch.cpu.opcode.ClrOpcode;
-import su.comp.bk.arch.cpu.opcode.ConditionCodeOpcodes;
-import su.comp.bk.arch.cpu.opcode.Opcode;
 import su.comp.bk.arch.io.Sel1RegisterSystemBits;
 import su.comp.bk.arch.memory.RandomAccessMemory;
-import su.comp.bk.arch.memory.ReadOnlyMemory;
 
 /**
  * {@link Computer} class unit tests.
