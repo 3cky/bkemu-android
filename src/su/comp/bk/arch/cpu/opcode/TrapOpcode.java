@@ -33,6 +33,11 @@ public class TrapOpcode extends BaseOpcode {
     }
 
     @Override
+    public int getOpcode() {
+        return OPCODE;
+    }
+
+    @Override
     public void execute() {
         getCpu().processTrap(Cpu.TRAP_VECTOR_TRAP, true);
     }

@@ -28,10 +28,15 @@ import su.comp.bk.arch.cpu.addressing.AddressingMode;
  */
 public class RolOpcode extends SingleOperandOpcode {
 
-    public final static short OPCODE = 06100;
+    public final static int OPCODE = 06100;
 
     public RolOpcode(Cpu cpu) {
         super(cpu);
+    }
+
+    @Override
+    public int getOpcode() {
+        return OPCODE;
     }
 
     @Override

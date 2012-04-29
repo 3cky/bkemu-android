@@ -35,6 +35,11 @@ public class BisOpcode extends DoubleOperandOpcode {
     }
 
     @Override
+    public int getOpcode() {
+        return OPCODE;
+    }
+
+    @Override
     public void execute() {
         boolean isByteMode = isByteModeOperation();
         AddressingMode srcMode = getSrcOperandAddressingMode();

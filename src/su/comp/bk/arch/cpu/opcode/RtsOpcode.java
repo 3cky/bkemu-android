@@ -35,6 +35,11 @@ public class RtsOpcode extends BaseOpcode {
         super(cpu);
     }
 
+    @Override
+    public int getOpcode() {
+        return OPCODE;
+    }
+
     private void decodeLinkageRegister() {
         this.linkageRegister = getInstruction() & 7;
     }

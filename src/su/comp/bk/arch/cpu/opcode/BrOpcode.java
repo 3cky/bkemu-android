@@ -33,6 +33,11 @@ public class BrOpcode extends BranchOpcode {
     }
 
     @Override
+    public int getOpcode() {
+        return OPCODE;
+    }
+
+    @Override
     protected boolean isBranchCondition(int psw) {
         return true;
     }

@@ -33,6 +33,11 @@ public class RtiOpcode extends BaseOpcode {
     }
 
     @Override
+    public int getOpcode() {
+        return OPCODE;
+    }
+
+    @Override
     public void execute() {
         getCpu().returnFromTrap(false);
     }

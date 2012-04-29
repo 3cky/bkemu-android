@@ -33,6 +33,11 @@ public class BgtOpcode extends BranchOpcode {
     }
 
     @Override
+    public int getOpcode() {
+        return OPCODE;
+    }
+
+    @Override
     protected boolean isBranchCondition(int psw) {
         boolean flagN = (psw & Cpu.PSW_FLAG_N) != 0;
         boolean flagV = (psw & Cpu.PSW_FLAG_V) != 0;

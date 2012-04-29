@@ -34,6 +34,11 @@ public class ClrOpcode extends SingleOperandOpcode {
     }
 
     @Override
+    public int getOpcode() {
+        return OPCODE;
+    }
+
+    @Override
     protected void executeSingleOperand(boolean isByteMode, int operandRegister,
             AddressingMode operandAddressingMode) {
         Cpu cpu = getCpu();

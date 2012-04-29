@@ -28,10 +28,15 @@ import su.comp.bk.arch.cpu.addressing.AddressingMode;
  */
 public class SwabOpcode extends SingleOperandOpcode {
 
-    public final static short OPCODE = 0300;
+    public final static int OPCODE = 0300;
 
     public SwabOpcode(Cpu cpu) {
         super(cpu);
+    }
+
+    @Override
+    public int getOpcode() {
+        return OPCODE;
     }
 
     @Override

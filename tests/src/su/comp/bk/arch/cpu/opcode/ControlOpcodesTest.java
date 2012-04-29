@@ -23,6 +23,12 @@ import static org.junit.Assert.*;
 
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.powermock.api.easymock.PowerMock;
+import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.powermock.modules.junit4.PowerMockRunner;
+
+import android.util.Log;
 
 import su.comp.bk.arch.Computer;
 import su.comp.bk.arch.cpu.Cpu;
@@ -33,6 +39,8 @@ import su.comp.bk.arch.memory.ReadOnlyMemory;
 /**
  * Control opcodes (RESET/WAIT/HALT) tests.
  */
+@RunWith(PowerMockRunner.class)
+@PrepareForTest(value=Log.class)
 public class ControlOpcodesTest {
 
     private Computer computer;
@@ -68,6 +76,7 @@ public class ControlOpcodesTest {
 
     @Test
     public void testHaltInstructionExecute() {
+        PowerMock.mockStatic(Log.class);
         computer.addMemory(new ReadOnlyMemory(0100000, new short[] {
                 HaltOpcode.OPCODE,                   // 0100000: HALT
                 (short) 0100010,                     // 0100002: <vector - PC>
@@ -92,7 +101,7 @@ public class ControlOpcodesTest {
             public void reset() {
             }
             @Override
-            public int read(boolean isByteMode, int address) {
+            public int read(int address) {
                 if (address == Cpu.REG_HALT_PC) {
                     return regHaltPc;
                 }
@@ -101,6 +110,9 @@ public class ControlOpcodesTest {
             @Override
             public int[] getAddresses() {
                 return new int[] { Cpu.REG_HALT_PC, Cpu.REG_HALT_PSW };
+            }
+            @Override
+            public void init() {
             }
         };
 
@@ -114,12 +126,15 @@ public class ControlOpcodesTest {
             public void reset() {
             }
             @Override
-            public int read(boolean isByteMode, int address) {
+            public int read(int address) {
                 return haltBitValue;
             }
             @Override
             public int[] getAddresses() {
                 return new int[] { Cpu.REG_SEL1 };
+            }
+            @Override
+            public void init() {
             }
         };
 

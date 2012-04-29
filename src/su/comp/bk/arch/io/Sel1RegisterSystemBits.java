@@ -46,6 +46,11 @@ public class Sel1RegisterSystemBits implements Device {
 
     @Override
     public void reset() {
+        init();
+    }
+
+    @Override
+    public void init() {
         setWriteFlagState(false);
     }
 
@@ -54,14 +59,11 @@ public class Sel1RegisterSystemBits implements Device {
     }
 
     @Override
-    public int read(boolean isByteMode, int address) {
+    public int read(int address) {
         // Return current state and clear write flag
-        try {
-            return state & (isByteMode ? 0377 : 0177777);
-        } finally {
-            setWriteFlagState(false);
-        }
-
+        int result = state;
+        setWriteFlagState(false);
+        return result;
     }
 
     @Override
@@ -69,5 +71,4 @@ public class Sel1RegisterSystemBits implements Device {
         // Only set write flag
         setWriteFlagState(true);
     }
-
 }

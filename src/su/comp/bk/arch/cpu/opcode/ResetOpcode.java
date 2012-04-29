@@ -33,6 +33,11 @@ public class ResetOpcode extends BaseOpcode {
     }
 
     @Override
+    public int getOpcode() {
+        return OPCODE;
+    }
+
+    @Override
     public void execute() {
         getCpu().resetDevices();
     }

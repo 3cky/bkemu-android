@@ -35,6 +35,11 @@ public class AddOpcode extends DoubleOperandOpcode {
     }
 
     @Override
+    public int getOpcode() {
+        return OPCODE;
+    }
+
+    @Override
     public void execute() {
         AddressingMode srcMode = getSrcOperandAddressingMode();
         int srcRegister = getSrcOperandRegister();

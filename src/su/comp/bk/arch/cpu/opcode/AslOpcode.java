@@ -28,10 +28,15 @@ import su.comp.bk.arch.cpu.addressing.AddressingMode;
  */
 public class AslOpcode extends SingleOperandOpcode {
 
-    public final static short OPCODE = 06300;
+    public final static int OPCODE = 06300;
 
     public AslOpcode(Cpu cpu) {
         super(cpu);
+    }
+
+    @Override
+    public int getOpcode() {
+        return OPCODE;
     }
 
     @Override

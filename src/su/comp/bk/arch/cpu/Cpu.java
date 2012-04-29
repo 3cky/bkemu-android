@@ -19,6 +19,7 @@
  */
 package su.comp.bk.arch.cpu;
 
+import android.util.Log;
 import su.comp.bk.arch.Computer;
 import su.comp.bk.arch.cpu.addressing.AddressingMode;
 import su.comp.bk.arch.cpu.addressing.AutodecrementAddressingMode;
@@ -153,6 +154,12 @@ public class Cpu {
     // Interrupt wait mode flag
     private boolean isInterruptWaitMode;
 
+    // Reserved opcode flag
+    private boolean isReservedOpcodeFetched;
+
+    // Deferred trace trap (after RTT instruction executing) flag
+    private boolean isDeferredTraceTrap;
+
     /** PSW: Carry */
     public final static int PSW_FLAG_C = 1;
     /** PSW: Arithmetic overflow */
@@ -251,7 +258,7 @@ public class Cpu {
         addOpcode(new BvsOpcode(this), BvsOpcode.OPCODE, BvsOpcode.OPCODE + 0377);
         addOpcode(new BccOpcode(this), BccOpcode.OPCODE, BccOpcode.OPCODE + 0377);
         addOpcode(new BcsOpcode(this), BcsOpcode.OPCODE, BcsOpcode.OPCODE + 0377);
-        addOpcode(new SobOpcode(this), SobOpcode.OPCODE, SobOpcode.OPCODE + 077);
+        addOpcode(new SobOpcode(this), SobOpcode.OPCODE, SobOpcode.OPCODE + 0777);
         // Double operand opcodes
         addOpcode(new MovOpcode(this), MovOpcode.OPCODE, MovOpcode.OPCODE + 07777);
         addOpcode(new MovOpcode(this), MovOpcode.OPCODE | Opcode.BYTE_OPERATION_FLAG,
@@ -283,8 +290,8 @@ public class Cpu {
         addOpcode(new IotOpcode(this), IotOpcode.OPCODE, IotOpcode.OPCODE);
         addOpcode(new ResetOpcode(this), ResetOpcode.OPCODE, ResetOpcode.OPCODE);
         addOpcode(new RttOpcode(this), RttOpcode.OPCODE, RttOpcode.OPCODE);
-        addOpcode(new EmtOpcode(this), EmtOpcode.OPCODE, EmtOpcode.OPCODE);
-        addOpcode(new TrapOpcode(this), TrapOpcode.OPCODE, TrapOpcode.OPCODE);
+        addOpcode(new EmtOpcode(this), EmtOpcode.OPCODE, EmtOpcode.OPCODE + 0377);
+        addOpcode(new TrapOpcode(this), TrapOpcode.OPCODE, TrapOpcode.OPCODE + 0377);
     }
 
     private void addOpcode(Opcode opcode, int startOpcode, int endOpcode) {
@@ -488,6 +495,52 @@ public class Cpu {
     }
 
     /**
+     * Get reserved opcode fetched flag state.
+     * @return <code>true</code> if last fetched opcode was reserved (unknown) opcode,
+     * <code>false</code> if last fetched opcode was decoded successfully
+     */
+    public boolean isReservedOpcodeFetched() {
+        return isReservedOpcodeFetched;
+    }
+
+    /**
+     * Set reserved opcode fetched flag state.
+     */
+    public void setReservedOpcodeFetched() {
+        this.isReservedOpcodeFetched = true;
+    }
+
+    /**
+     * Clear reserved opcode fetched flag state.
+     */
+    public void clearReservedOpcodeFetched() {
+        this.isReservedOpcodeFetched = false;
+    }
+
+    /**
+     * Check deferred trace trap (RTT instruction) flag state.
+     * @return <code>true</code> if last executed instruction was RTT,
+     * <code>false</code> otherwise
+     */
+    public boolean isDeferredTraceTrap() {
+        return isDeferredTraceTrap;
+    }
+
+    /**
+     * Set deferred trace trap flag state.
+     */
+    public void setDeferredTraceTrap() {
+        this.isDeferredTraceTrap = true;
+    }
+
+    /**
+     * Clear deferred trace trap flag state.
+     */
+    public void clearDeferredTraceTrap() {
+        this.isDeferredTraceTrap = false;
+    }
+
+    /**
      * Execute 1801VM1-specific halt mode entering sequence
      */
     public void enterHaltMode() {
@@ -516,6 +569,8 @@ public class Cpu {
      * or <false> if bus error happens while vector loading
      */
     public boolean processTrap(int trapVectorAddress, boolean pushReturnState) {
+        Log.d("bkemu", "TRAP " + Integer.toOctalString(trapVectorAddress) +
+                ", PC: " + Integer.toOctalString(readRegister(false, PC)));
         boolean isVectorLoaded = false;
         if (!pushReturnState || (push(getPswState()) && push(readRegister(false, PC)))) {
             int trapAddress = readMemory(false, trapVectorAddress);
@@ -543,7 +598,7 @@ public class Cpu {
             int psw = pop();
             if (psw != Computer.BUS_ERROR) {
                 setPswState((short) (psw & 0377));
-                // TODO process isReturnFromTraceTrap flag
+                setDeferredTraceTrap();
             }
         }
     }
@@ -689,7 +744,7 @@ public class Cpu {
      * Fetch instruction pointed by PC and increment PC by 2.
      * @return fetched instruction code or BUS_ERROR in case of error
      */
-    public int fetchInstruction() {
+    private int fetchInstruction() {
         int instruction = readMemory(false, readRegister(false, PC));
         incrementRegister(false, PC);
         return instruction;
@@ -701,8 +756,41 @@ public class Cpu {
      * @return decoded {@link Opcode} for given instruction code or <code>null</code> if no
      * opcode exist for given instruction code
      */
-    public Opcode decodeInstruction(int instruction) {
+    private Opcode decodeInstruction(int instruction) {
         return opcodesTable[instruction & 0177777];
+    }
+
+    /**
+     * Checks is instructions executing allowed
+     * (CPU is not in WAIT mode, no unhandled bus errors).
+     * @return <code>true</code> if instructions executing is allowed,
+     * <code>false</code> if not allowed
+     */
+    private boolean isInstructionsExecutingAllowed() {
+        return !isInterruptWaitMode() && !isBusError();
+    }
+
+    /**
+     * Process pending interrupt requests.
+     */
+    private void processPendingInterrupts() {
+        if (isBusError()) {
+            // Bus error handling
+            if (processTrap(TRAP_VECTOR_BUS_ERROR, true)) {
+                clearBusError();
+            }
+            // TODO double bus error handling
+        } else if (isReservedOpcodeFetched()) {
+            // Reserved opcode handling
+            clearReservedOpcodeFetched();
+            processTrap(TRAP_VECTOR_RESERVED_OPCODE, true);
+        } else if (isPswFlagSet(PSW_FLAG_T) && !isInterruptWaitMode()) {
+            // Trace bit handling (if not in WAIT mode)
+            if (!isDeferredTraceTrap()) {
+                processTrap(TRAP_VECTOR_BPT, true);
+            }
+        }
+        // TODO handle hardware interrupts
     }
 
     /**
@@ -715,12 +803,28 @@ public class Cpu {
             if (instructionOpcode != null) {
                 instructionOpcode.decode(instruction);
                 instructionOpcode.execute();
+                // Clear deferred trace trap flag if instruction was executed
+                // while trace bit is set
+                if (isPswFlagSet(PSW_FLAG_T) && instructionOpcode
+                        .getOpcode() != RttOpcode.OPCODE) {
+                    clearDeferredTraceTrap();
+                }
             } else {
-                // TODO Illegal instruction
+                Log.e("bkemu", "fetched unknown instruction: " + Integer.toOctalString(instruction)
+                        + ", PC: " + Integer.toOctalString(readRegister(false, PC)));
+                setReservedOpcodeFetched();
             }
-        } else {
-            // TODO Bus error while fetching instruction
         }
+    }
+
+    /**
+     * Execute next operation (instruction executing and/or interrupts processing).
+     */
+    public void executeNextOperation() {
+        if (isInstructionsExecutingAllowed()) {
+            executeSingleInstruction();
+        }
+        processPendingInterrupts();
     }
 
 }

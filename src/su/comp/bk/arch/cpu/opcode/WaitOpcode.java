@@ -33,6 +33,11 @@ public class WaitOpcode extends BaseOpcode {
     }
 
     @Override
+    public int getOpcode() {
+        return OPCODE;
+    }
+
+    @Override
     public void execute() {
         getCpu().setInterruptWaitMode();
     }

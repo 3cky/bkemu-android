@@ -28,10 +28,15 @@ import su.comp.bk.arch.cpu.addressing.AddressingMode;
  */
 public class AdcOpcode extends SingleOperandOpcode {
 
-    public final static short OPCODE = 05500;
+    public final static int OPCODE = 05500;
 
     public AdcOpcode(Cpu cpu) {
         super(cpu);
+    }
+
+    @Override
+    public int getOpcode() {
+        return OPCODE;
     }
 
     @Override

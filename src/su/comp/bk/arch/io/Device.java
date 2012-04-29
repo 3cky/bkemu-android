@@ -30,18 +30,21 @@ public interface Device {
     int[] getAddresses();
 
     /**
-     * Reset device (on power-on or by RESET instruction).
+     * Handle hardware device reset.
      */
     void reset();
 
     /**
-     * Read value from I/O device.
-     * @param isByteAddressing <code>true</code> to read byte value, <code>false</code> to read
-     * word value
+     * Handle bus INIT signal (on hardware reset or RESET instruction).
+     */
+    void init();
+
+    /**
+     * Read value from I/O device. Devices always read as word.
      * @param address absolute address to read (from address list this device is mapped to)
      * @return read value
      */
-    int read(boolean isByteMode, int address);
+    int read(int address);
 
     /**
      * Write value to I/O device.

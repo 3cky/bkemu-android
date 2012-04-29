@@ -19,26 +19,40 @@
  */
 package su.comp.bk.arch;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 
+import android.content.res.Resources;
+import android.util.Log;
+
+import su.comp.bk.R;
 import su.comp.bk.arch.cpu.Cpu;
 import su.comp.bk.arch.io.Device;
+import su.comp.bk.arch.io.KeyboardController;
+import su.comp.bk.arch.io.PeripheralPort;
+import su.comp.bk.arch.io.Sel1RegisterSystemBits;
+import su.comp.bk.arch.io.VideoController;
 import su.comp.bk.arch.memory.Memory;
+import su.comp.bk.arch.memory.RandomAccessMemory;
+import su.comp.bk.arch.memory.ReadOnlyMemory;
 
 /**
  * BK001x computer implementation.
  */
-public class Computer {
+public class Computer implements Runnable {
 
     /** Bus error constant */
     public final static int BUS_ERROR = -1;
 
-    // Memory table mapped by 8K blocks
+    // Memory table mapped by 8KB blocks
     private final Memory[] memoryTable = new Memory[8];
 
     // CPU implementation reference
     private final Cpu cpu;
+
+    private VideoController videoController;
 
     /** I/O registers space start address */
     public final static int IO_REGISTERS_START_ADDRESS = 0177600;
@@ -47,8 +61,52 @@ public class Computer {
     // I/O registers space addresses mapped to devices
     private final List<?>[] deviceTable = new List[4096];
 
+    private boolean isRunning = false;
+
+    private Thread clockThread;
+
+    public enum Configuration {
+        BK_0010_BASIC
+    }
+
     public Computer() {
         this.cpu = new Cpu(this);
+    }
+
+    public void configure(Resources resources, Configuration config) throws IOException {
+        RandomAccessMemory workMemory = new RandomAccessMemory(0, 020000);
+        addMemory(workMemory);
+        RandomAccessMemory videoMemory = new RandomAccessMemory(040000, 020000);
+        addMemory(videoMemory);
+        videoController = new VideoController(videoMemory);
+        addDevice(videoController);
+        addDevice(new Sel1RegisterSystemBits(0100000));
+        addDevice(new KeyboardController());
+        addDevice(new PeripheralPort());
+        switch (config) {
+            case BK_0010_BASIC:
+                addReadOnlyMemory(resources, R.raw.monit10, 0100000);
+                addReadOnlyMemory(resources, R.raw.basic10_1, 0120000);
+                addReadOnlyMemory(resources, R.raw.basic10_2, 0140000);
+                addReadOnlyMemory(resources, R.raw.basic10_3, 0160000);
+                break;
+            default:
+                break;
+        }
+    }
+
+    private void addReadOnlyMemory(Resources resources, int romDataResId, int address)
+            throws IOException {
+        byte[] romData = loadReadOnlyMemoryData(resources, romDataResId);
+        addMemory(new ReadOnlyMemory(address, romData));
+    }
+
+    private byte[] loadReadOnlyMemoryData(Resources resources, int romDataResId)
+            throws IOException {
+        InputStream romDataStream = resources.openRawResource(romDataResId);
+        byte[] romData = new byte[romDataStream.available()];
+        romDataStream.read(romData);
+        return romData;
     }
 
     /**
@@ -59,12 +117,20 @@ public class Computer {
         return cpu;
     }
 
+    public VideoController getVideoController() {
+        return videoController;
+    }
+
     /**
      * Add memory (RAM/ROM) to address space.
      * @param memory {@link Memory} to add
      */
     public void addMemory(Memory memory) {
-        memoryTable[memory.getStartAddress() >> 13] = memory;
+        int memoryStartBlock = memory.getStartAddress() >> 13;
+        int memoryBlocksCount = (memory.getSize() >> 12) + 1; // ((size << 1) >> 13) + 1
+        for (int memoryBlockIdx = 0; memoryBlockIdx < memoryBlocksCount; memoryBlockIdx++) {
+            memoryTable[memoryStartBlock + memoryBlockIdx] = memory;
+        }
     }
 
     /**
@@ -123,11 +189,18 @@ public class Computer {
         int readValue = BUS_ERROR;
         // First check for I/O registers
         if (address >= IO_REGISTERS_START_ADDRESS) {
-            List<Device> devices = getDevices(address);
-            if (devices != null) {
+            List<Device> subdevices = getDevices(address);
+            if (subdevices != null) {
                 readValue = 0;
-                for (Device device: devices) {
-                    readValue |= device.read(isByteMode, address);
+                for (Device subdevice: subdevices) {
+                    // Read subdevice status value in word mode
+                    int subdeviceState = subdevice.read(address);
+                    // For byte mode read and odd address - extract high byte
+                    if (isByteMode && (address & 1) != 0) {
+                        subdeviceState >>= 8;
+                    }
+                    // Concatenate this subdevice state value with values of other subdevices
+                    readValue |= (subdeviceState & (isByteMode ? 0377 : 0177777));
                 }
             }
         } else {
@@ -168,6 +241,53 @@ public class Computer {
             }
         }
         return isWritten;
+    }
+
+    /**
+     * Start computer.
+     */
+    public synchronized void start() {
+        if (!isRunning) {
+            this.clockThread = new Thread(this, "ComputerClockThread");
+            isRunning = true;
+            clockThread.start();
+            Log.d("bkemu", "computer started");
+        } else {
+            throw new IllegalStateException("Computer is already running!");
+        }
+    }
+
+    /**
+     * Stop computer.
+     */
+    public void stop() {
+        if (isRunning) {
+            Log.d("bkemu", "stopping computer");
+            isRunning = false;
+            while (clockThread.isAlive()) {
+                try {
+                    this.clockThread.join();
+                } catch (InterruptedException e) {
+                }
+            }
+        } else {
+            throw new IllegalStateException("Computer is already stopped!");
+        }
+    }
+
+    @Override
+    public void run() {
+        reset();
+        while (isRunning) {
+            cpu.executeNextOperation();
+            synchronized (this) {
+                try {
+                    this.wait(0L, 100000);
+                } catch (InterruptedException e) {
+                }
+            }
+        }
+        Log.d("bkemu", "computer stopped");
     }
 
 }

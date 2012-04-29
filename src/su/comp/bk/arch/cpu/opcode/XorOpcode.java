@@ -35,6 +35,11 @@ public class XorOpcode extends DoubleOperandOpcode {
     }
 
     @Override
+    public int getOpcode() {
+        return OPCODE;
+    }
+
+    @Override
     public void execute() {
         Cpu cpu = getCpu();
         // Read source value from register

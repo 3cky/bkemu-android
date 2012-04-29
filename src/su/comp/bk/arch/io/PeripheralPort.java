@@ -1,5 +1,5 @@
 /*
- * Created: 12.04.2012
+ * Created: 23.04.2012
  *
  * Copyright (C) 2012 Victor Antonovich (v.antonovich@gmail.com)
  *
@@ -17,32 +17,43 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package su.comp.bk.arch.cpu.opcode;
-
-import su.comp.bk.arch.cpu.Cpu;
+package su.comp.bk.arch.io;
 
 /**
- * Branch if less than or equal (Z|(N^V) = 1) opcode.
+ * BK-0010 peripheral port.
  */
-public class BleOpcode extends BranchOpcode {
+public class PeripheralPort implements Device {
 
-    public final static int OPCODE = 03400;
+    public final static int DATA_REGISTER_ADDRESS = 0177714;
 
-    public BleOpcode(Cpu cpu) {
-        super(cpu);
+    private final static int[] addresses = { DATA_REGISTER_ADDRESS };
+
+    public PeripheralPort() {
     }
 
     @Override
-    public int getOpcode() {
-        return OPCODE;
+    public int[] getAddresses() {
+        return addresses;
     }
 
     @Override
-    protected boolean isBranchCondition(int psw) {
-        boolean flagN = (psw & Cpu.PSW_FLAG_N) != 0;
-        boolean flagV = (psw & Cpu.PSW_FLAG_V) != 0;
-        boolean flagZ = (psw & Cpu.PSW_FLAG_Z) != 0;
-        return flagZ || (flagN ^ flagV);
+    public void reset() {
+        // TODO
+    }
+
+    @Override
+    public void init() {
+        // TODO
+    }
+
+    @Override
+    public int read(int address) {
+        return 0; // TODO
+    }
+
+    @Override
+    public void write(boolean isByteMode, int address, int value) {
+        // TODO
     }
 
 }

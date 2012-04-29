@@ -38,6 +38,11 @@ public class JsrOpcode extends BaseOpcode {
         super(cpu);
     }
 
+    @Override
+    public int getOpcode() {
+        return OPCODE;
+    }
+
     private void decodeLinkageRegister() {
         this.linkageRegister = (getInstruction() >> 6) & 7;
     }

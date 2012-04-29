@@ -37,6 +37,11 @@ public class JmpOpcode extends BaseOpcode {
         super(cpu);
     }
 
+    @Override
+    public int getOpcode() {
+        return OPCODE;
+    }
+
     private void decodeAddressingRegister() {
         this.addressingRegister = getInstruction() & 7;
     }

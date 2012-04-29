@@ -33,6 +33,11 @@ public class EmtOpcode extends BaseOpcode {
     }
 
     @Override
+    public int getOpcode() {
+        return OPCODE;
+    }
+
+    @Override
     public void execute() {
         getCpu().processTrap(Cpu.TRAP_VECTOR_EMT, true);
     }

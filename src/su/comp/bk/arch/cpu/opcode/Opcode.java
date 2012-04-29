@@ -28,6 +28,12 @@ public interface Opcode {
     static int BYTE_OPERATION_FLAG = 0100000;
 
     /**
+     * Get opcode value.
+     * @return opcode value
+     */
+    int getOpcode();
+
+    /**
      * Decode instruction.
      * @param instruction instruction word to decode
      */

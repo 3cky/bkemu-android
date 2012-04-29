@@ -63,7 +63,10 @@ public class RandomAccessMemory implements Memory {
     }
 
     protected void initMemoryData() {
-        // TODO K565RU6 power-on pattern
+        // K565RU6 power-on pattern: 0177777/0000000 sequence, order switched every 0100 words
+        for (int idx = 0; idx < getSize(); idx++) {
+            data[idx] = (short) (((idx & 1) == ((idx >> 6) & 1) ? 0177777 : 0));
+        }
     }
 
     @Override

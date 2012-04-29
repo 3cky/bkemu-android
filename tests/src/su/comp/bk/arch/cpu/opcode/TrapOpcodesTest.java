@@ -23,6 +23,12 @@ import static org.junit.Assert.*;
 
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.powermock.api.easymock.PowerMock;
+import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.powermock.modules.junit4.PowerMockRunner;
+
+import android.util.Log;
 
 import su.comp.bk.arch.Computer;
 import su.comp.bk.arch.cpu.Cpu;
@@ -33,12 +39,15 @@ import su.comp.bk.arch.memory.ReadOnlyMemory;
 /**
  * Trap opcodes (EMT/TRAP/RTI) tests.
  */
+@RunWith(PowerMockRunner.class)
+@PrepareForTest(value=Log.class)
 public class TrapOpcodesTest {
 
     private Computer computer;
 
     @Before
     public void setUp() throws Exception {
+        PowerMock.mockStatic(Log.class);
         computer = new Computer();
         computer.addDevice(new Sel1RegisterSystemBits(0100000));
         computer.addMemory(new RandomAccessMemory(0, 01000));

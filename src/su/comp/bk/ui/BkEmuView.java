@@ -20,11 +20,16 @@
 package su.comp.bk.ui;
 
 import su.comp.bk.R;
+import su.comp.bk.arch.Computer;
+import su.comp.bk.arch.io.VideoController;
 import android.content.Context;
+import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.Matrix;
 import android.os.Handler;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.widget.FrameLayout;
@@ -37,7 +42,7 @@ import android.widget.TextView;
 public class BkEmuView extends SurfaceView implements SurfaceHolder.Callback {
 
     // Rendering framerate, in frames per second
-    private static final int RENDERING_FRAMERATE = 25;
+    private static final int RENDERING_FRAMERATE = 5;
     // Rendering period, in milliseconds.
     // RENDERING_FRAMERATE = 1000 / RENDERING_PERIOD
     private static final int RENDERING_PERIOD = (1000 / RENDERING_FRAMERATE);
@@ -45,16 +50,16 @@ public class BkEmuView extends SurfaceView implements SurfaceHolder.Callback {
     // FPS value averaging time, in milliseconds
     private static final int FPS_AVERAGING_TIME = 1000;
     // FPS counters last update timestamp
-    private long fpsCountersUpdateTimestamp;
+    protected long fpsCountersUpdateTimestamp;
     // FPS frame counter
-    private int fpsFrameCounter;
+    protected int fpsFrameCounter;
     // FPS accumulated time counter
-    private int fpsAccumulatedTime;
+    protected int fpsAccumulatedTime;
     // FPS current value
-    private int fpsValue;
+    protected int fpsValue;
 
     // FPS drawing enabled flag
-    private static boolean isFpsDrawingEnabled = true;
+    protected static boolean isFpsDrawingEnabled = true;
     // Low FPS value
     private final static int FPS_LOW_VALUE = 10;
     // Low FPS drawing color
@@ -62,16 +67,23 @@ public class BkEmuView extends SurfaceView implements SurfaceHolder.Callback {
     // Normal FPS drawing color
     private final static int FPS_COLOR_NORMAL = Color.GREEN;
 
+    // Computer screen aspect ratio
+    private final static float COMPUTER_SCREEN_ASPECT_RATIO = (4f / 3f);
+
     private final FpsIndicatorUpdateRunnable fpsIndicatorUpdateRunnable =
     			new FpsIndicatorUpdateRunnable();
-    private TextView fpsIndicator;
-    private String fpsIndicatorString;
+    protected TextView fpsIndicator;
+    protected String fpsIndicatorString;
 
     // UI update handler
     private final Handler uiUpdateHandler;
 
     // UI surface render thread
     private BkEmuViewRenderingThread renderingThread;
+
+    protected Matrix videoBufferBitmapTransformMatrix;
+
+    protected Computer computer;
 
 	/*
 	 * Surface view rendering thread
@@ -93,6 +105,7 @@ public class BkEmuView extends SurfaceView implements SurfaceHolder.Callback {
 	        long timeStamp;
 	        long timeDelta;
 	        Canvas canvas;
+	        VideoController videoController = computer.getVideoController();
 			while (isRunning) {
 				timeStamp = System.currentTimeMillis();
 				// Repaint surface
@@ -101,6 +114,10 @@ public class BkEmuView extends SurfaceView implements SurfaceHolder.Callback {
 	            	canvas = surfaceHolder.lockCanvas(null);
 	            	synchronized (surfaceHolder) {
 	            		canvas.drawColor(Color.BLACK);
+	            		if (computer != null) {
+	            		    canvas.drawBitmap(videoController.renderVideoBuffer(),
+	            		            videoBufferBitmapTransformMatrix, null);
+	            		}
 	            	}
 	            } finally {
 	            	if (canvas != null) {
@@ -149,11 +166,15 @@ public class BkEmuView extends SurfaceView implements SurfaceHolder.Callback {
         surfaceHolder.addCallback(this);
 	}
 
+    public void setComputer(Computer computer) {
+        this.computer = computer;
+    }
+
     public void setFpsDrawingEnabled(boolean isEnabled) {
         isFpsDrawingEnabled = isEnabled;
     }
 
-    private void updateFpsCounters(long currentTime) {
+    protected void updateFpsCounters(long currentTime) {
         if (fpsCountersUpdateTimestamp > 0) {
         	fpsFrameCounter++;
             // Calculate time elapsed from last FPS counters update
@@ -176,6 +197,32 @@ public class BkEmuView extends SurfaceView implements SurfaceHolder.Callback {
         fpsCountersUpdateTimestamp = currentTime;
     }
 
+    private void updateVideoBufferBitmapTransformMatrix() {
+        int viewWidth = getWidth();
+        int viewHeight = getHeight();
+        Bitmap videoBufferBitmap = computer.getVideoController().getVideoBuffer();
+        int bitmapWidth = videoBufferBitmap.getWidth();
+        int bitmapHeight = videoBufferBitmap.getHeight();
+        videoBufferBitmapTransformMatrix = new Matrix();
+        float bitmapTranslateX;
+        float bitmapTranslateY;
+        float bitmapScaleX;
+        float bitmapScaleY;
+        if (viewWidth > viewHeight) {
+            bitmapScaleY = (float) getHeight() / bitmapHeight;
+            bitmapScaleX = bitmapScaleY * COMPUTER_SCREEN_ASPECT_RATIO;
+            bitmapTranslateX = (viewWidth - bitmapWidth * bitmapScaleX) / 2f;
+            bitmapTranslateY = 0f;
+        } else {
+            bitmapScaleX = (float) getWidth() / bitmapWidth;
+            bitmapScaleY = bitmapScaleX / COMPUTER_SCREEN_ASPECT_RATIO;
+            bitmapTranslateX = 0f;
+            bitmapTranslateY = (viewHeight - bitmapHeight * bitmapScaleY) / 2f;
+        }
+        videoBufferBitmapTransformMatrix.setScale(bitmapScaleX, bitmapScaleY);
+        videoBufferBitmapTransformMatrix.postTranslate(bitmapTranslateX, bitmapTranslateY);
+    }
+
 	/* (non-Javadoc)
 	 * @see android.view.SurfaceHolder.Callback#surfaceChanged(android.view.SurfaceHolder, int, int, int)
 	 */
@@ -189,12 +236,16 @@ public class BkEmuView extends SurfaceView implements SurfaceHolder.Callback {
 	 */
 	@Override
 	public void surfaceCreated(SurfaceHolder holder) {
+	    Log.d("bkemu", "surface created");
+	    // Update emulator screen bitmap scale matrix
+	    updateVideoBufferBitmapTransformMatrix();
         // Get FPS indicator resources
         this.fpsIndicatorString = getContext().getString(R.string.fps_string);
         this.fpsIndicator = (TextView) ((FrameLayout) getParent())
         		.findViewById(R.id.fps_indicator);
 		this.renderingThread = new BkEmuViewRenderingThread(holder);
 		this.renderingThread.start();
+		this.computer.start();
 	}
 
 	/* (non-Javadoc)
@@ -202,6 +253,8 @@ public class BkEmuView extends SurfaceView implements SurfaceHolder.Callback {
 	 */
 	@Override
 	public void surfaceDestroyed(SurfaceHolder holder) {
+        Log.d("bkemu", "surface destroyed");
+        this.computer.stop();
 		this.renderingThread.stopRendering();
 		while (renderingThread.isAlive()) {
 			try {
@@ -209,6 +262,7 @@ public class BkEmuView extends SurfaceView implements SurfaceHolder.Callback {
 			} catch (InterruptedException e) {
 			}
 		}
+        Log.d("bkemu", "rendering stopped");
 	}
 
 }

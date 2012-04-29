@@ -33,6 +33,11 @@ public class BmiOpcode extends BranchOpcode {
     }
 
     @Override
+    public int getOpcode() {
+        return OPCODE;
+    }
+
+    @Override
     protected boolean isBranchCondition(int psw) {
         return (psw & Cpu.PSW_FLAG_N) != 0;
     }

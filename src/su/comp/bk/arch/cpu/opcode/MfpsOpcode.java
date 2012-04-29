@@ -34,6 +34,11 @@ public class MfpsOpcode extends SingleOperandOpcode {
     }
 
     @Override
+    public int getOpcode() {
+        return OPCODE;
+    }
+
+    @Override
     protected void executeSingleOperand(boolean isByteMode, int singleOperandRegister,
             AddressingMode singleOperandAddressingMode) {
         Cpu cpu = getCpu();

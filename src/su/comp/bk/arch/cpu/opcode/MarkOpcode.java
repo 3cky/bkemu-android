@@ -36,6 +36,11 @@ public class MarkOpcode extends BaseOpcode {
     }
 
     @Override
+    public int getOpcode() {
+        return OPCODE;
+    }
+
+    @Override
     public void execute() {
         Cpu cpu = getCpu();
         int n = getInstruction() & 077;

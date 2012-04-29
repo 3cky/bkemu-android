@@ -20,11 +20,16 @@
 
 package su.comp.bk.ui;
 
+import java.io.IOException;
+
 import su.comp.bk.R;
+import su.comp.bk.arch.Computer;
 import android.app.Activity;
 import android.content.pm.ActivityInfo;
 import android.os.Build;
 import android.os.Bundle;
+import android.view.LayoutInflater;
+import android.view.View;
 
 /**
  * Main application activity.
@@ -36,7 +41,17 @@ public class BkEmuActivity extends Activity {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setCompatibleOrientationMode();
-        setContentView(R.layout.main);
+        LayoutInflater layoutInflater = getLayoutInflater();
+        View mainView = layoutInflater.inflate(R.layout.main, null);
+        BkEmuView bkEmuView = (BkEmuView) mainView.findViewById(R.id.emu_view);
+        Computer computer = new Computer();
+        try {
+            computer.configure(getResources(), Computer.Configuration.BK_0010_BASIC);
+            bkEmuView.setComputer(computer);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        setContentView(mainView);
     }
 
 	private void setCompatibleOrientationMode() {
@@ -46,4 +61,5 @@ public class BkEmuActivity extends Activity {
         	setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
         }
 	}
+
 }

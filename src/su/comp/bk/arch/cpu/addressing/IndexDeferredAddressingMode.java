@@ -46,14 +46,22 @@ public class IndexDeferredAddressingMode extends BaseAddressingMode {
 
     @Override
     public int getAddress(int register) {
-        // Read value of register
-        int registerValue = cpu.readRegister(false, register);
+        int address = Computer.BUS_ERROR;
         // Read address of X
         int indexAddress = cpu.readRegister(false, Cpu.PC);
         // Read value of X
         int indexValue = cpu.readMemory(false, indexAddress);
-        return (indexValue != Computer.BUS_ERROR) ?  cpu.readMemory(false,
-                (registerValue + (short) indexValue) & 0177777) : Computer.BUS_ERROR;
+        if (indexValue != Computer.BUS_ERROR) {
+            // Read value of register
+            int registerValue = cpu.readRegister(false, register);
+            if (register == Cpu.PC) {
+                // Take into account PC postincrementing after index value reading
+                // for relative deferred addressing mode (code 77)
+                registerValue += 2;
+            }
+            address = cpu.readMemory(false, (registerValue + (short) indexValue) & 0177777);
+        }
+        return address;
     }
 
 }

@@ -36,6 +36,11 @@ public class SobOpcode extends BaseOpcode {
     }
 
     @Override
+    public int getOpcode() {
+        return OPCODE;
+    }
+
+    @Override
     public void decode(int instructionToDecode) {
         super.decode(instructionToDecode);
         this.branchOffset = instructionToDecode & 077;
