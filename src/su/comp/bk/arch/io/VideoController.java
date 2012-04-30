@@ -37,19 +37,13 @@ public class VideoController implements Device {
     private final static int EXTMEM_CONTROL_BIT = 01000;
 
     private final static int SCREEN_WIDTH_BW = 512;
-    private final static int SCREEN_WIDTH_COLOR = 256;
     private final static int SCREEN_HEIGHT_FULL = 256;
     private final static int SCREEN_HEIGHT_EXTMEM = 64;
     private final static int SCREEN_SCANLINE_LENGTH = 040;
     private final static int SCREEN_BPP_BW = 1;
     private final static int SCREEN_BPW_BW = Short.SIZE / SCREEN_BPP_BW;
-    private final static int SCREEN_BPP_COLOR = 2;
-    private final static int SCREEN_PPW_COLOR = Short.SIZE / SCREEN_BPP_COLOR;
 
-    private final static int PIXEL_BITMASK_BW = 1;
-    private final static int PIXEL_BITMASK_COLOR = 3;
-
-    private final static int[] PIXEL_TAB_COLOR = { Color.BLACK, Color.BLUE, Color.GREEN, Color.RED };
+    private final static int[] PIXEL_TAB_BW = new int[8 * 256];
 
     private final static int[] addresses = { CONTROL_REGISTER_ADDRESS };
 
@@ -58,6 +52,16 @@ public class VideoController implements Device {
     private final RandomAccessMemory videoMemory;
 
     private final Bitmap videoBuffer;
+
+    static {
+        int pixelTabIdx = 0;
+        for (int videoBufferByte = 0; videoBufferByte < 256; videoBufferByte++) {
+            for (int videoBufferBytePixel = 0; videoBufferBytePixel < 8; videoBufferBytePixel++) {
+                PIXEL_TAB_BW[pixelTabIdx++] = (videoBufferByte & (1 << videoBufferBytePixel)) != 0
+                        ? Color.WHITE : Color.BLACK;
+            }
+        }
+    }
 
     public VideoController(RandomAccessMemory videoMemory) {
         this.videoMemory = videoMemory;
@@ -79,17 +83,16 @@ public class VideoController implements Device {
         int videoBufferY;
         for (int videoDataIdx = videoDataOffset; videoDataIdx < videoData.length;
                 videoDataIdx++) {
-            int videoDataWord = videoData[videoDataIdx] & 0177777;
-            videoBufferX = (videoDataIdx % SCREEN_SCANLINE_LENGTH) * SCREEN_BPW_BW;
-            videoBufferY = (videoDataIdx / SCREEN_SCANLINE_LENGTH - scrollShift)
-                    & (SCREEN_HEIGHT_FULL - 1);
-            while (videoDataWord != 0) {
-                int pixelColorIdx = videoDataWord & PIXEL_BITMASK_BW;
-                if (pixelColorIdx > 0) {
-                    videoBuffer.setPixel(videoBufferX, videoBufferY, Color.WHITE);
-                }
-                videoDataWord >>>= SCREEN_BPP_BW;
-                videoBufferX++;
+            int videoDataWord = videoData[videoDataIdx];
+            if (videoDataWord != 0) {
+                videoBufferX = (videoDataIdx % SCREEN_SCANLINE_LENGTH) * SCREEN_BPW_BW;
+                videoBufferY = (videoDataIdx / SCREEN_SCANLINE_LENGTH - scrollShift)
+                        & (SCREEN_HEIGHT_FULL - 1);
+                videoBuffer.setPixels(PIXEL_TAB_BW, (videoDataWord & 0377) << 3,
+                        SCREEN_WIDTH_BW, videoBufferX, videoBufferY, 8, 1);
+                videoBufferX += 8;
+                videoBuffer.setPixels(PIXEL_TAB_BW, ((videoDataWord >> 8) & 0377) << 3,
+                        SCREEN_WIDTH_BW, videoBufferX, videoBufferY, 8, 1);
             }
         }
         return videoBuffer;
