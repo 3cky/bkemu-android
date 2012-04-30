@@ -61,7 +61,7 @@ public class VideoController implements Device {
 
     public VideoController(RandomAccessMemory videoMemory) {
         this.videoMemory = videoMemory;
-        this.videoBuffer = Bitmap.createBitmap(SCREEN_WIDTH_BW, SCREEN_HEIGHT_FULL * 2,
+        this.videoBuffer = Bitmap.createBitmap(SCREEN_WIDTH_BW, SCREEN_HEIGHT_FULL,
                 Bitmap.Config.ARGB_8888);
     }
 
@@ -81,13 +81,12 @@ public class VideoController implements Device {
                 videoDataIdx++) {
             int videoDataWord = videoData[videoDataIdx] & 0177777;
             videoBufferX = (videoDataIdx % SCREEN_SCANLINE_LENGTH) * SCREEN_BPW_BW;
-            videoBufferY = ((videoDataIdx / SCREEN_SCANLINE_LENGTH - scrollShift)
-                    & (SCREEN_HEIGHT_FULL - 1)) << 1;
+            videoBufferY = (videoDataIdx / SCREEN_SCANLINE_LENGTH - scrollShift)
+                    & (SCREEN_HEIGHT_FULL - 1);
             while (videoDataWord != 0) {
                 int pixelColorIdx = videoDataWord & PIXEL_BITMASK_BW;
                 if (pixelColorIdx > 0) {
                     videoBuffer.setPixel(videoBufferX, videoBufferY, Color.WHITE);
-                    videoBuffer.setPixel(videoBufferX, videoBufferY + 1, Color.WHITE);
                 }
                 videoDataWord >>>= SCREEN_BPP_BW;
                 videoBufferX++;

@@ -42,7 +42,7 @@ import android.widget.TextView;
 public class BkEmuView extends SurfaceView implements SurfaceHolder.Callback {
 
     // Rendering framerate, in frames per second
-    private static final int RENDERING_FRAMERATE = 5;
+    private static final int RENDERING_FRAMERATE = 25;
     // Rendering period, in milliseconds.
     // RENDERING_FRAMERATE = 1000 / RENDERING_PERIOD
     private static final int RENDERING_PERIOD = (1000 / RENDERING_FRAMERATE);
@@ -203,6 +203,7 @@ public class BkEmuView extends SurfaceView implements SurfaceHolder.Callback {
         Bitmap videoBufferBitmap = computer.getVideoController().getVideoBuffer();
         int bitmapWidth = videoBufferBitmap.getWidth();
         int bitmapHeight = videoBufferBitmap.getHeight();
+        float bitmapAspectRatio = (float) bitmapWidth / bitmapHeight;
         videoBufferBitmapTransformMatrix = new Matrix();
         float bitmapTranslateX;
         float bitmapTranslateY;
@@ -210,12 +211,12 @@ public class BkEmuView extends SurfaceView implements SurfaceHolder.Callback {
         float bitmapScaleY;
         if (viewWidth > viewHeight) {
             bitmapScaleY = (float) getHeight() / bitmapHeight;
-            bitmapScaleX = bitmapScaleY * COMPUTER_SCREEN_ASPECT_RATIO;
+            bitmapScaleX = bitmapScaleY * COMPUTER_SCREEN_ASPECT_RATIO / bitmapAspectRatio;
             bitmapTranslateX = (viewWidth - bitmapWidth * bitmapScaleX) / 2f;
             bitmapTranslateY = 0f;
         } else {
             bitmapScaleX = (float) getWidth() / bitmapWidth;
-            bitmapScaleY = bitmapScaleX / COMPUTER_SCREEN_ASPECT_RATIO;
+            bitmapScaleY = bitmapAspectRatio * bitmapScaleX / COMPUTER_SCREEN_ASPECT_RATIO;
             bitmapTranslateX = 0f;
             bitmapTranslateY = (viewHeight - bitmapHeight * bitmapScaleY) / 2f;
         }
