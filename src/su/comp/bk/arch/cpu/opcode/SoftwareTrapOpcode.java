@@ -22,21 +22,15 @@ package su.comp.bk.arch.cpu.opcode;
 import su.comp.bk.arch.cpu.Cpu;
 
 /**
- * Reset UNIBUS devices operation.
+ * Software trap operation.
  */
-public class ResetOpcode extends BaseOpcode {
+public abstract class SoftwareTrapOpcode extends BaseOpcode {
 
-    public final static int OPCODE = 05;
+    // Software trap instructions execution time (in CPU ticks)
+    private static final int EXECUTION_TIME = 68;
 
-    private static final int EXECUTION_TIME = 1160;
-
-    public ResetOpcode(Cpu cpu) {
+    public SoftwareTrapOpcode(Cpu cpu) {
         super(cpu);
-    }
-
-    @Override
-    public int getOpcode() {
-        return OPCODE;
     }
 
     @Override
@@ -46,7 +40,12 @@ public class ResetOpcode extends BaseOpcode {
 
     @Override
     public void execute() {
-        getCpu().resetDevices();
+        getCpu().processTrap(getTrapVectorAddress(), true);
     }
+
+    /**
+     * Get software trap vector address.
+     */
+    protected abstract int getTrapVectorAddress();
 
 }

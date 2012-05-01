@@ -179,6 +179,18 @@ public class Cpu {
     // Registers (R0-R7)
     private final short[] registers = new short[8];
 
+    // Reset time (in CPU ticks)
+    private final static int RESET_TIME = 1024000;
+
+    // Reserved instruction decode time (in CPU ticks)
+    private final static int RESERVED_OPCODE_DECODE_TIME = 144;
+
+    // Bus error timeout (in CPU ticks)
+    private final static int BUS_ERROR_TIMEOUT = 64;
+
+    // CPU time (in clock ticks)
+    private long time;
+
     public Cpu(Computer computer) {
         this.computer = computer;
         initializeAddressingModes();
@@ -308,6 +320,14 @@ public class Cpu {
 
     private void addAddressingMode(AddressingMode addressingMode) {
         this.addressingModes[addressingMode.getCode()] = addressingMode;
+    }
+
+    /**
+     * Get CPU time (in clock ticks).
+     * @return CPU time
+     */
+    public long getTime() {
+        return time;
     }
 
     /**
@@ -730,6 +750,7 @@ public class Cpu {
         } else {
             // FIXME Deal with bus error while read startup address
         }
+        time += RESET_TIME;
     }
 
     /**
@@ -779,11 +800,13 @@ public class Cpu {
             if (processTrap(TRAP_VECTOR_BUS_ERROR, true)) {
                 clearBusError();
             }
+            time += BUS_ERROR_TIMEOUT;
             // TODO double bus error handling
         } else if (isReservedOpcodeFetched()) {
             // Reserved opcode handling
             clearReservedOpcodeFetched();
             processTrap(TRAP_VECTOR_RESERVED_OPCODE, true);
+            time += RESERVED_OPCODE_DECODE_TIME;
         } else if (isPswFlagSet(PSW_FLAG_T) && !isInterruptWaitMode()) {
             // Trace bit handling (if not in WAIT mode)
             if (!isDeferredTraceTrap()) {
@@ -791,6 +814,9 @@ public class Cpu {
             }
         }
         // TODO handle hardware interrupts
+        if (isInterruptWaitMode()) {
+            time += Computer.SYNC_UPTIME_THRESHOLD; // FIXME
+        }
     }
 
     /**
@@ -803,6 +829,7 @@ public class Cpu {
             if (instructionOpcode != null) {
                 instructionOpcode.decode(instruction);
                 instructionOpcode.execute();
+                time += instructionOpcode.getExecutionTime();
                 // Clear deferred trace trap flag if instruction was executed
                 // while trace bit is set
                 if (isPswFlagSet(PSW_FLAG_T) && instructionOpcode

@@ -40,6 +40,12 @@ public interface Opcode {
     void decode(int instruction);
 
     /**
+     * Get decoded instruction execution time (in CPU ticks).
+     * @return decoded instruction execution time
+     */
+    int getExecutionTime();
+
+    /**
      * Execute decoded instruction.
      */
     void execute();

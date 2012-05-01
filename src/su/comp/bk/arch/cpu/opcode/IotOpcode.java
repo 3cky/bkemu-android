@@ -24,7 +24,7 @@ import su.comp.bk.arch.cpu.Cpu;
 /**
  * I/O trap operation.
  */
-public class IotOpcode extends BaseOpcode {
+public class IotOpcode extends SoftwareTrapOpcode {
 
     public final static int OPCODE = 4;
 
@@ -38,8 +38,8 @@ public class IotOpcode extends BaseOpcode {
     }
 
     @Override
-    public void execute() {
-        getCpu().processTrap(Cpu.TRAP_VECTOR_IOT, true);
+    protected int getTrapVectorAddress() {
+        return Cpu.TRAP_VECTOR_IOT;
     }
 
 }

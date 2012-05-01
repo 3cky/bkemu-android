@@ -28,6 +28,8 @@ public class WaitOpcode extends BaseOpcode {
 
     public final static int OPCODE = 1;
 
+    private static final int EXECUTION_TIME = 144;
+
     public WaitOpcode(Cpu cpu) {
         super(cpu);
     }
@@ -35,6 +37,11 @@ public class WaitOpcode extends BaseOpcode {
     @Override
     public int getOpcode() {
         return OPCODE;
+    }
+
+    @Override
+    public int getExecutionTime() {
+        return EXECUTION_TIME;
     }
 
     @Override

@@ -24,7 +24,7 @@ import su.comp.bk.arch.cpu.Cpu;
 /**
  * Emulator trap operation.
  */
-public class EmtOpcode extends BaseOpcode {
+public class EmtOpcode extends SoftwareTrapOpcode {
 
     public final static int OPCODE = 0104000;
 
@@ -38,8 +38,8 @@ public class EmtOpcode extends BaseOpcode {
     }
 
     @Override
-    public void execute() {
-        getCpu().processTrap(Cpu.TRAP_VECTOR_EMT, true);
+    protected int getTrapVectorAddress() {
+        return Cpu.TRAP_VECTOR_EMT;
     }
 
 }

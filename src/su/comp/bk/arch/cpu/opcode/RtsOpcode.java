@@ -29,6 +29,8 @@ public class RtsOpcode extends BaseOpcode {
 
     public final static int OPCODE = 0200;
 
+    private static final int EXECUTION_TIME = 40;
+
     private int linkageRegister;
 
     public RtsOpcode(Cpu cpu) {
@@ -38,6 +40,11 @@ public class RtsOpcode extends BaseOpcode {
     @Override
     public int getOpcode() {
         return OPCODE;
+    }
+
+    @Override
+    public int getExecutionTime() {
+        return EXECUTION_TIME;
     }
 
     private void decodeLinkageRegister() {

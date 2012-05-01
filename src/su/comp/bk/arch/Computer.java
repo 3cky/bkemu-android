@@ -52,6 +52,7 @@ public class Computer implements Runnable {
     // CPU implementation reference
     private final Cpu cpu;
 
+    // Video controller reference
     private VideoController videoController;
 
     /** I/O registers space start address */
@@ -64,6 +65,21 @@ public class Computer implements Runnable {
     private boolean isRunning = false;
 
     private Thread clockThread;
+
+    // BK0010 clock frequency (in kHz)
+    public final static int CLOCK_FREQUENCY_BK0010 = 3000;
+
+    // Computer clock frequency (in kHz)
+    private int clockFrequency;
+
+    // Uptime sync threshold (in nanoseconds)
+    public static final long SYNC_UPTIME_THRESHOLD = 1000000L;
+
+    // Last uptime sync timestamp (in nanoseconds, absolute value)
+    private long lastUptimeSyncTimestamp;
+
+    // Computer uptime (in nanoseconds)
+    private long uptime;
 
     public enum Configuration {
         BK_0010_BASIC
@@ -85,6 +101,7 @@ public class Computer implements Runnable {
         addDevice(new PeripheralPort());
         switch (config) {
             case BK_0010_BASIC:
+                setClockFrequency(CLOCK_FREQUENCY_BK0010);
                 addReadOnlyMemory(resources, R.raw.monit10, 0100000);
                 addReadOnlyMemory(resources, R.raw.basic10_1, 0120000);
                 addReadOnlyMemory(resources, R.raw.basic10_2, 0140000);
@@ -93,6 +110,22 @@ public class Computer implements Runnable {
             default:
                 break;
         }
+    }
+
+    /**
+     * Get clock frequency (in kHz)
+     * @return clock frequency
+     */
+    public int getClockFrequency() {
+        return clockFrequency;
+    }
+
+    /**
+     * Set clock frequency (in kHz)
+     * @param clockFrequency clock frequency to set
+     */
+    public void setClockFrequency(int clockFrequency) {
+        this.clockFrequency = clockFrequency;
     }
 
     private void addReadOnlyMemory(Resources resources, int romDataResId, int address)
@@ -117,8 +150,20 @@ public class Computer implements Runnable {
         return cpu;
     }
 
+    /**
+     * Get {@link VideoController} reference
+     * @return video controller reference
+     */
     public VideoController getVideoController() {
         return videoController;
+    }
+
+    /**
+     * Get this computer uptime (in nanoseconds)
+     * @return computer uptime (in nanoseconds)
+     */
+    public long getUptime() {
+        return uptime;
     }
 
     /**
@@ -275,17 +320,39 @@ public class Computer implements Runnable {
         }
     }
 
+    /**
+     * Get CPU time (converted from clock ticks to nanoseconds)
+     * @return CPU time in nanoseconds
+     */
+    private long getCpuTimeNanos() {
+        // cpuTimeNanos = cpuTime * 1000000 / clockFrequency
+        return cpu.getTime() * 1000000L / clockFrequency;
+    }
+
+    /**
+     * Sync CPU time with computer uptime.
+     */
+    private void doSyncUptime() {
+        long timestamp = System.nanoTime();
+        uptime += timestamp - lastUptimeSyncTimestamp;
+        lastUptimeSyncTimestamp = timestamp;
+        long uptimeCpuTimeDifference = getCpuTimeNanos() - uptime;
+        if (uptimeCpuTimeDifference >= SYNC_UPTIME_THRESHOLD) {
+            synchronized (this) {
+                try {
+                    this.wait(0L, (int) uptimeCpuTimeDifference);
+                } catch (InterruptedException e) {
+                }
+            }
+        }
+    }
+
     @Override
     public void run() {
         reset();
         while (isRunning) {
             cpu.executeNextOperation();
-            synchronized (this) {
-                try {
-                    this.wait(0L, 100000);
-                } catch (InterruptedException e) {
-                }
-            }
+            doSyncUptime();
         }
         Log.d("bkemu", "computer stopped");
     }

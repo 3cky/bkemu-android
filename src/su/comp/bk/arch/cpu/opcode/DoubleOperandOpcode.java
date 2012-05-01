@@ -19,9 +19,9 @@
  */
 package su.comp.bk.arch.cpu.opcode;
 
-import su.comp.bk.arch.Computer;
 import su.comp.bk.arch.cpu.Cpu;
 import su.comp.bk.arch.cpu.addressing.AddressingMode;
+import su.comp.bk.arch.cpu.addressing.RegisterAddressingMode;
 
 /**
  * Double operand operation codes base class.
@@ -77,6 +77,15 @@ public abstract class DoubleOperandOpcode extends BaseOpcode {
         decodeSrcOperandAddressingMode();
         decodeDestOperandRegister();
         decodeDestOperandAddressingMode();
+    }
+
+    @Override
+    public int getExecutionTime() {
+        int srcAddrCode = srcOperandAddressingMode.getCode();
+        int destAddrCode = destOperandAddressingMode.getCode();
+        return getBaseExecutionTime() + getAddressingTimeA(srcAddrCode) +
+                ((srcAddrCode == RegisterAddressingMode.CODE) ? getAddressingTimeB(destAddrCode)
+                        : getAddressingTimeAb(destAddrCode));
     }
 
 }

@@ -72,6 +72,11 @@ public class ConditionCodeOpcodes extends ZeroOperandOpcode {
     }
 
     @Override
+    public int getExecutionTime() {
+        return getBaseExecutionTime();
+    }
+
+    @Override
     public void execute() {
         int instruction = getInstruction();
         int psw = getCpu().getPswState();

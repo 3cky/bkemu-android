@@ -40,6 +40,12 @@ public class XorOpcode extends DoubleOperandOpcode {
     }
 
     @Override
+    public int getExecutionTime() {
+        return getBaseExecutionTime() + getAddressingTimeA2(
+                getDestOperandAddressingMode().getCode());
+    }
+
+    @Override
     public void execute() {
         Cpu cpu = getCpu();
         // Read source value from register

@@ -31,6 +31,8 @@ public class MarkOpcode extends BaseOpcode {
 
     public final static int OPCODE = 06400;
 
+    private static final int EXECUTION_TIME = 36;
+
     public MarkOpcode(Cpu cpu) {
         super(cpu);
     }
@@ -38,6 +40,11 @@ public class MarkOpcode extends BaseOpcode {
     @Override
     public int getOpcode() {
         return OPCODE;
+    }
+
+    @Override
+    public int getExecutionTime() {
+        return EXECUTION_TIME;
     }
 
     @Override

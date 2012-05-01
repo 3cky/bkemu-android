@@ -28,6 +28,8 @@ public class RtiOpcode extends BaseOpcode {
 
     public final static int OPCODE = 2;
 
+    private static final int EXECUTION_TIME = 40;
+
     public RtiOpcode(Cpu cpu) {
         super(cpu);
     }
@@ -35,6 +37,11 @@ public class RtiOpcode extends BaseOpcode {
     @Override
     public int getOpcode() {
         return OPCODE;
+    }
+
+    @Override
+    public int getExecutionTime() {
+        return EXECUTION_TIME;
     }
 
     @Override

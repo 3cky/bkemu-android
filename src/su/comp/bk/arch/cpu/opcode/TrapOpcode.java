@@ -24,7 +24,7 @@ import su.comp.bk.arch.cpu.Cpu;
 /**
  * TRAP operation.
  */
-public class TrapOpcode extends BaseOpcode {
+public class TrapOpcode extends SoftwareTrapOpcode {
 
     public final static int OPCODE = 0104400;
 
@@ -38,8 +38,8 @@ public class TrapOpcode extends BaseOpcode {
     }
 
     @Override
-    public void execute() {
-        getCpu().processTrap(Cpu.TRAP_VECTOR_TRAP, true);
+    protected int getTrapVectorAddress() {
+        return Cpu.TRAP_VECTOR_TRAP;
     }
 
 }

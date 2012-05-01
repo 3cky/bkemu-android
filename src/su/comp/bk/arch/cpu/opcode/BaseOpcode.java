@@ -26,6 +26,18 @@ import su.comp.bk.arch.cpu.Cpu;
  */
 public abstract class BaseOpcode implements Opcode {
 
+    // Instruction base execution time (in CPU ticks)
+    private static final int BASE_EXECUTION_TIME = 12;
+
+    // Addressing times for source operand by addressing code
+    private static final int[] ADDRESSING_TIME_A = { 0, 12, 12, 20, 12, 20, 20, 28 };
+    // Addressing times for destination operand by addressing code
+    private static final int[] ADDRESSING_TIME_B = { 0, 20, 20, 32, 20, 32, 32, 40 };
+    // Addressing times for operand which is both source and destination by addressing code
+    private static final int[] ADDRESSING_TIME_AB = { 0, 16, 16, 24, 16, 24, 24, 32 };
+    // Addressing times for unchanged destination operand by addressing code
+    private static final int[] ADDRESSING_TIME_A2 = { 0, 20, 20, 28, 20, 28, 28, 36 };
+
     private final Cpu cpu;
 
     private int instruction;
@@ -49,6 +61,26 @@ public abstract class BaseOpcode implements Opcode {
 
     protected int getInstruction() {
         return instruction;
+    }
+
+    protected static int getBaseExecutionTime() {
+        return BASE_EXECUTION_TIME;
+    }
+
+    protected static int getAddressingTimeA(int addressingModeCode) {
+        return ADDRESSING_TIME_A[addressingModeCode];
+    }
+
+    protected static int getAddressingTimeB(int addressingModeCode) {
+        return ADDRESSING_TIME_B[addressingModeCode];
+    }
+
+    protected static int getAddressingTimeAb(int addressingModeCode) {
+        return ADDRESSING_TIME_AB[addressingModeCode];
+    }
+
+    protected static int getAddressingTimeA2(int addressingModeCode) {
+        return ADDRESSING_TIME_A2[addressingModeCode];
     }
 
     @Override

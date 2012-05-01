@@ -58,6 +58,11 @@ public abstract class SingleOperandOpcode extends BaseOpcode {
     }
 
     @Override
+    public int getExecutionTime() {
+        return getBaseExecutionTime() + getAddressingTimeAb(operandAddressingMode.getCode());
+    }
+
+    @Override
     public void execute() {
         boolean isByteModeOperation = isByteModeOperation();
         operandAddressingMode.preAddressingAction(isByteModeOperation, operandRegister);

@@ -26,8 +26,16 @@ import su.comp.bk.arch.cpu.Cpu;
  */
 public abstract class BranchOpcode extends BaseOpcode {
 
+    // Branch instructions execution time (in CPU ticks)
+    private static final int EXECUTION_TIME = 16;
+
     public BranchOpcode(Cpu cpu) {
         super(cpu);
+    }
+
+    @Override
+    public int getExecutionTime() {
+        return EXECUTION_TIME;
     }
 
     @Override

@@ -40,6 +40,12 @@ public class TstOpcode extends SingleOperandOpcode {
     }
 
     @Override
+    public int getExecutionTime() {
+        return getBaseExecutionTime() + getAddressingTimeA(
+                getOperandAddressingMode().getCode());
+    }
+
+    @Override
     protected void executeSingleOperand(boolean isByteMode, int singleOperandRegister,
             AddressingMode singleOperandAddressingMode) {
         Cpu cpu = getCpu();

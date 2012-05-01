@@ -28,6 +28,8 @@ public class HaltOpcode extends BaseOpcode {
 
     public final static int OPCODE = 0;
 
+    private static final int EXECUTION_TIME = 144;
+
     public HaltOpcode(Cpu cpu) {
         super(cpu);
     }
@@ -35,6 +37,11 @@ public class HaltOpcode extends BaseOpcode {
     @Override
     public int getOpcode() {
         return OPCODE;
+    }
+
+    @Override
+    public int getExecutionTime() {
+        return EXECUTION_TIME;
     }
 
     @Override

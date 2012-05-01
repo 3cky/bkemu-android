@@ -28,6 +28,8 @@ public class SobOpcode extends BaseOpcode {
 
     public final static int OPCODE = 077000;
 
+    private static final int EXECUTION_TIME = 20;
+
     private int branchOffset;
     private int subtractRegister;
 
@@ -38,6 +40,11 @@ public class SobOpcode extends BaseOpcode {
     @Override
     public int getOpcode() {
         return OPCODE;
+    }
+
+    @Override
+    public int getExecutionTime() {
+        return EXECUTION_TIME;
     }
 
     @Override

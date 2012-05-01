@@ -22,6 +22,7 @@ package su.comp.bk.arch.cpu.opcode;
 import su.comp.bk.arch.Computer;
 import su.comp.bk.arch.cpu.Cpu;
 import su.comp.bk.arch.cpu.addressing.AddressingMode;
+import su.comp.bk.arch.cpu.addressing.RegisterAddressingMode;
 
 /**
  * Bit test operation.
@@ -37,6 +38,15 @@ public class BitOpcode extends DoubleOperandOpcode {
     @Override
     public int getOpcode() {
         return OPCODE;
+    }
+
+    @Override
+    public int getExecutionTime() {
+        int srcAddrCode = getSrcOperandAddressingMode().getCode();
+        int destAddrCode = getDestOperandAddressingMode().getCode();
+        return getBaseExecutionTime() + getAddressingTimeA(srcAddrCode) +
+                ((srcAddrCode == RegisterAddressingMode.CODE) ? getAddressingTimeA2(destAddrCode)
+                        : getAddressingTimeA(destAddrCode));
     }
 
     @Override

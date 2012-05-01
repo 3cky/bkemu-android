@@ -30,6 +30,8 @@ public class JsrOpcode extends BaseOpcode {
 
     public final static int OPCODE = 04000;
 
+    private static final int[] ADDRESSING_TIME = { 0, 32, 32, 40, 32, 40, 40, 48 };
+
     private int linkageRegister;
     private int addressingRegister;
     private AddressingMode addressingMode;
@@ -61,6 +63,11 @@ public class JsrOpcode extends BaseOpcode {
         decodeAddressingRegister();
         decodeAddressingMode();
         decodeLinkageRegister();
+    }
+
+    @Override
+    public int getExecutionTime() {
+        return getBaseExecutionTime() + ADDRESSING_TIME[addressingMode.getCode()];
     }
 
     @Override

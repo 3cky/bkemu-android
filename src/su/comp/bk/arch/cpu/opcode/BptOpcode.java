@@ -24,7 +24,7 @@ import su.comp.bk.arch.cpu.Cpu;
 /**
  * Breakpoint trap operation.
  */
-public class BptOpcode extends BaseOpcode {
+public class BptOpcode extends SoftwareTrapOpcode {
 
     public final static int OPCODE = 3;
 
@@ -38,8 +38,8 @@ public class BptOpcode extends BaseOpcode {
     }
 
     @Override
-    public void execute() {
-        getCpu().processTrap(Cpu.TRAP_VECTOR_BPT, true);
+    protected int getTrapVectorAddress() {
+        return Cpu.TRAP_VECTOR_BPT;
     }
 
 }

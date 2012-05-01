@@ -58,6 +58,11 @@ public class JmpOpcode extends BaseOpcode {
     }
 
     @Override
+    public int getExecutionTime() {
+        return getBaseExecutionTime() + getAddressingTimeA2(addressingMode.getCode());
+    }
+
+    @Override
     public void execute() {
         addressingMode.preAddressingAction(false, addressingRegister);
         int jumpAddress = addressingMode.getAddress(addressingRegister);
