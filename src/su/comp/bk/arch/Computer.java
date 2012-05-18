@@ -43,6 +43,8 @@ import su.comp.bk.arch.memory.ReadOnlyMemory;
  */
 public class Computer implements Runnable {
 
+    private static final String TAG = Computer.class.getName();
+
     /** Bus error constant */
     public final static int BUS_ERROR = -1;
 
@@ -296,7 +298,7 @@ public class Computer implements Runnable {
             this.clockThread = new Thread(this, "ComputerClockThread");
             isRunning = true;
             clockThread.start();
-            Log.d("bkemu", "computer started");
+            Log.d(TAG, "computer started");
         } else {
             throw new IllegalStateException("Computer is already running!");
         }
@@ -307,7 +309,7 @@ public class Computer implements Runnable {
      */
     public void stop() {
         if (isRunning) {
-            Log.d("bkemu", "stopping computer");
+            Log.d(TAG, "stopping computer");
             isRunning = false;
             while (clockThread.isAlive()) {
                 try {
@@ -354,7 +356,7 @@ public class Computer implements Runnable {
             cpu.executeNextOperation();
             doSyncUptime();
         }
-        Log.d("bkemu", "computer stopped");
+        Log.d(TAG, "computer stopped");
     }
 
 }

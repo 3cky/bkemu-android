@@ -41,6 +41,8 @@ import android.widget.TextView;
  */
 public class BkEmuView extends SurfaceView implements SurfaceHolder.Callback {
 
+    private static final String TAG = BkEmuView.class.getName();
+
     // Rendering framerate, in frames per second
     private static final int RENDERING_FRAMERATE = 25;
     // Rendering period, in milliseconds.
@@ -237,7 +239,7 @@ public class BkEmuView extends SurfaceView implements SurfaceHolder.Callback {
 	 */
 	@Override
 	public void surfaceCreated(SurfaceHolder holder) {
-	    Log.d("bkemu", "surface created");
+	    Log.d(TAG, "surface created");
 	    // Update emulator screen bitmap scale matrix
 	    updateVideoBufferBitmapTransformMatrix();
         // Get FPS indicator resources
@@ -254,7 +256,7 @@ public class BkEmuView extends SurfaceView implements SurfaceHolder.Callback {
 	 */
 	@Override
 	public void surfaceDestroyed(SurfaceHolder holder) {
-        Log.d("bkemu", "surface destroyed");
+        Log.d(TAG, "surface destroyed");
         this.computer.stop();
 		this.renderingThread.stopRendering();
 		while (renderingThread.isAlive()) {
@@ -263,7 +265,7 @@ public class BkEmuView extends SurfaceView implements SurfaceHolder.Callback {
 			} catch (InterruptedException e) {
 			}
 		}
-        Log.d("bkemu", "rendering stopped");
+        Log.d(TAG, "rendering stopped");
 	}
 
 }

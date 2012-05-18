@@ -91,6 +91,8 @@ import su.comp.bk.arch.cpu.opcode.XorOpcode;
  */
 public class Cpu {
 
+    private static final String TAG = Cpu.class.getName();
+
     /** SEL1 I/O register address */
     public final static int REG_SEL1 = 0177716;
     /** SEL2 I/O register address */
@@ -589,7 +591,7 @@ public class Cpu {
      * or <false> if bus error happens while vector loading
      */
     public boolean processTrap(int trapVectorAddress, boolean pushReturnState) {
-        Log.d("bkemu", "TRAP " + Integer.toOctalString(trapVectorAddress) +
+        Log.d(TAG, "TRAP " + Integer.toOctalString(trapVectorAddress) +
                 ", PC: " + Integer.toOctalString(readRegister(false, PC)));
         boolean isVectorLoaded = false;
         if (!pushReturnState || (push(getPswState()) && push(readRegister(false, PC)))) {
@@ -837,7 +839,7 @@ public class Cpu {
                     clearDeferredTraceTrap();
                 }
             } else {
-                Log.e("bkemu", "fetched unknown instruction: " + Integer.toOctalString(instruction)
+                Log.d(TAG, "fetched unknown instruction: " + Integer.toOctalString(instruction)
                         + ", PC: " + Integer.toOctalString(readRegister(false, PC)));
                 setReservedOpcodeFetched();
             }
