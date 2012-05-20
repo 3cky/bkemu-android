@@ -111,20 +111,19 @@ public class BkEmuView extends SurfaceView implements SurfaceHolder.Callback {
 			while (isRunning) {
 				timeStamp = System.currentTimeMillis();
 				// Repaint surface
-	            canvas = null;
-	            try {
-	            	canvas = surfaceHolder.lockCanvas(null);
-	            	synchronized (surfaceHolder) {
-	            		canvas.drawColor(Color.BLACK);
-	            		if (computer != null) {
-	            		    canvas.drawBitmap(videoController.renderVideoBuffer(),
-	            		            videoBufferBitmapTransformMatrix, null);
-	            		}
-	            	}
-	            } finally {
-	            	if (canvas != null) {
-	            		surfaceHolder.unlockCanvasAndPost(canvas);
-	            	}
+	            canvas = surfaceHolder.lockCanvas(null);
+	            if (canvas != null) {
+	                try {
+	                    synchronized (surfaceHolder) {
+	                        canvas.drawColor(Color.BLACK);
+	                        if (computer != null) {
+	                            canvas.drawBitmap(videoController.renderVideoBuffer(),
+	                                    videoBufferBitmapTransformMatrix, null);
+	                        }
+	                    }
+	                } finally {
+	                    surfaceHolder.unlockCanvasAndPost(canvas);
+	                }
 	            }
 	            long currentTime = System.currentTimeMillis();
 	            updateFpsCounters(currentTime);
