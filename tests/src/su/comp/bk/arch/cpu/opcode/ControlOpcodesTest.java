@@ -21,10 +21,14 @@ package su.comp.bk.arch.cpu.opcode;
 
 import static org.junit.Assert.*;
 
+import static org.easymock.EasyMock.expect;
+import static org.easymock.EasyMock.anyObject;
+
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.powermock.api.easymock.PowerMock;
+import static org.powermock.api.easymock.PowerMock.*;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 
@@ -47,8 +51,16 @@ public class ControlOpcodesTest {
 
     @Before
     public void setUp() throws Exception {
+        mockStatic(Log.class);
+        expect(Log.d(anyObject(String.class), anyObject(String.class))).andReturn(0).anyTimes();
+        replay(Log.class);
         computer = new Computer();
         computer.addDevice(new Sel1RegisterSystemBits(0100000));
+    }
+
+    @After
+    public void tearDown() throws Exception {
+        verifyAll();
     }
 
     @Test
@@ -76,7 +88,6 @@ public class ControlOpcodesTest {
 
     @Test
     public void testHaltInstructionExecute() {
-        PowerMock.mockStatic(Log.class);
         computer.addMemory(new ReadOnlyMemory(0100000, new short[] {
                 HaltOpcode.OPCODE,                   // 0100000: HALT
                 (short) 0100010,                     // 0100002: <vector - PC>
