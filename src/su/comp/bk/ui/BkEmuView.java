@@ -30,6 +30,8 @@ import android.graphics.Matrix;
 import android.os.Handler;
 import android.util.AttributeSet;
 import android.util.Log;
+import android.view.GestureDetector;
+import android.view.MotionEvent;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.widget.FrameLayout;
@@ -83,9 +85,26 @@ public class BkEmuView extends SurfaceView implements SurfaceHolder.Callback {
     // UI surface render thread
     private BkEmuViewRenderingThread renderingThread;
 
+    private GestureDetector gestureDetector;
+
     protected Matrix videoBufferBitmapTransformMatrix;
 
     protected Computer computer;
+
+    /*
+     * Gesture listener
+     */
+    class GestureListener extends GestureDetector.SimpleOnGestureListener {
+        @Override
+        public boolean onDown(MotionEvent e) {
+            return true;
+        }
+        @Override
+        public boolean onDoubleTap(MotionEvent e) {
+            // TODO Handle double tap
+            return true;
+        }
+    }
 
 	/*
 	 * Surface view rendering thread
@@ -161,6 +180,7 @@ public class BkEmuView extends SurfaceView implements SurfaceHolder.Callback {
 
 	public BkEmuView(Context context, AttributeSet attrs) {
         super(context, attrs);
+        gestureDetector = new GestureDetector(context, new GestureListener());
         this.uiUpdateHandler = new Handler();
         // Set surface events listener
         SurfaceHolder surfaceHolder = getHolder();
@@ -198,9 +218,8 @@ public class BkEmuView extends SurfaceView implements SurfaceHolder.Callback {
         fpsCountersUpdateTimestamp = currentTime;
     }
 
-    private void updateVideoBufferBitmapTransformMatrix() {
-        int viewWidth = getWidth();
-        int viewHeight = getHeight();
+    private void updateVideoBufferBitmapTransformMatrix(int viewWidth, int viewHeight) {
+        Log.d(TAG, "update transform matrix, w:" + viewWidth + ", h:" + viewHeight);
         Bitmap videoBufferBitmap = computer.getVideoController().getVideoBuffer();
         int bitmapWidth = videoBufferBitmap.getWidth();
         int bitmapHeight = videoBufferBitmap.getHeight();
@@ -210,17 +229,18 @@ public class BkEmuView extends SurfaceView implements SurfaceHolder.Callback {
         float bitmapTranslateY;
         float bitmapScaleX;
         float bitmapScaleY;
-        if (viewWidth > viewHeight) {
-            bitmapScaleY = (float) getHeight() / bitmapHeight;
+        if (viewWidth > COMPUTER_SCREEN_ASPECT_RATIO * viewHeight) {
+            bitmapScaleY = (float) viewHeight / bitmapHeight;
             bitmapScaleX = bitmapScaleY * COMPUTER_SCREEN_ASPECT_RATIO / bitmapAspectRatio;
             bitmapTranslateX = (viewWidth - bitmapWidth * bitmapScaleX) / 2f;
             bitmapTranslateY = 0f;
         } else {
-            bitmapScaleX = (float) getWidth() / bitmapWidth;
+            bitmapScaleX = (float) viewWidth / bitmapWidth;
             bitmapScaleY = bitmapAspectRatio * bitmapScaleX / COMPUTER_SCREEN_ASPECT_RATIO;
             bitmapTranslateX = 0f;
-            bitmapTranslateY = (viewHeight - bitmapHeight * bitmapScaleY) / 2f;
+            bitmapTranslateY = 0f;
         }
+        Log.d(TAG, "scales x: " + bitmapScaleX + ", y: " + bitmapScaleY);
         videoBufferBitmapTransformMatrix.setScale(bitmapScaleX, bitmapScaleY);
         videoBufferBitmapTransformMatrix.postTranslate(bitmapTranslateX, bitmapTranslateY);
     }
@@ -230,7 +250,9 @@ public class BkEmuView extends SurfaceView implements SurfaceHolder.Callback {
 	 */
 	@Override
 	public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
-		// TODO Auto-generated method stub
+	    Log.d(TAG, "surface changed");
+        // Update emulator screen bitmap scale matrix
+        updateVideoBufferBitmapTransformMatrix(width, height);
 	}
 
 	/* (non-Javadoc)
@@ -240,7 +262,7 @@ public class BkEmuView extends SurfaceView implements SurfaceHolder.Callback {
 	public void surfaceCreated(SurfaceHolder holder) {
 	    Log.d(TAG, "surface created");
 	    // Update emulator screen bitmap scale matrix
-	    updateVideoBufferBitmapTransformMatrix();
+	    updateVideoBufferBitmapTransformMatrix(getWidth(), getHeight());
         // Get FPS indicator resources
         this.fpsIndicatorString = getContext().getString(R.string.fps_string);
         this.fpsIndicator = (TextView) ((FrameLayout) getParent())
@@ -266,5 +288,13 @@ public class BkEmuView extends SurfaceView implements SurfaceHolder.Callback {
 		}
         Log.d(TAG, "rendering stopped");
 	}
+
+    /* (non-Javadoc)
+     * @see android.view.View#onTouchEvent(android.view.MotionEvent)
+     */
+    @Override
+    public boolean onTouchEvent(MotionEvent event) {
+        return gestureDetector.onTouchEvent(event);
+    }
 
 }

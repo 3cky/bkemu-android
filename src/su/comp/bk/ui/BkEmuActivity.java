@@ -25,22 +25,27 @@ import java.io.IOException;
 import su.comp.bk.R;
 import su.comp.bk.arch.Computer;
 import android.app.Activity;
-import android.content.pm.ActivityInfo;
-import android.os.Build;
+import android.content.Context;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
+import android.view.inputmethod.InputMethodManager;
 
 /**
  * Main application activity.
  */
 public class BkEmuActivity extends Activity {
 
+    private static final String TAG = BkEmuActivity.class.getName();
+
     /** Called when the activity is first created. */
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setCompatibleOrientationMode();
         LayoutInflater layoutInflater = getLayoutInflater();
         View mainView = layoutInflater.inflate(R.layout.main, null);
         BkEmuView bkEmuView = (BkEmuView) mainView.findViewById(R.id.emu_view);
@@ -54,12 +59,27 @@ public class BkEmuActivity extends Activity {
         setContentView(mainView);
     }
 
-	private void setCompatibleOrientationMode() {
-		if (Build.VERSION.SDK_INT < Build.VERSION_CODES.GINGERBREAD) {
-        	setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
-        } else {
-        	setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
-        }
-	}
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        MenuInflater inflater = getMenuInflater();
+        inflater.inflate(R.menu.main, menu);
+        return true;
+    }
 
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+            case R.id.keyboard:
+                toggleOnScreenKeyboard();
+                return true;
+            default:
+                return super.onOptionsItemSelected(item);
+        }
+    }
+
+    private void toggleOnScreenKeyboard() {
+        Log.d(TAG, "Toggling on-screen keyboard");
+        InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+        imm.toggleSoftInput(InputMethodManager.SHOW_FORCED, 0);
+    }
 }
