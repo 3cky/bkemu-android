@@ -66,6 +66,8 @@ public class Computer implements Runnable {
 
     private boolean isRunning = false;
 
+    private boolean isPaused = false;
+
     private Thread clockThread;
 
     // BK0010 clock frequency (in kHz)
@@ -295,6 +297,7 @@ public class Computer implements Runnable {
      */
     public synchronized void start() {
         if (!isRunning) {
+            Log.d(TAG, "starting computer");
             this.clockThread = new Thread(this, "ComputerClockThread");
             isRunning = true;
             clockThread.start();
@@ -310,7 +313,10 @@ public class Computer implements Runnable {
     public void stop() {
         if (isRunning) {
             Log.d(TAG, "stopping computer");
-            isRunning = false;
+            synchronized (this) {
+                isRunning = false;
+                this.notifyAll();
+            }
             while (clockThread.isAlive()) {
                 try {
                     this.clockThread.join();
@@ -323,7 +329,27 @@ public class Computer implements Runnable {
     }
 
     /**
-     * Get CPU time (converted from clock ticks to nanoseconds)
+     * Pause computer.
+     */
+    public synchronized void pause() {
+        isPaused = true;
+        Log.d(TAG, "computer paused");
+    }
+
+    /**
+     * Resume computer.
+     */
+    public synchronized void resume() {
+        lastUptimeSyncTimestamp = System.nanoTime();
+        if (isPaused) {
+            isPaused = false;
+            this.notifyAll();
+            Log.d(TAG, "computer resumed");
+        }
+    }
+
+    /**
+     * Get CPU time (converted from clock ticks to nanoseconds).
      * @return CPU time in nanoseconds
      */
     private long getCpuTimeNanos() {
@@ -339,10 +365,10 @@ public class Computer implements Runnable {
         uptime += timestamp - lastUptimeSyncTimestamp;
         lastUptimeSyncTimestamp = timestamp;
         long uptimeCpuTimeDifference = getCpuTimeNanos() - uptime;
-        if (uptimeCpuTimeDifference >= SYNC_UPTIME_THRESHOLD) {
-            synchronized (this) {
+        synchronized (this) {
+            if (isRunning && (isPaused || uptimeCpuTimeDifference >= SYNC_UPTIME_THRESHOLD)) {
                 try {
-                    this.wait(0L, (int) uptimeCpuTimeDifference);
+                    this.wait(0L, isPaused ? 0 : (int) uptimeCpuTimeDifference);
                 } catch (InterruptedException e) {
                 }
             }
@@ -351,7 +377,7 @@ public class Computer implements Runnable {
 
     @Override
     public void run() {
-        reset();
+        Log.d(TAG, "computer started");
         while (isRunning) {
             cpu.executeNextOperation();
             doSyncUptime();

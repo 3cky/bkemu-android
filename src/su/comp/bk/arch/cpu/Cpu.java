@@ -506,6 +506,7 @@ public class Cpu {
      * Set interrupt wait mode flag state.
      */
     public void setInterruptWaitMode() {
+        Log.d(TAG, "Entering WAIT mode, PC: " + Integer.toOctalString(readRegister(false, PC)));
         this.isInterruptWaitMode = true;
     }
 
@@ -566,6 +567,7 @@ public class Cpu {
      * Execute 1801VM1-specific halt mode entering sequence
      */
     public void enterHaltMode() {
+        Log.d(TAG, "Entering HALT mode, PC: " + Integer.toOctalString(readRegister(false, PC)));
         // Set bit 3 in SEL1 register
         int sel1 = readMemory(false, REG_SEL1);
         if (sel1 != Computer.BUS_ERROR) {

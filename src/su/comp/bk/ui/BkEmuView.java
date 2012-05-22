@@ -38,8 +38,7 @@ import android.widget.FrameLayout;
 import android.widget.TextView;
 
 /**
- * @author avm
- *
+ * Emulator screen view.
  */
 public class BkEmuView extends SurfaceView implements SurfaceHolder.Callback {
 
@@ -240,7 +239,6 @@ public class BkEmuView extends SurfaceView implements SurfaceHolder.Callback {
             bitmapTranslateX = 0f;
             bitmapTranslateY = 0f;
         }
-        Log.d(TAG, "scales x: " + bitmapScaleX + ", y: " + bitmapScaleY);
         videoBufferBitmapTransformMatrix.setScale(bitmapScaleX, bitmapScaleY);
         videoBufferBitmapTransformMatrix.postTranslate(bitmapTranslateX, bitmapTranslateY);
     }
@@ -269,7 +267,6 @@ public class BkEmuView extends SurfaceView implements SurfaceHolder.Callback {
         		.findViewById(R.id.fps_indicator);
 		this.renderingThread = new BkEmuViewRenderingThread(holder);
 		this.renderingThread.start();
-		this.computer.start();
 	}
 
 	/* (non-Javadoc)
@@ -278,7 +275,6 @@ public class BkEmuView extends SurfaceView implements SurfaceHolder.Callback {
 	@Override
 	public void surfaceDestroyed(SurfaceHolder holder) {
         Log.d(TAG, "surface destroyed");
-        this.computer.stop();
 		this.renderingThread.stopRendering();
 		while (renderingThread.isAlive()) {
 			try {

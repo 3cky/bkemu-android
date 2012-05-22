@@ -42,21 +42,70 @@ public class BkEmuActivity extends Activity {
 
     private static final String TAG = BkEmuActivity.class.getName();
 
+    private Computer computer;
+
     /** Called when the activity is first created. */
     @Override
     public void onCreate(Bundle savedInstanceState) {
+        Log.d(TAG, "onCreate(" + savedInstanceState + ")");
         super.onCreate(savedInstanceState);
         LayoutInflater layoutInflater = getLayoutInflater();
         View mainView = layoutInflater.inflate(R.layout.main, null);
         BkEmuView bkEmuView = (BkEmuView) mainView.findViewById(R.id.emu_view);
-        Computer computer = new Computer();
+        this.computer = new Computer();
         try {
-            computer.configure(getResources(), Computer.Configuration.BK_0010_BASIC);
+            this.computer.configure(getResources(), Computer.Configuration.BK_0010_BASIC);
+            this.computer.reset();
             bkEmuView.setComputer(computer);
         } catch (IOException e) {
             e.printStackTrace();
         }
         setContentView(mainView);
+    }
+
+    protected void onStart() {
+        Log.d(TAG, "onStart()");
+        this.computer.start();
+        super.onStart();
+    }
+
+    @Override
+    protected void onRestart() {
+        Log.d(TAG, "onRestart()");
+        super.onRestart();
+    }
+
+    @Override
+    protected void onResume() {
+        Log.d(TAG, "onResume()");
+        this.computer.resume();
+        super.onResume();
+    }
+
+    @Override
+    protected void onPause() {
+        Log.d(TAG, "onPause()");
+        this.computer.pause();
+        super.onPause();
+    }
+
+    @Override
+    protected void onStop() {
+        Log.d(TAG, "onStop()");
+        this.computer.stop();
+        super.onStop();
+    }
+
+    @Override
+    protected void onDestroy() {
+        Log.d(TAG, "onDestroy()");
+        super.onDestroy();
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        Log.d(TAG, "onSaveInstanceState()");
+        super.onSaveInstanceState(outState);
     }
 
     @Override
