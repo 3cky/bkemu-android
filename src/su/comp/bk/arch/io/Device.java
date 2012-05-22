@@ -30,11 +30,6 @@ public interface Device {
     int[] getAddresses();
 
     /**
-     * Handle hardware device reset.
-     */
-    void reset();
-
-    /**
      * Handle bus INIT signal (on hardware reset or RESET instruction).
      */
     void init();

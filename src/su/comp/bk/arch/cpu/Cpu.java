@@ -747,7 +747,7 @@ public class Cpu {
      * Reset processor state.
      */
     public void reset() {
-        resetDevices();
+        initDevices();
         int sel1RegisterValue = readMemory(false, REG_SEL1);
         if (sel1RegisterValue != Computer.BUS_ERROR) {
             writeRegister(false, PC, sel1RegisterValue & 0177400);
@@ -758,10 +758,10 @@ public class Cpu {
     }
 
     /**
-     * Reset computer devices.
+     * Initialize computer devices.
      */
-    public void resetDevices() {
-        computer.resetDevices();
+    public void initDevices() {
+        computer.initDevices();
         setPswState((short) 0340);
     }
 

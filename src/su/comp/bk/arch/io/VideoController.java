@@ -67,6 +67,7 @@ public class VideoController implements Device {
         this.videoMemory = videoMemory;
         this.videoBuffer = Bitmap.createBitmap(SCREEN_WIDTH_BW, SCREEN_HEIGHT_FULL,
                 Bitmap.Config.ARGB_8888);
+        writeScrollRegister(SCROLL_EXTMEM_VALUE);
     }
 
     public Bitmap getVideoBuffer() {
@@ -101,11 +102,6 @@ public class VideoController implements Device {
     @Override
     public int[] getAddresses() {
         return addresses;
-    }
-
-    @Override
-    public void reset() {
-        writeScrollRegister(SCROLL_EXTMEM_VALUE);
     }
 
     @Override

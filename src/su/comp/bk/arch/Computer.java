@@ -212,11 +212,11 @@ public class Computer implements Runnable {
     }
 
     /**
-     * Reset bus devices state (on power-on cycle or RESET opcode).
+     * Initialize bus devices state (on power-on cycle or RESET opcode).
      */
-    public void resetDevices() {
+    public void initDevices() {
         for (Device device: deviceList) {
-            device.reset();
+            device.init();
         }
     }
 

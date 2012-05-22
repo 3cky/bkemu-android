@@ -38,11 +38,6 @@ public class KeyboardController implements Device {
     }
 
     @Override
-    public void reset() {
-        // TODO
-    }
-
-    @Override
     public void init() {
         // TODO
     }

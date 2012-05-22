@@ -109,9 +109,6 @@ public class ControlOpcodesTest {
                 }
             }
             @Override
-            public void reset() {
-            }
-            @Override
             public int read(int address) {
                 if (address == Cpu.REG_HALT_PC) {
                     return regHaltPc;
@@ -132,9 +129,6 @@ public class ControlOpcodesTest {
             @Override
             public void write(boolean isByteMode, int address, int value) {
                 haltBitValue = value;
-            }
-            @Override
-            public void reset() {
             }
             @Override
             public int read(int address) {

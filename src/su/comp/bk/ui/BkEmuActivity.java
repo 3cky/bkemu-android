@@ -47,7 +47,7 @@ public class BkEmuActivity extends Activity {
     /** Called when the activity is first created. */
     @Override
     public void onCreate(Bundle savedInstanceState) {
-        Log.d(TAG, "onCreate(" + savedInstanceState + ")");
+        Log.d(TAG, "onCreate()");
         super.onCreate(savedInstanceState);
         LayoutInflater layoutInflater = getLayoutInflater();
         View mainView = layoutInflater.inflate(R.layout.main, null);

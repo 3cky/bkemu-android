@@ -46,7 +46,7 @@ public class ResetOpcode extends BaseOpcode {
 
     @Override
     public void execute() {
-        getCpu().resetDevices();
+        getCpu().initDevices();
     }
 
 }

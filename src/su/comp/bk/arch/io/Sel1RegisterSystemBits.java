@@ -45,11 +45,6 @@ public class Sel1RegisterSystemBits implements Device {
     }
 
     @Override
-    public void reset() {
-        init();
-    }
-
-    @Override
     public void init() {
         setWriteFlagState(false);
     }
