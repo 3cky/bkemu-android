@@ -147,6 +147,11 @@ public class Cpu {
     /** TRAP instruction trap vector address */
     public static final int TRAP_VECTOR_TRAP = 034;
 
+    // Vector interrupt (VIRQ) requested flag
+    private boolean isVirqRequested;
+    // Requested vector interrupt (VIRQ) address
+    private int virqAddress;
+
     // Bus error flag
     private boolean isBusError;
 
@@ -495,6 +500,38 @@ public class Cpu {
     }
 
     /**
+     * Request vector interrupt (VIRQ).
+     * @param address vector interrupt address
+     */
+    public synchronized void requestVirq(int address) {
+        this.isVirqRequested = true;
+        this.virqAddress = address;
+    }
+
+    /**
+     * Check is vector interrupt (VIRQ) requested.
+     * @return <code>true</code> if vector interrupt is requested, <code>false</code> if not
+     */
+    public boolean isVirqRequested() {
+        return this.isVirqRequested;
+    }
+
+    /**
+     * Clear pending vector interrupt (VIRQ) request.
+     */
+    public void clearVirqRequest() {
+        this.isVirqRequested = false;
+    }
+
+    /**
+     * Get pending vector interrupt (VIRQ) address.
+     * @return pending vector interrupt address
+     */
+    public synchronized int getVirqAddress() {
+        return virqAddress;
+    }
+
+    /**
      * Get interrupt wait mode flag state.
      * @return <code>true</code> if processor in interrupt wait mode, <code>false</code> otherwise
      */
@@ -816,8 +853,19 @@ public class Cpu {
             if (!isDeferredTraceTrap()) {
                 processTrap(TRAP_VECTOR_BPT, true);
             }
+        } else if (!isPswFlagSet(PSW_FLAG_P)) {
+            // Handle hardware interrupts if not masked
+            boolean isInterruptHandled = false;
+            // TODO Handle pending maskable radial requests (IRQ2,3)
+            // Check for pending vector interrupt request
+            if (isVirqRequested()) {
+                processTrap(getVirqAddress(), true);
+            }
+            // Leave WAIT mode if interrupt was handled
+            if (isInterruptHandled) {
+                clearInterruptWaitMode();
+            }
         }
-        // TODO handle hardware interrupts
         if (isInterruptWaitMode()) {
             time += Computer.SYNC_UPTIME_THRESHOLD; // FIXME
         }

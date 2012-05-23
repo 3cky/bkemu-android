@@ -23,9 +23,8 @@ import su.comp.bk.arch.memory.RandomAccessMemory;
 import android.graphics.Bitmap;
 import android.graphics.Color;
 
-
 /**
- * BK-0010 video output controller.
+ * BK-0010 video output controller (К1801ВП1-037).
  */
 public class VideoController implements Device {
 
@@ -45,7 +44,7 @@ public class VideoController implements Device {
 
     private final static int[] PIXEL_TAB_BW = new int[8 * 256];
 
-    private final static int[] addresses = { CONTROL_REGISTER_ADDRESS };
+    private final static int[] ADDRESSES = { CONTROL_REGISTER_ADDRESS };
 
     private int scrollRegister;
 
@@ -101,7 +100,7 @@ public class VideoController implements Device {
 
     @Override
     public int[] getAddresses() {
-        return addresses;
+        return ADDRESSES;
     }
 
     @Override

@@ -26,14 +26,14 @@ public class PeripheralPort implements Device {
 
     public final static int DATA_REGISTER_ADDRESS = 0177714;
 
-    private final static int[] addresses = { DATA_REGISTER_ADDRESS };
+    private final static int[] ADDRESSES = { DATA_REGISTER_ADDRESS };
 
     public PeripheralPort() {
     }
 
     @Override
     public int[] getAddresses() {
-        return addresses;
+        return ADDRESSES;
     }
 
     @Override

@@ -57,6 +57,9 @@ public class Computer implements Runnable {
     // Video controller reference
     private VideoController videoController;
 
+    // Keyboard controller reference
+    private KeyboardController keyboardController;
+
     /** I/O registers space start address */
     public final static int IO_REGISTERS_START_ADDRESS = 0177600;
     // I/O devices list
@@ -101,7 +104,8 @@ public class Computer implements Runnable {
         videoController = new VideoController(videoMemory);
         addDevice(videoController);
         addDevice(new Sel1RegisterSystemBits(0100000));
-        addDevice(new KeyboardController());
+        keyboardController = new KeyboardController(getCpu());
+        addDevice(keyboardController);
         addDevice(new PeripheralPort());
         switch (config) {
             case BK_0010_BASIC:
@@ -160,6 +164,14 @@ public class Computer implements Runnable {
      */
     public VideoController getVideoController() {
         return videoController;
+    }
+
+    /**
+     * Get {@link KeyboardController} reference
+     * @return keyboard controller reference
+     */
+    public KeyboardController getKeyboardController() {
+        return keyboardController;
     }
 
     /**
@@ -242,8 +254,8 @@ public class Computer implements Runnable {
             if (subdevices != null) {
                 readValue = 0;
                 for (Device subdevice: subdevices) {
-                    // Read subdevice status value in word mode
-                    int subdeviceState = subdevice.read(address);
+                    // Read subdevice state value in word mode
+                    int subdeviceState = subdevice.read(address & 0177776);
                     // For byte mode read and odd address - extract high byte
                     if (isByteMode && (address & 1) != 0) {
                         subdeviceState >>= 8;
@@ -301,7 +313,6 @@ public class Computer implements Runnable {
             this.clockThread = new Thread(this, "ComputerClockThread");
             isRunning = true;
             clockThread.start();
-            Log.d(TAG, "computer started");
         } else {
             throw new IllegalStateException("Computer is already running!");
         }
@@ -368,7 +379,13 @@ public class Computer implements Runnable {
         synchronized (this) {
             if (isRunning && (isPaused || uptimeCpuTimeDifference >= SYNC_UPTIME_THRESHOLD)) {
                 try {
-                    this.wait(0L, isPaused ? 0 : (int) uptimeCpuTimeDifference);
+                    if (isPaused) {
+                        this.wait();
+                    } else {
+                        long uptimeCpuTimeDifferenceMillis = uptimeCpuTimeDifference / 1000000L;
+                        int uptimeCpuTimeDifferenceNanos = (int) (uptimeCpuTimeDifference % 1000000L);
+                        this.wait(uptimeCpuTimeDifferenceMillis, uptimeCpuTimeDifferenceNanos);
+                    }
                 } catch (InterruptedException e) {
                 }
             }

@@ -28,6 +28,7 @@ import android.app.Activity;
 import android.content.Context;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -109,6 +110,18 @@ public class BkEmuActivity extends Activity {
     }
 
     @Override
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+        return this.computer.getKeyboardController().handleKeyCode(keyCode, true)
+                ? true : super.onKeyDown(keyCode, event);
+    }
+
+    @Override
+    public boolean onKeyUp(int keyCode, KeyEvent event) {
+        return this.computer.getKeyboardController().handleKeyCode(keyCode, false)
+                ? true : super.onKeyUp(keyCode, event);
+    }
+
+    @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         MenuInflater inflater = getMenuInflater();
         inflater.inflate(R.menu.main, menu);
@@ -127,7 +140,7 @@ public class BkEmuActivity extends Activity {
     }
 
     private void toggleOnScreenKeyboard() {
-        Log.d(TAG, "Toggling on-screen keyboard");
+        Log.d(TAG, "toggling on-screen keyboard");
         InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
         imm.toggleSoftInput(InputMethodManager.SHOW_FORCED, 0);
     }
