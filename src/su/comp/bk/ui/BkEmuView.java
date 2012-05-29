@@ -45,7 +45,7 @@ public class BkEmuView extends SurfaceView implements SurfaceHolder.Callback {
     private static final String TAG = BkEmuView.class.getName();
 
     // Rendering framerate, in frames per second
-    private static final int RENDERING_FRAMERATE = 25;
+    private static final int RENDERING_FRAMERATE = 15;
     // Rendering period, in milliseconds.
     // RENDERING_FRAMERATE = 1000 / RENDERING_PERIOD
     private static final int RENDERING_PERIOD = (1000 / RENDERING_FRAMERATE);
@@ -181,6 +181,9 @@ public class BkEmuView extends SurfaceView implements SurfaceHolder.Callback {
         super(context, attrs);
         gestureDetector = new GestureDetector(context, new GestureListener());
         this.uiUpdateHandler = new Handler();
+        // Enable focus grabbing by view
+        this.setFocusable(true);
+        this.setFocusableInTouchMode(true);
         // Set surface events listener
         SurfaceHolder surfaceHolder = getHolder();
         surfaceHolder.addCallback(this);
