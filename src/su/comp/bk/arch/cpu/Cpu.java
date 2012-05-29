@@ -147,6 +147,9 @@ public class Cpu {
     /** TRAP instruction trap vector address */
     public static final int TRAP_VECTOR_TRAP = 034;
 
+    // First radial interrupt (IRQ1) requested
+    private boolean isIrq1Requested;
+
     // Vector interrupt (VIRQ) requested flag
     private boolean isVirqRequested;
     // Requested vector interrupt (VIRQ) address
@@ -179,6 +182,10 @@ public class Cpu {
     public final static int PSW_FLAG_T = 020;
     /** PSW: Priority */
     public final static int PSW_FLAG_P = 0200;
+    /** PSW: Halt bit */
+    public final static int PSW_FLAG_H = 02000;
+    /** PSW: IRQ1 mask */
+    public final static int PSW_FLAG_M = 04000;
 
     // Processor Status Word (PSW)
     private short processorStatusWord;
@@ -500,6 +507,28 @@ public class Cpu {
     }
 
     /**
+     * Check first radial interrupt (IRQ1) is requested.
+     * @return <code>true</code> if IRQ1 requested, <code>false</code> otherwise
+     */
+    public boolean isIrq1Requested() {
+        return isIrq1Requested;
+    }
+
+    /**
+     * Request first radial interrupt (IRQ1).
+     */
+    public void requestIrq1() {
+        this.isIrq1Requested = true;
+    }
+
+    /**
+     * Clear pending first radial interrupt (IRQ1) request.
+     */
+    public void clearIrq1Request() {
+        this.isIrq1Requested = false;
+    }
+
+    /**
      * Request vector interrupt (VIRQ).
      * @param address vector interrupt address
      */
@@ -798,6 +827,8 @@ public class Cpu {
      * Initialize computer devices.
      */
     public void initDevices() {
+        clearIrq1Request();
+        clearVirqRequest();
         computer.initDevices();
         setPswState((short) 0340);
     }
@@ -853,13 +884,23 @@ public class Cpu {
             if (!isDeferredTraceTrap()) {
                 processTrap(TRAP_VECTOR_BPT, true);
             }
-        } else if (!isPswFlagSet(PSW_FLAG_P)) {
+        } else {
             // Handle hardware interrupts if not masked
             boolean isInterruptHandled = false;
-            // TODO Handle pending maskable radial requests (IRQ2,3)
-            // Check for pending vector interrupt request
-            if (isVirqRequested()) {
-                processTrap(getVirqAddress(), true);
+            if (!isPswFlagSet(PSW_FLAG_H)) { // bit 10 in PSW masks all hardware interrupts
+                // Check for pending IRQ1
+                if (!isPswFlagSet(PSW_FLAG_M) && isIrq1Requested()) { // bit 11 in PSW masks IRQ1
+                    enterHaltMode();
+                    clearIrq1Request();
+                    isInterruptHandled = true;
+                } else if (!isPswFlagSet(PSW_FLAG_P)) {
+                    // TODO Handle pending maskable radial interrupt requests IRQ2, IRQ3
+                    // Check for pending vector interrupt request
+                    if (isVirqRequested()) {
+                        processTrap(getVirqAddress(), true);
+                        isInterruptHandled = true;
+                    }
+                }
             }
             // Leave WAIT mode if interrupt was handled
             if (isInterruptHandled) {
