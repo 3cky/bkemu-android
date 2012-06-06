@@ -19,6 +19,8 @@
  */
 package su.comp.bk.arch.io;
 
+import android.os.Bundle;
+
 /**
  * BK-0010 peripheral port.
  */
@@ -49,6 +51,16 @@ public class PeripheralPort implements Device {
     @Override
     public void write(boolean isByteMode, int address, int value) {
         // TODO
+    }
+
+    @Override
+    public void saveState(Bundle outState) {
+        // Do nothing
+    }
+
+    @Override
+    public void restoreState(Bundle inState) {
+        // Do nothing
     }
 
 }

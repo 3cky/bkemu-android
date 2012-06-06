@@ -79,10 +79,13 @@ public class RandomAccessMemory implements Memory {
         return size;
     }
 
-
     @Override
     public short[] getData() {
         return data;
+    }
+
+    public void putData(short[] dataToPut) {
+        System.arraycopy(dataToPut, 0, data, 0, dataToPut.length);
     }
 
     private int getWordIndex(int address) {

@@ -19,6 +19,8 @@
  */
 package su.comp.bk.arch.io;
 
+import android.os.Bundle;
+
 /**
  * I/O device interface.
  */
@@ -33,6 +35,18 @@ public interface Device {
      * Handle bus INIT signal (on hardware reset or RESET instruction).
      */
     void init();
+
+    /**
+     * Save device state.
+     * @param outState {@link Bundle} to save device state
+     */
+    void saveState(Bundle outState);
+
+    /**
+     * Read device state.
+     * @param inState {@link Bundle} to restore device state
+     */
+    void restoreState(Bundle inState);
 
     /**
      * Read value from I/O device. Devices always read as word.

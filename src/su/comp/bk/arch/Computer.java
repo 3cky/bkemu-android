@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import android.content.res.Resources;
+import android.os.Bundle;
 import android.util.Log;
 
 import su.comp.bk.R;
@@ -45,8 +46,19 @@ public class Computer implements Runnable {
 
     private static final String TAG = Computer.class.getName();
 
+    // State save/restore: Computer uptime (in nanoseconds)
+    private static final String STATE_UPTIME = Computer.class.getName() + "#uptime";
+    // State save/restore: RandomAccessMemory pages addresses
+    private static final String STATE_RAM_ADDRESSES =
+            RandomAccessMemory.class.getName() + "#addresses";
+    // State save/restore: RandomAccessMemory page data
+    private static final String STATE_RAM_DATA = RandomAccessMemory.class.getName() + "@";
+
     /** Bus error constant */
     public final static int BUS_ERROR = -1;
+
+    // Computer configuration
+    private Configuration configuration;
 
     // Memory table mapped by 8KB blocks
     private final Memory[] memoryTable = new Memory[8];
@@ -69,21 +81,28 @@ public class Computer implements Runnable {
 
     private boolean isRunning = false;
 
-    private boolean isPaused = false;
+    private boolean isPaused = true;
 
     private Thread clockThread;
 
-    // BK0010 clock frequency (in kHz)
+    /** Amount of nanoseconds in one millisecond */
+    public static final long NANOSECS_IN_MSEC = 1000000L;
+
+    /** BK0010 clock frequency (in kHz) */
     public final static int CLOCK_FREQUENCY_BK0010 = 3000;
 
     // Computer clock frequency (in kHz)
     private int clockFrequency;
 
-    // Uptime sync threshold (in nanoseconds)
-    public static final long SYNC_UPTIME_THRESHOLD = 1000000L;
+    /** Uptime sync threshold (in nanoseconds) */
+    public static final long SYNC_UPTIME_THRESHOLD = (1L * NANOSECS_IN_MSEC);
+    // Uptime sync threshold (in CPU clock ticks, depends from CPU clock frequency)
+    private long syncUptimeThresholdCpuTicks;
 
     // Last uptime sync timestamp (in nanoseconds, absolute value)
     private long lastUptimeSyncTimestamp;
+    // Last CPU time sync timestamp (in ticks)
+    private long lastCpuTimeSyncTimestamp;
 
     // Computer uptime (in nanoseconds)
     private long uptime;
@@ -96,7 +115,14 @@ public class Computer implements Runnable {
         this.cpu = new Cpu(this);
     }
 
-    public void configure(Resources resources, Configuration config) throws IOException {
+    /**
+     * Configure this computer.
+     * @param resources Android resources object reference
+     * @param config computer configuration as {@link Configuration} value
+     * @throws Exception in case of error while configuring
+     */
+    public void configure(Resources resources, Configuration config) throws Exception {
+        setConfiguration(config);
         RandomAccessMemory workMemory = new RandomAccessMemory(0, 020000);
         addMemory(workMemory);
         RandomAccessMemory videoMemory = new RandomAccessMemory(040000, 020000);
@@ -121,6 +147,90 @@ public class Computer implements Runnable {
     }
 
     /**
+     * Set computer configuration.
+     * @param config computer configuration as {@link Configuration} value
+     */
+    public void setConfiguration(Configuration config) {
+        this.configuration = config;
+    }
+
+    /**
+     * Get computer configuration.
+     * @return computer configuration as {@link Configuration} value
+     */
+    public Configuration getConfiguration() {
+        return this.configuration;
+    }
+
+    /**
+     * Save computer state.
+     * @param resources Android {@link Resources} object reference
+     * @param outState {@link Bundle} to save state
+     */
+    public synchronized void saveState(Resources resources, Bundle outState) {
+        // Save computer configuration
+        outState.putString(Configuration.class.getName(), getConfiguration().name());
+        // Save computer uptime
+        outState.putLong(STATE_UPTIME, getUptime());
+        // Save RAM data
+        ArrayList<Integer> ramAddresses = new ArrayList<Integer>();
+        for (int memoryBlockIdx = 0; memoryBlockIdx < memoryTable.length; memoryBlockIdx++) {
+            if (memoryTable[memoryBlockIdx] instanceof RandomAccessMemory) {
+                RandomAccessMemory ram = (RandomAccessMemory) memoryTable[memoryBlockIdx];
+                Integer ramAddress = ram.getStartAddress();
+                if (!ramAddresses.contains(ramAddress)) {
+                    ramAddresses.add(ramAddress);
+                }
+            }
+        }
+        if (ramAddresses.size() > 0) {
+            outState.putIntegerArrayList(STATE_RAM_ADDRESSES, ramAddresses);
+            for (Integer ramAddress: ramAddresses) {
+                outState.putShortArray(STATE_RAM_DATA + Integer.toOctalString(ramAddress),
+                        ((RandomAccessMemory) getMemory(ramAddress)).getData());
+            }
+        }
+        // Save CPU state
+        getCpu().saveState(outState);
+        // Save device states
+        for (Device device : deviceList) {
+            device.saveState(outState);
+        }
+    }
+
+    /**
+     * Restore computer state.
+     * @param resources Android {@link Resources} object reference
+     * @param inState {@link Bundle} to restore state
+     * @throws Exception in case of error while state restoring
+     */
+    public synchronized void restoreState(Resources resources, Bundle inState) throws Exception {
+        // Restore computer configuration
+        Configuration config = Configuration.valueOf(inState
+                .getString(Configuration.class.getName()));
+        configure(resources, config);
+        // Restore computer uptime
+        setUptime(inState.getLong(STATE_UPTIME));
+        // Initialize CPU and devices
+        cpu.initDevices();
+        // Restore RAM data
+        ArrayList<Integer> ramAddresses = inState.getIntegerArrayList(STATE_RAM_ADDRESSES);
+        if (ramAddresses != null && ramAddresses.size() > 0) {
+            for (Integer ramAddress: ramAddresses) {
+                short[] ramData = inState.getShortArray(STATE_RAM_DATA +
+                        Integer.toOctalString(ramAddress));
+                ((RandomAccessMemory) getMemory(ramAddress)).putData(ramData);
+            }
+        }
+        // Restore CPU state
+        getCpu().restoreState(inState);
+        // Restore device states
+        for (Device device : deviceList) {
+            device.restoreState(inState);
+        }
+    }
+
+    /**
      * Get clock frequency (in kHz)
      * @return clock frequency
      */
@@ -134,6 +244,7 @@ public class Computer implements Runnable {
      */
     public void setClockFrequency(int clockFrequency) {
         this.clockFrequency = clockFrequency;
+        this.syncUptimeThresholdCpuTicks = getNanosCpuTime(SYNC_UPTIME_THRESHOLD);
     }
 
     private void addReadOnlyMemory(Resources resources, int romDataResId, int address)
@@ -175,7 +286,15 @@ public class Computer implements Runnable {
     }
 
     /**
-     * Get this computer uptime (in nanoseconds)
+     * Set computer uptime (in nanoseconds).
+     * @param uptime computer uptime to set (in nanoseconds)
+     */
+    public void setUptime(long uptime) {
+        this.uptime = uptime;
+    }
+
+    /**
+     * Get this computer uptime (in nanoseconds).
      * @return computer uptime (in nanoseconds)
      */
     public long getUptime() {
@@ -313,6 +432,11 @@ public class Computer implements Runnable {
             this.clockThread = new Thread(this, "ComputerClockThread");
             isRunning = true;
             clockThread.start();
+            // Waiting to emulation thread start
+            try {
+                this.wait();
+            } catch (InterruptedException e) {
+            }
         } else {
             throw new IllegalStateException("Computer is already running!");
         }
@@ -343,61 +467,85 @@ public class Computer implements Runnable {
      * Pause computer.
      */
     public synchronized void pause() {
+        Log.d(TAG, "pausing computer");
         isPaused = true;
-        Log.d(TAG, "computer paused");
+        this.notifyAll();
     }
 
     /**
      * Resume computer.
      */
     public synchronized void resume() {
+        Log.d(TAG, "resuming computer");
         lastUptimeSyncTimestamp = System.nanoTime();
-        if (isPaused) {
-            isPaused = false;
-            this.notifyAll();
-            Log.d(TAG, "computer resumed");
-        }
+        lastCpuTimeSyncTimestamp = cpu.getTime();
+        isPaused = false;
+        this.notifyAll();
     }
 
     /**
      * Get CPU time (converted from clock ticks to nanoseconds).
      * @return CPU time in nanoseconds
      */
-    private long getCpuTimeNanos() {
-        // cpuTimeNanos = cpuTime * 1000000 / clockFrequency
-        return cpu.getTime() * 1000000L / clockFrequency;
+    public long getCpuTimeNanos() {
+        return cpu.getTime() * NANOSECS_IN_MSEC / clockFrequency;
+    }
+
+    /**
+     * Get number of CPU clock ticks for given time in nanoseconds.
+     * @param nanosecs time (in nanoseconds) to convert to CPU ticks
+     * @return CPU ticks for given time
+     */
+    public long getNanosCpuTime(long nanosecs) {
+        return nanosecs * clockFrequency / NANOSECS_IN_MSEC;
+    }
+
+    /**
+     * Check is time to sync CPU time with computer uptime.
+     */
+    public void checkSyncUptime() {
+        long cpuTimeUptimeDifference = cpu.getTime() - lastCpuTimeSyncTimestamp;
+        if (cpuTimeUptimeDifference >= syncUptimeThresholdCpuTicks) {
+            doSyncUptime();
+        }
     }
 
     /**
      * Sync CPU time with computer uptime.
      */
-    private void doSyncUptime() {
+    public void doSyncUptime() {
         long timestamp = System.nanoTime();
         uptime += timestamp - lastUptimeSyncTimestamp;
         lastUptimeSyncTimestamp = timestamp;
+        lastCpuTimeSyncTimestamp = cpu.getTime();
         long uptimeCpuTimeDifference = getCpuTimeNanos() - uptime;
-        synchronized (this) {
-            if (isRunning && (isPaused || uptimeCpuTimeDifference >= SYNC_UPTIME_THRESHOLD)) {
-                try {
-                    if (isPaused) {
-                        this.wait();
-                    } else {
-                        long uptimeCpuTimeDifferenceMillis = uptimeCpuTimeDifference / 1000000L;
-                        int uptimeCpuTimeDifferenceNanos = (int) (uptimeCpuTimeDifference % 1000000L);
-                        this.wait(uptimeCpuTimeDifferenceMillis, uptimeCpuTimeDifferenceNanos);
-                    }
-                } catch (InterruptedException e) {
-                }
-            }
+        uptimeCpuTimeDifference = (uptimeCpuTimeDifference > 0L) ? uptimeCpuTimeDifference : 1L;
+        long uptimeCpuTimeDifferenceMillis = uptimeCpuTimeDifference / NANOSECS_IN_MSEC;
+        int uptimeCpuTimeDifferenceNanos = (int) (uptimeCpuTimeDifference % NANOSECS_IN_MSEC);
+        try {
+            this.wait(uptimeCpuTimeDifferenceMillis, uptimeCpuTimeDifferenceNanos);
+        } catch (InterruptedException e) {
         }
     }
 
     @Override
     public void run() {
         Log.d(TAG, "computer started");
-        while (isRunning) {
-            cpu.executeNextOperation();
-            doSyncUptime();
+        synchronized (this) {
+            this.notifyAll();
+            while (isRunning) {
+                if (isPaused) {
+                    try {
+                        Log.d(TAG, "computer paused");
+                        this.wait();
+                    } catch (InterruptedException e) {
+                    }
+                    Log.d(TAG, "computer resumed");
+                } else {
+                    cpu.executeNextOperation();
+                    checkSyncUptime();
+                }
+            }
         }
         Log.d(TAG, "computer stopped");
     }

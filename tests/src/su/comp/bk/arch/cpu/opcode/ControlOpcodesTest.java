@@ -32,6 +32,7 @@ import static org.powermock.api.easymock.PowerMock.*;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 
+import android.os.Bundle;
 import android.util.Log;
 
 import su.comp.bk.arch.Computer;
@@ -122,6 +123,12 @@ public class ControlOpcodesTest {
             @Override
             public void init() {
             }
+            @Override
+            public void saveState(Bundle outState) {
+            }
+            @Override
+            public void restoreState(Bundle inState) {
+            }
         };
 
         Device haltBitRegister = new Device() {
@@ -140,6 +147,12 @@ public class ControlOpcodesTest {
             }
             @Override
             public void init() {
+            }
+            @Override
+            public void saveState(Bundle outState) {
+            }
+            @Override
+            public void restoreState(Bundle inState) {
             }
         };
 

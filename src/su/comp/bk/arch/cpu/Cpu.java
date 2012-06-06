@@ -19,6 +19,7 @@
  */
 package su.comp.bk.arch.cpu;
 
+import android.os.Bundle;
 import android.util.Log;
 import su.comp.bk.arch.Computer;
 import su.comp.bk.arch.cpu.addressing.AddressingMode;
@@ -146,6 +147,31 @@ public class Cpu {
     public static final int TRAP_VECTOR_EMT = 030;
     /** TRAP instruction trap vector address */
     public static final int TRAP_VECTOR_TRAP = 034;
+
+    // State save/restore: CPU time (in clock ticks)
+    private static final String STATE_TIME =
+            Cpu.class.getName() + "#time";
+    // State save/restore: Reserved opcode was fetched flag
+    private static final String STATE_RESERVED_OPCODE =
+            Cpu.class.getName() + "#reserved_opcode";
+    // State save/restore: Interrupt request waiting flag
+    private static final String STATE_IRQ_WAIT =
+            Cpu.class.getName() + "#irq_wait";
+    // State save/restore: Deferred trace trap flag
+    private static final String STATE_DEFERRED_TRACE_TRAP =
+            Cpu.class.getName() + "#deferred_trace_trap";
+    // State save/restore: CPU is in HALT mode flag
+    private static final String STATE_HALT_MODE =
+            Cpu.class.getName() + "#halt_mode";
+    // State save/restore: Bus error caused flag
+    private static final String STATE_BUS_ERROR =
+            Cpu.class.getName() + "#bus_error";
+    // State save/restore: Registers data
+    private static final String STATE_REGISTERS =
+            Cpu.class.getName() + "#registers";
+    // State save/restore: Processor status word data
+    private static final String STATE_PSW =
+            Cpu.class.getName() + "#psw";
 
     // First radial interrupt (IRQ1) requested
     private boolean isIrq1Requested;
@@ -337,11 +363,58 @@ public class Cpu {
     }
 
     /**
+     * Save CPU state.
+     * @param outState {@link Bundle} to save state
+     */
+    public void saveState(Bundle outState) {
+        // Save PSW
+        outState.putShort(STATE_PSW, getPswState());
+        // Save registers
+        outState.putShortArray(STATE_REGISTERS, getRegisters());
+        // Save state flags
+        outState.putBoolean(STATE_BUS_ERROR, isBusError());
+        outState.putBoolean(STATE_HALT_MODE, isHaltMode());
+        outState.putBoolean(STATE_DEFERRED_TRACE_TRAP, isDeferredTraceTrap());
+        outState.putBoolean(STATE_IRQ_WAIT, isInterruptWaitMode());
+        outState.putBoolean(STATE_RESERVED_OPCODE, isReservedOpcodeFetched());
+        // Save CPU time
+        outState.putLong(STATE_TIME, getTime());
+    }
+
+    /**
+     * Restore CPU state.
+     * @param inState {@link Bundle} to restore state
+     * @throws Exception in case of error while state restoring
+     */
+    public void restoreState(Bundle inState) throws Exception {
+        // Restore PSW
+        setPswState(inState.getShort(STATE_PSW));
+        // Restore registers
+        putRegisters(inState.getShortArray(STATE_REGISTERS));
+        // Restore state flags
+        setBusError(inState.getBoolean(STATE_BUS_ERROR));
+        setHaltMode(inState.getBoolean(STATE_HALT_MODE));
+        setDeferredTraceTrap(inState.getBoolean(STATE_DEFERRED_TRACE_TRAP));
+        setInterruptWaitMode(inState.getBoolean(STATE_IRQ_WAIT));
+        setReservedOpcodeFetched(inState.getBoolean(STATE_RESERVED_OPCODE));
+        // Restore CPU time
+        setTime(inState.getLong(STATE_TIME));
+    }
+
+    /**
      * Get CPU time (in clock ticks).
      * @return CPU time
      */
     public long getTime() {
         return time;
+    }
+
+    /**
+     * Set CPU time (in clock ticks).
+     * @param CPU time to set
+     */
+    public void setTime(long timeToSet) {
+        time = timeToSet;
     }
 
     /**
@@ -351,6 +424,22 @@ public class Cpu {
      */
     public AddressingMode getAddressingMode(int addressingModeCode) {
         return addressingModes[addressingModeCode & 7];
+    }
+
+    /**
+     * Get processor registers.
+     * @return processor registers as array of shorts
+     */
+    public short[] getRegisters() {
+        return registers;
+    }
+
+    /**
+     * Put processor registers.
+     * @param registersToPut processor registers to put as array of shorts
+     */
+    public void putRegisters(short[] registersToPut) {
+        System.arraycopy(registersToPut, R0, registers, R0, registersToPut.length);
     }
 
     /**
@@ -472,16 +561,24 @@ public class Cpu {
 
     /**
      * Set bus error flag state.
+     * @param isBusError bus error flag state to set
+     */
+    public void setBusError(boolean isBusError) {
+        this.isBusError = isBusError;
+    }
+
+    /**
+     * Set bus error flag state.
      */
     public void setBusError() {
-        this.isBusError = true;
+        setBusError(true);
     }
 
     /**
      * Clear bus error flag state.
      */
     public void clearBusError() {
-        this.isBusError = false;
+        setBusError(false);
     }
 
     /**
@@ -494,16 +591,24 @@ public class Cpu {
 
     /**
      * Set halt mode flag state.
+     * @param isHaltMode halt mode flag state to set
+     */
+    public void setHaltMode(boolean isHaltMode) {
+        this.isHaltMode = isHaltMode;
+    }
+
+    /**
+     * Set halt mode flag state.
      */
     public void setHaltMode() {
-        this.isHaltMode = true;
+        setHaltMode(true);
     }
 
     /**
      * Clear halt mode flag state.
      */
     public void clearHaltMode() {
-        this.isHaltMode = false;
+        setHaltMode(false);
     }
 
     /**
@@ -570,17 +675,28 @@ public class Cpu {
 
     /**
      * Set interrupt wait mode flag state.
+     * @param isInterruptWaitMode interrupt wait mode flag state to set
+     */
+    public void setInterruptWaitMode(boolean isInterruptWaitMode) {
+        this.isInterruptWaitMode = isInterruptWaitMode;
+    }
+
+    /**
+     * Set interrupt wait mode flag state.
      */
     public void setInterruptWaitMode() {
         Log.d(TAG, "Entering WAIT mode, PC: " + Integer.toOctalString(readRegister(false, PC)));
-        this.isInterruptWaitMode = true;
+        setInterruptWaitMode(true);
     }
 
     /**
      * Clear interrupt wait mode flag state.
      */
     public void clearInterruptWaitMode() {
-        this.isInterruptWaitMode = false;
+        if (isInterruptWaitMode()) {
+            Log.d(TAG, "Leaving WAIT mode, PC: " + Integer.toOctalString(readRegister(false, PC)));
+        }
+        setInterruptWaitMode(false);
     }
 
     /**
@@ -594,16 +710,24 @@ public class Cpu {
 
     /**
      * Set reserved opcode fetched flag state.
+     * @param isReservedOpcodeFetched reserved opcode fetched flag state to set
+     */
+    public void setReservedOpcodeFetched(boolean isReservedOpcodeFetched) {
+        this.isReservedOpcodeFetched = isReservedOpcodeFetched;
+    }
+
+    /**
+     * Set reserved opcode fetched flag state.
      */
     public void setReservedOpcodeFetched() {
-        this.isReservedOpcodeFetched = true;
+        setReservedOpcodeFetched(true);
     }
 
     /**
      * Clear reserved opcode fetched flag state.
      */
     public void clearReservedOpcodeFetched() {
-        this.isReservedOpcodeFetched = false;
+        setReservedOpcodeFetched(false);
     }
 
     /**
@@ -617,16 +741,24 @@ public class Cpu {
 
     /**
      * Set deferred trace trap flag state.
+     * @param isDeferredTraceTrap deferred trace trap flag state to set
+     */
+    public void setDeferredTraceTrap(boolean isDeferredTraceTrap) {
+        this.isDeferredTraceTrap = isDeferredTraceTrap;
+    }
+
+    /**
+     * Set deferred trace trap flag state.
      */
     public void setDeferredTraceTrap() {
-        this.isDeferredTraceTrap = true;
+        setDeferredTraceTrap(true);
     }
 
     /**
      * Clear deferred trace trap flag state.
      */
     public void clearDeferredTraceTrap() {
-        this.isDeferredTraceTrap = false;
+        setDeferredTraceTrap(false);
     }
 
     /**

@@ -19,6 +19,7 @@
  */
 package su.comp.bk.arch.io;
 
+import android.os.Bundle;
 import su.comp.bk.arch.cpu.Cpu;
 
 /**
@@ -66,4 +67,16 @@ public class Sel1RegisterSystemBits implements Device {
         // Only set write flag
         setWriteFlagState(true);
     }
+
+
+    @Override
+    public void saveState(Bundle outState) {
+        // TODO
+    }
+
+    @Override
+    public void restoreState(Bundle inState) {
+        // TODO
+    }
+
 }

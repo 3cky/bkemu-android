@@ -22,11 +22,16 @@ package su.comp.bk.arch.io;
 import su.comp.bk.arch.memory.RandomAccessMemory;
 import android.graphics.Bitmap;
 import android.graphics.Color;
+import android.os.Bundle;
 
 /**
  * BK-0010 video output controller (К1801ВП1-037).
  */
 public class VideoController implements Device {
+
+    // State save/restore: scroll register value
+    private static final String STATE_SCROLL_REGISTER =
+            VideoController.class.getName() + "#scroll_reg";
 
     public final static int CONTROL_REGISTER_ADDRESS = 0177664;
 
@@ -106,6 +111,16 @@ public class VideoController implements Device {
     @Override
     public void init() {
         // Do nothing
+    }
+
+    @Override
+    public void saveState(Bundle outState) {
+        outState.putInt(STATE_SCROLL_REGISTER, scrollRegister);
+    }
+
+    @Override
+    public void restoreState(Bundle inState) {
+        scrollRegister = inState.getInt(STATE_SCROLL_REGISTER);
     }
 
     private boolean isFullFrameMode() {

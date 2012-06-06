@@ -20,8 +20,6 @@
 
 package su.comp.bk.ui;
 
-import java.io.IOException;
-
 import su.comp.bk.R;
 import su.comp.bk.arch.Computer;
 import android.app.Activity;
@@ -43,6 +41,8 @@ public class BkEmuActivity extends Activity {
 
     private static final String TAG = BkEmuActivity.class.getName();
 
+    private BkEmuView bkEmuView;
+
     private Computer computer;
 
     /** Called when the activity is first created. */
@@ -52,16 +52,38 @@ public class BkEmuActivity extends Activity {
         super.onCreate(savedInstanceState);
         LayoutInflater layoutInflater = getLayoutInflater();
         View mainView = layoutInflater.inflate(R.layout.main, null);
-        BkEmuView bkEmuView = (BkEmuView) mainView.findViewById(R.id.emu_view);
-        this.computer = new Computer();
-        try {
-            this.computer.configure(getResources(), Computer.Configuration.BK_0010_BASIC);
-            this.computer.reset();
-            bkEmuView.setComputer(computer);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        bkEmuView = (BkEmuView) mainView.findViewById(R.id.emu_view);
+        initializeComputer(savedInstanceState);
         setContentView(mainView);
+    }
+
+    private void initializeComputer(Bundle savedInstanceState) {
+        this.computer = new Computer();
+        boolean isComputerInitialized = false;
+        if (savedInstanceState != null) {
+            // Trying to restore computer state
+            try {
+                this.computer.restoreState(getResources(), savedInstanceState);
+                isComputerInitialized = true;
+            } catch (Exception e) {
+                Log.d(TAG, "Can't restore computer state", e);
+            }
+        }
+        if (!isComputerInitialized) {
+            // Computer state can't be restored, do startup initialization
+            try {
+                this.computer.configure(getResources(), Computer.Configuration.BK_0010_BASIC);
+                this.computer.reset();
+                isComputerInitialized = true;
+            } catch (Exception e) {
+                Log.e(TAG, "Error while computer configuring", e);
+            }
+        }
+        if (isComputerInitialized) {
+            bkEmuView.setComputer(computer);
+        } else {
+            throw new IllegalStateException("Can't initialize computer state");
+        }
     }
 
     protected void onStart() {
@@ -106,6 +128,7 @@ public class BkEmuActivity extends Activity {
     @Override
     protected void onSaveInstanceState(Bundle outState) {
         Log.d(TAG, "onSaveInstanceState()");
+        this.computer.saveState(getResources(), outState);
         super.onSaveInstanceState(outState);
     }
 
