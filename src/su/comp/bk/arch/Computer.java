@@ -19,6 +19,8 @@
  */
 package su.comp.bk.arch;
 
+import java.io.ByteArrayInputStream;
+import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -34,6 +36,7 @@ import su.comp.bk.arch.io.Device;
 import su.comp.bk.arch.io.KeyboardController;
 import su.comp.bk.arch.io.PeripheralPort;
 import su.comp.bk.arch.io.Sel1RegisterSystemBits;
+import su.comp.bk.arch.io.Timer;
 import su.comp.bk.arch.io.VideoController;
 import su.comp.bk.arch.memory.Memory;
 import su.comp.bk.arch.memory.RandomAccessMemory;
@@ -133,6 +136,7 @@ public class Computer implements Runnable {
         keyboardController = new KeyboardController(getCpu());
         addDevice(keyboardController);
         addDevice(new PeripheralPort());
+        addDevice(new Timer());
         switch (config) {
             case BK_0010_BASIC:
                 setClockFrequency(CLOCK_FREQUENCY_BK0010);
@@ -253,12 +257,58 @@ public class Computer implements Runnable {
         addMemory(new ReadOnlyMemory(address, romData));
     }
 
+    /**
+     * Load ROM data from raw resource.
+     * @param resources {@link Resources} reference
+     * @param romDataResId ROM raw resource ID
+     * @return loaded ROM data
+     * @throws IOException in case of ROM loading error
+     */
     private byte[] loadReadOnlyMemoryData(Resources resources, int romDataResId)
             throws IOException {
-        InputStream romDataStream = resources.openRawResource(romDataResId);
-        byte[] romData = new byte[romDataStream.available()];
-        romDataStream.read(romData);
-        return romData;
+        return loadRawResourceData(resources, romDataResId);
+    }
+
+    /**
+     * Load data of raw resource.
+     * @param resources {@link Resources} reference
+     * @param resourceId raw resource ID
+     * @return read raw resource data
+     * @throws IOException in case of loading error
+     */
+    private byte[] loadRawResourceData(Resources resources, int resourceId) throws IOException {
+        InputStream resourceDataStream = resources.openRawResource(resourceId);
+        byte[] resourceData = new byte[resourceDataStream.available()];
+        resourceDataStream.read(resourceData);
+        return resourceData;
+    }
+
+    /**
+     * Load image in bin format (address/length/data) from byte array.
+     * @param imageData image data byte array
+     * @throws IOException in case of loading error
+     */
+    public synchronized void loadImage(byte[] imageData) throws IOException {
+        DataInputStream imageDataInputStream = new DataInputStream(
+                new ByteArrayInputStream(imageData, 0, imageData.length));
+        int imageAddress = imageDataInputStream.readByte() | (imageDataInputStream.readByte() << 8);
+        int imageLength = imageDataInputStream.readByte() | (imageDataInputStream.readByte() << 8);
+        Log.d(TAG, "image file address 0" + Integer.toOctalString(imageAddress) +
+                ", length: " + imageLength);
+        for (int imageIndex = 0; imageIndex < imageLength; imageIndex++) {
+            writeMemory(true, imageAddress + imageIndex, imageDataInputStream.read());
+        }
+    }
+
+    /**
+     * Load image in bin format (address/length/data) from raw resource.
+     * @param resources {@link Resources} reference
+     * @param imageResourceId image raw resource id
+     * @throws IOException
+     */
+    public synchronized void loadImage(Resources resources, int imageResourceId)
+            throws IOException {
+        loadImage(loadRawResourceData(resources, imageResourceId));
     }
 
     /**
@@ -347,7 +397,7 @@ public class Computer implements Runnable {
      */
     public void initDevices() {
         for (Device device: deviceList) {
-            device.init();
+            device.init(getCpu().getTime());
         }
     }
 
@@ -371,10 +421,11 @@ public class Computer implements Runnable {
         if (address >= IO_REGISTERS_START_ADDRESS) {
             List<Device> subdevices = getDevices(address);
             if (subdevices != null) {
+                long cpuClock = getCpu().getTime();
                 readValue = 0;
                 for (Device subdevice: subdevices) {
                     // Read subdevice state value in word mode
-                    int subdeviceState = subdevice.read(address & 0177776);
+                    int subdeviceState = subdevice.read(cpuClock, address & 0177776);
                     // For byte mode read and odd address - extract high byte
                     if (isByteMode && (address & 1) != 0) {
                         subdeviceState >>= 8;
@@ -407,8 +458,9 @@ public class Computer implements Runnable {
         if (address >= IO_REGISTERS_START_ADDRESS) {
             List<Device> devices = getDevices(address);
             if (devices != null) {
+                long cpuClock = getCpu().getTime();
                 for (Device device: devices) {
-                    device.write(isByteMode, address, value);
+                    device.write(cpuClock, isByteMode, address, value);
                 }
                 isWritten = true;
             }

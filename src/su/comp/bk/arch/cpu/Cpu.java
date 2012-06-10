@@ -685,7 +685,7 @@ public class Cpu {
      * Set interrupt wait mode flag state.
      */
     public void setInterruptWaitMode() {
-        Log.d(TAG, "Entering WAIT mode, PC: " + Integer.toOctalString(readRegister(false, PC)));
+        Log.d(TAG, "entering WAIT mode, PC: 0" + Integer.toOctalString(readRegister(false, PC)));
         setInterruptWaitMode(true);
     }
 
@@ -694,7 +694,7 @@ public class Cpu {
      */
     public void clearInterruptWaitMode() {
         if (isInterruptWaitMode()) {
-            Log.d(TAG, "Leaving WAIT mode, PC: " + Integer.toOctalString(readRegister(false, PC)));
+            Log.d(TAG, "leaving WAIT mode, PC: 0" + Integer.toOctalString(readRegister(false, PC)));
         }
         setInterruptWaitMode(false);
     }
@@ -765,7 +765,7 @@ public class Cpu {
      * Execute 1801VM1-specific halt mode entering sequence
      */
     public void enterHaltMode() {
-        Log.d(TAG, "Entering HALT mode, PC: " + Integer.toOctalString(readRegister(false, PC)));
+        Log.d(TAG, "entering HALT mode, PC: 0" + Integer.toOctalString(readRegister(false, PC)));
         // Set bit 3 in SEL1 register
         int sel1 = readMemory(false, REG_SEL1);
         if (sel1 != Computer.BUS_ERROR) {
@@ -791,8 +791,8 @@ public class Cpu {
      * or <false> if bus error happens while vector loading
      */
     public boolean processTrap(int trapVectorAddress, boolean pushReturnState) {
-        Log.d(TAG, "TRAP " + Integer.toOctalString(trapVectorAddress) +
-                ", PC: " + Integer.toOctalString(readRegister(false, PC)));
+        Log.d(TAG, ">>> TRAP " + Integer.toOctalString(trapVectorAddress) +
+                ", PC: 0" + Integer.toOctalString(readRegister(false, PC)));
         boolean isVectorLoaded = false;
         if (!pushReturnState || (push(getPswState()) && push(readRegister(false, PC)))) {
             int trapAddress = readMemory(false, trapVectorAddress);
@@ -805,6 +805,8 @@ public class Cpu {
                 }
             }
         }
+        Log.d(TAG, "<<< TRAP " + Integer.toOctalString(trapVectorAddress) +
+                ", PC: 0" + Integer.toOctalString(readRegister(false, PC)));
         return isVectorLoaded;
     }
 
@@ -814,6 +816,7 @@ public class Cpu {
      * <code>false</code> otherwise
      */
     public void returnFromTrap(boolean isTraceTrap) {
+        Log.d(TAG, ">>> return from TRAP, PC: 0" + Integer.toOctalString(readRegister(false, PC)));
         int pc = pop();
         if (pc != Computer.BUS_ERROR) {
             writeRegister(false, PC, pc);
@@ -823,6 +826,7 @@ public class Cpu {
                 setDeferredTraceTrap();
             }
         }
+        Log.d(TAG, "<<< return from TRAP, PC: 0" + Integer.toOctalString(readRegister(false, PC)));
     }
 
     /**
@@ -1030,6 +1034,7 @@ public class Cpu {
                     // Check for pending vector interrupt request
                     if (isVirqRequested()) {
                         processTrap(getVirqAddress(), true);
+                        clearVirqRequest();
                         isInterruptHandled = true;
                     }
                 }
@@ -1063,7 +1068,7 @@ public class Cpu {
                 }
             } else {
                 Log.d(TAG, "fetched unknown instruction: " + Integer.toOctalString(instruction)
-                        + ", PC: " + Integer.toOctalString(readRegister(false, PC)));
+                        + ", PC: 0" + Integer.toOctalString(readRegister(false, PC)));
                 setReservedOpcodeFetched();
             }
         }

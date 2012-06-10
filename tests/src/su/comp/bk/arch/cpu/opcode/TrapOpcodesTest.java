@@ -19,8 +19,13 @@
  */
 package su.comp.bk.arch.cpu.opcode;
 
+import static org.easymock.EasyMock.anyObject;
+import static org.easymock.EasyMock.expect;
 import static org.junit.Assert.*;
+import static org.powermock.api.easymock.PowerMock.replay;
+import static org.powermock.api.easymock.PowerMock.verifyAll;
 
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -48,9 +53,16 @@ public class TrapOpcodesTest {
     @Before
     public void setUp() throws Exception {
         PowerMock.mockStatic(Log.class);
+        expect(Log.d(anyObject(String.class), anyObject(String.class))).andReturn(0).anyTimes();
+        replay(Log.class);
         computer = new Computer();
         computer.addDevice(new Sel1RegisterSystemBits(0100000));
         computer.addMemory(new RandomAccessMemory(0, 01000));
+    }
+
+    @After
+    public void tearDown() throws Exception {
+        verifyAll();
     }
 
     @Test

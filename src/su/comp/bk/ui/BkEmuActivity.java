@@ -157,6 +157,14 @@ public class BkEmuActivity extends Activity {
             case R.id.keyboard:
                 toggleOnScreenKeyboard();
                 return true;
+            case R.id.load_image:
+                Log.d(TAG, "loading image file");
+                try {
+                    computer.loadImage(getResources(), R.raw.image);
+                } catch (Exception e) {
+                    Log.e(TAG, "can't load image file", e);
+                }
+                return true;
             default:
                 return super.onOptionsItemSelected(item);
         }

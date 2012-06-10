@@ -33,8 +33,9 @@ public interface Device {
 
     /**
      * Handle bus INIT signal (on hardware reset or RESET instruction).
+     * @param cpuTime current CPU time (in clock ticks)
      */
-    void init();
+    void init(long cpuTime);
 
     /**
      * Save device state.
@@ -50,17 +51,19 @@ public interface Device {
 
     /**
      * Read value from I/O device. Devices always read as word.
+     * @param cpuTime current CPU time (in clock ticks)
      * @param address absolute address to read (from address list this device is mapped to)
      * @return read value
      */
-    int read(int address);
+    int read(long cpuTime, int address);
 
     /**
      * Write value to I/O device.
-     * @param isByteAddressing <code>true</code> to write byte value, <code>false</code> to write
-     * word value
+     * @param cpuTime current CPU time (in clock ticks)
      * @param address absolute address to write (from address list this device is mapped to)
      * @param value value to write to device
+     * @param isByteAddressing <code>true</code> to write byte value, <code>false</code> to write
+     * word value
      */
-    void write(boolean isByteMode, int address, int value);
+    void write(long cpuTime, boolean isByteMode, int address, int value);
 }

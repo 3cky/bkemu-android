@@ -208,7 +208,7 @@ public class KeyboardController implements Device {
     }
 
     @Override
-    public void init() {
+    public void init(long cpuTime) {
         setKeyPressed(false);
         writeDataRegister(0);
         setStatusRegisterDataReadyFlag(false);
@@ -279,7 +279,7 @@ public class KeyboardController implements Device {
     }
 
     @Override
-    public int read(int address) {
+    public int read(long cpuTime, int address) {
         switch (address) {
             case STATUS_REGISTER_ADDRESS:
                 return readStatusRegister();
@@ -291,7 +291,7 @@ public class KeyboardController implements Device {
     }
 
     @Override
-    public void write(boolean isByteMode, int address, int value) {
+    public void write(long cpuTime, boolean isByteMode, int address, int value) {
         switch (address & 0177776) {
             case STATUS_REGISTER_ADDRESS:
                 writeStatusRegister(value);

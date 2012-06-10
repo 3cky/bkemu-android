@@ -109,7 +109,7 @@ public class VideoController implements Device {
     }
 
     @Override
-    public void init() {
+    public void init(long cpuTime) {
         // Do nothing
     }
 
@@ -140,12 +140,12 @@ public class VideoController implements Device {
     }
 
     @Override
-    public int read(int address) {
+    public int read(long cpuTime, int address) {
         return readScrollRegister();
     }
 
     @Override
-    public void write(boolean isByteMode, int address, int value) {
+    public void write(long cpuTime, boolean isByteMode, int address, int value) {
         int registerValue;
         if (isByteMode) {
             if ((address & 1) != 0) {

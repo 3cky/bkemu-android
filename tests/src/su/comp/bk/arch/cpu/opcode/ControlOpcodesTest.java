@@ -102,7 +102,7 @@ public class ControlOpcodesTest {
             int regHaltPc;
             int regHaltPsw;
             @Override
-            public void write(boolean isByteMode, int address, int value) {
+            public void write(long cpuTime, boolean isByteMode, int address, int value) {
                 if (address == Cpu.REG_HALT_PC) {
                     regHaltPc = value;
                 } else {
@@ -110,7 +110,7 @@ public class ControlOpcodesTest {
                 }
             }
             @Override
-            public int read(int address) {
+            public int read(long cpuTime, int address) {
                 if (address == Cpu.REG_HALT_PC) {
                     return regHaltPc;
                 }
@@ -121,7 +121,7 @@ public class ControlOpcodesTest {
                 return new int[] { Cpu.REG_HALT_PC, Cpu.REG_HALT_PSW };
             }
             @Override
-            public void init() {
+            public void init(long cpuTime) {
             }
             @Override
             public void saveState(Bundle outState) {
@@ -134,11 +134,11 @@ public class ControlOpcodesTest {
         Device haltBitRegister = new Device() {
             int haltBitValue;
             @Override
-            public void write(boolean isByteMode, int address, int value) {
+            public void write(long cpuTime, boolean isByteMode, int address, int value) {
                 haltBitValue = value;
             }
             @Override
-            public int read(int address) {
+            public int read(long cpuTime, int address) {
                 return haltBitValue;
             }
             @Override
@@ -146,7 +146,7 @@ public class ControlOpcodesTest {
                 return new int[] { Cpu.REG_SEL1 };
             }
             @Override
-            public void init() {
+            public void init(long cpuTime) {
             }
             @Override
             public void saveState(Bundle outState) {
