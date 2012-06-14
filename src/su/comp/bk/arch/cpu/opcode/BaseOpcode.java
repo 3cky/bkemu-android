@@ -63,7 +63,7 @@ public abstract class BaseOpcode implements Opcode {
         return instruction;
     }
 
-    protected static int getBaseExecutionTime() {
+    public static int getBaseExecutionTime() {
         return BASE_EXECUTION_TIME;
     }
 

@@ -32,6 +32,7 @@ import android.util.Log;
 
 import su.comp.bk.R;
 import su.comp.bk.arch.cpu.Cpu;
+import su.comp.bk.arch.io.AudioOutput;
 import su.comp.bk.arch.io.Device;
 import su.comp.bk.arch.io.KeyboardController;
 import su.comp.bk.arch.io.PeripheralPort;
@@ -74,6 +75,9 @@ public class Computer implements Runnable {
 
     // Keyboard controller reference
     private KeyboardController keyboardController;
+
+    // Audio output reference
+    private AudioOutput audioOutput;
 
     /** I/O registers space start address */
     public final static int IO_REGISTERS_START_ADDRESS = 0177600;
@@ -148,6 +152,8 @@ public class Computer implements Runnable {
             default:
                 break;
         }
+        audioOutput = new AudioOutput(this);
+        addDevice(audioOutput);
     }
 
     /**
@@ -489,6 +495,7 @@ public class Computer implements Runnable {
                 this.wait();
             } catch (InterruptedException e) {
             }
+            audioOutput.start();
         } else {
             throw new IllegalStateException("Computer is already running!");
         }
@@ -500,6 +507,7 @@ public class Computer implements Runnable {
     public void stop() {
         if (isRunning) {
             Log.d(TAG, "stopping computer");
+            audioOutput.stop();
             synchronized (this) {
                 isRunning = false;
                 this.notifyAll();
@@ -522,6 +530,7 @@ public class Computer implements Runnable {
         Log.d(TAG, "pausing computer");
         isPaused = true;
         this.notifyAll();
+        audioOutput.pause();
     }
 
     /**
@@ -532,15 +541,33 @@ public class Computer implements Runnable {
         lastUptimeSyncTimestamp = System.nanoTime();
         lastCpuTimeSyncTimestamp = cpu.getTime();
         isPaused = false;
+        audioOutput.resume();
         this.notifyAll();
     }
 
     /**
+     * Release computer resources.
+     */
+    public void release() {
+        Log.d(TAG, "releasing computer");
+        audioOutput.release();
+    }
+
+    /**
      * Get CPU time (converted from clock ticks to nanoseconds).
-     * @return CPU time in nanoseconds
+     * @return current CPU time in nanoseconds
      */
     public long getCpuTimeNanos() {
-        return cpu.getTime() * NANOSECS_IN_MSEC / clockFrequency;
+        return getCpuTimeNanos(cpu.getTime());
+    }
+
+    /**
+     * Get CPU time (converted from clock ticks to nanoseconds).
+     * @param cpuTime CPU time (in clock ticks) to convert
+     * @return CPU time in nanoseconds
+     */
+    public long getCpuTimeNanos(long cpuTime) {
+        return cpuTime * NANOSECS_IN_MSEC / clockFrequency;
     }
 
     /**

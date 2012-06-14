@@ -122,6 +122,7 @@ public class BkEmuActivity extends Activity {
     @Override
     protected void onDestroy() {
         Log.d(TAG, "onDestroy()");
+        this.computer.release();
         super.onDestroy();
     }
 
