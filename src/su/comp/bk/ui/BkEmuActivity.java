@@ -22,6 +22,7 @@ package su.comp.bk.ui;
 
 import su.comp.bk.R;
 import su.comp.bk.arch.Computer;
+import su.comp.bk.arch.io.VideoController;
 import android.app.Activity;
 import android.content.Context;
 import android.os.Bundle;
@@ -166,6 +167,9 @@ public class BkEmuActivity extends Activity {
                     Log.e(TAG, "can't load image file", e);
                 }
                 return true;
+            case R.id.screen_mode:
+                toggleScreenMode();
+                return true;
             default:
                 return super.onOptionsItemSelected(item);
         }
@@ -175,5 +179,11 @@ public class BkEmuActivity extends Activity {
         Log.d(TAG, "toggling on-screen keyboard");
         InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
         imm.toggleSoftInput(InputMethodManager.SHOW_FORCED, 0);
+    }
+
+    private void toggleScreenMode() {
+        Log.d(TAG, "toggling screen mode");
+        VideoController videoController = computer.getVideoController();
+        videoController.setColorMode(!videoController.isColorMode());
     }
 }

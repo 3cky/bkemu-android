@@ -4,6 +4,8 @@
           android:icon="@drawable/keyboard"
           android:title="@string/toggle_keyboard"
           android:showAsAction="ifRoom" />
+    <item android:id="@+id/screen_mode"
+          android:title="@string/toggle_screen_mode" />
     <item android:id="@+id/load_image"
           android:title="@string/load_image" />
 </menu>

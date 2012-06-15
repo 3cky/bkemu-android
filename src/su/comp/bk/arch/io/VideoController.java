@@ -29,49 +29,111 @@ import android.os.Bundle;
  */
 public class VideoController implements Device {
 
+    /** Scroll/mode register address */
+    public final static int CONTROL_REGISTER_ADDRESS = 0177664;
+
+    private final static int[] ADDRESSES = { CONTROL_REGISTER_ADDRESS };
+
+    // Scroll/mode register: scroll base value in normal mode
+    private final static int SCROLL_BASE_VALUE = 0330;
+    // Scroll/mode register: scroll value in extended memory mode
+    private final static int SCROLL_EXTMEM_VALUE = 0230;
+    // Scroll/mode register: extended memory mode disable bit
+    // (0 - extended memory mode, 1 - normal mode)
+    private final static int EXTMEM_CONTROL_BIT = 01000;
+
+    // Screen height (in lines) in extended memory mode
+    private final static int SCREEN_HEIGHT_EXTMEM = 64;
+    // Screen scan line length (in words)
+    private final static int SCREEN_SCANLINE_LENGTH = 040;
+    // VideoRAM bits per screen pixel in black and white mode
+    private final static int SCREEN_BPP_BW = 1;
+    // VideoRAM bits per screen pixel in color mode
+    private final static int SCREEN_BPP_COLOR = 2;
+    // Screen pixels per videoRAM word in black and white mode
+    private final static int SCREEN_PPW_BW = (Short.SIZE / SCREEN_BPP_BW);
+    // Screen pixels per videoRAM word in color mode
+    private final static int SCREEN_PPW_COLOR = (Short.SIZE / SCREEN_BPP_COLOR);
+
+    // Video buffer pixels per screen pixel in black and white mode
+    private final static int PIXELS_PER_SCREEN_PIXEL_BW = 1;
+    // Video buffer pixels per screen pixel in color mode
+    private final static int PIXELS_PER_SCREEN_PIXEL_COLOR = 2;
+
+    // VideoRAM word pixel value mask for black and white mode
+    private final static int PIXEL_MASK_BW = 1;
+    // VideoRAM word pixel value mask for color mode
+    private final static int PIXEL_MASK_COLOR = 3;
+
+    // Pixel palette in black and white mode
+    private final static int[] PIXEL_PALETTE_BW = { Color.BLACK, Color.WHITE };
+    // Pixel palette in color mode
+    private final static int[] PIXEL_PALETTE_COLOR = { Color.BLACK, Color.BLUE,
+        Color.GREEN, Color.RED };
+
+    // VideoRAM data byte to corresponding pixels lookup table
+    private final int[] videoDataToPixelsTable = new int[8 * 256];
+
+    // State save/restore: color/bw mode flag value
+    private static final String STATE_COLOR_MODE =
+            VideoController.class.getName() + "#color_mode";
+
     // State save/restore: scroll register value
     private static final String STATE_SCROLL_REGISTER =
             VideoController.class.getName() + "#scroll_reg";
 
-    public final static int CONTROL_REGISTER_ADDRESS = 0177664;
+    // Screen mode flag: true for color mode, false for black and white mode
+    private boolean isColorMode;
 
-    private final static int SCROLL_BASE_VALUE = 0330;
-    private final static int SCROLL_EXTMEM_VALUE = 0230;
-
-    private final static int EXTMEM_CONTROL_BIT = 01000;
-
-    private final static int SCREEN_WIDTH_BW = 512;
-    private final static int SCREEN_HEIGHT_FULL = 256;
-    private final static int SCREEN_HEIGHT_EXTMEM = 64;
-    private final static int SCREEN_SCANLINE_LENGTH = 040;
-    private final static int SCREEN_BPP_BW = 1;
-    private final static int SCREEN_BPW_BW = Short.SIZE / SCREEN_BPP_BW;
-
-    private final static int[] PIXEL_TAB_BW = new int[8 * 256];
-
-    private final static int[] ADDRESSES = { CONTROL_REGISTER_ADDRESS };
-
+    // Scroll register value
     private int scrollRegister;
 
+    // VideoRAM reference
     private final RandomAccessMemory videoMemory;
 
+    // Video buffer width (in pixels)
+    private final static int VIDEO_BUFFER_WIDTH = 512;
+    // Video buffer height (in pixels)
+    private final static int VIDEO_BUFFER_HEIGHT = 256;
+    // Video buffer pixels per videoRAM word
+    private final static int VIDEO_BUFFER_PIXELS_PER_WORD = Short.SIZE;
+    // Video buffer bitmap object
     private final Bitmap videoBuffer;
-
-    static {
-        int pixelTabIdx = 0;
-        for (int videoBufferByte = 0; videoBufferByte < 256; videoBufferByte++) {
-            for (int videoBufferBytePixel = 0; videoBufferBytePixel < 8; videoBufferBytePixel++) {
-                PIXEL_TAB_BW[pixelTabIdx++] = (videoBufferByte & (1 << videoBufferBytePixel)) != 0
-                        ? Color.WHITE : Color.BLACK;
-            }
-        }
-    }
 
     public VideoController(RandomAccessMemory videoMemory) {
         this.videoMemory = videoMemory;
-        this.videoBuffer = Bitmap.createBitmap(SCREEN_WIDTH_BW, SCREEN_HEIGHT_FULL,
+        this.videoBuffer = Bitmap.createBitmap(VIDEO_BUFFER_WIDTH, VIDEO_BUFFER_HEIGHT,
                 Bitmap.Config.ARGB_8888);
         writeScrollRegister(SCROLL_EXTMEM_VALUE);
+        setColorMode(true);
+    }
+
+    public boolean isColorMode() {
+        return isColorMode;
+    }
+
+    public void setColorMode(boolean isColorMode) {
+        this.isColorMode = isColorMode;
+        int pixelTabIdx = 0;
+        int bitsPerPixel = isColorMode ? SCREEN_BPP_COLOR : SCREEN_BPP_BW;
+        int[] pixelPalette = isColorMode ? PIXEL_PALETTE_COLOR : PIXEL_PALETTE_BW;
+        int pixelMask = isColorMode ? PIXEL_MASK_COLOR : PIXEL_MASK_BW;
+        int pixelsPerByte = (isColorMode ? SCREEN_PPW_COLOR : SCREEN_PPW_BW) / 2;
+        int pixelsPerScreenPixel = isColorMode ? PIXELS_PER_SCREEN_PIXEL_COLOR
+                : PIXELS_PER_SCREEN_PIXEL_BW;
+        synchronized (videoDataToPixelsTable) {
+            for (int videoDataByte = 0; videoDataByte < 256; videoDataByte++) {
+                for (int videoDataBytePixelIndex = 0; videoDataBytePixelIndex < pixelsPerByte;
+                        videoDataBytePixelIndex++) {
+                    int pixelPaletteIndex = (videoDataByte >>> (videoDataBytePixelIndex
+                            * bitsPerPixel)) & pixelMask;
+                    int pixelColor = pixelPalette[pixelPaletteIndex];
+                    for (int pixelIndex = 0; pixelIndex < pixelsPerScreenPixel; pixelIndex++) {
+                        videoDataToPixelsTable[pixelTabIdx++] = pixelColor;
+                    }
+                }
+            }
+        }
     }
 
     public Bitmap getVideoBuffer() {
@@ -86,18 +148,20 @@ public class VideoController implements Device {
         int scrollShift = (readScrollRegister() - SCROLL_BASE_VALUE) & 0377;
         int videoBufferX;
         int videoBufferY;
-        for (int videoDataIdx = videoDataOffset; videoDataIdx < videoData.length;
-                videoDataIdx++) {
-            int videoDataWord = videoData[videoDataIdx];
-            if (videoDataWord != 0) {
-                videoBufferX = (videoDataIdx % SCREEN_SCANLINE_LENGTH) * SCREEN_BPW_BW;
-                videoBufferY = (videoDataIdx / SCREEN_SCANLINE_LENGTH - scrollShift)
-                        & (SCREEN_HEIGHT_FULL - 1);
-                videoBuffer.setPixels(PIXEL_TAB_BW, (videoDataWord & 0377) << 3,
-                        SCREEN_WIDTH_BW, videoBufferX, videoBufferY, 8, 1);
-                videoBufferX += 8;
-                videoBuffer.setPixels(PIXEL_TAB_BW, ((videoDataWord >> 8) & 0377) << 3,
-                        SCREEN_WIDTH_BW, videoBufferX, videoBufferY, 8, 1);
+        synchronized (videoDataToPixelsTable) {
+            for (int videoDataIdx = videoDataOffset; videoDataIdx < videoData.length;
+                    videoDataIdx++) {
+                int videoDataWord = videoData[videoDataIdx];
+                if (videoDataWord != 0) {
+                    videoBufferX = (videoDataIdx % SCREEN_SCANLINE_LENGTH) * VIDEO_BUFFER_PIXELS_PER_WORD;
+                    videoBufferY = (videoDataIdx / SCREEN_SCANLINE_LENGTH - scrollShift)
+                            & (VIDEO_BUFFER_HEIGHT - 1);
+                    videoBuffer.setPixels(videoDataToPixelsTable, (videoDataWord & 0377) << 3,
+                            VIDEO_BUFFER_WIDTH, videoBufferX, videoBufferY, 8, 1);
+                    videoBufferX += 8;
+                    videoBuffer.setPixels(videoDataToPixelsTable, ((videoDataWord >> 8) & 0377) << 3,
+                            VIDEO_BUFFER_WIDTH, videoBufferX, videoBufferY, 8, 1);
+                }
             }
         }
         return videoBuffer;
@@ -116,11 +180,13 @@ public class VideoController implements Device {
     @Override
     public void saveState(Bundle outState) {
         outState.putInt(STATE_SCROLL_REGISTER, scrollRegister);
+        outState.putBoolean(STATE_COLOR_MODE, isColorMode());
     }
 
     @Override
     public void restoreState(Bundle inState) {
         scrollRegister = inState.getInt(STATE_SCROLL_REGISTER);
+        setColorMode(inState.getBoolean(STATE_COLOR_MODE));
     }
 
     private boolean isFullFrameMode() {
