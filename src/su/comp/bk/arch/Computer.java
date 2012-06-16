@@ -115,7 +115,12 @@ public class Computer implements Runnable {
     private long uptime;
 
     public enum Configuration {
-        BK_0010_BASIC
+        /** BK0010 - monitor only */
+        BK_0010_MONITOR,
+        /** BK0010 - monitor and Basic */
+        BK_0010_BASIC,
+        /** BK0010 - monitor, Focal and tests */
+        BK_0010_MSTD
     }
 
     public Computer() {
@@ -149,7 +154,15 @@ public class Computer implements Runnable {
                 addReadOnlyMemory(resources, R.raw.basic10_2, 0140000);
                 addReadOnlyMemory(resources, R.raw.basic10_3, 0160000);
                 break;
+            case BK_0010_MSTD:
+                setClockFrequency(CLOCK_FREQUENCY_BK0010);
+                addReadOnlyMemory(resources, R.raw.monit10, 0100000);
+                addReadOnlyMemory(resources, R.raw.focal, 0120000);
+                addReadOnlyMemory(resources, R.raw.tests, 0160000);
+                break;
             default:
+                setClockFrequency(CLOCK_FREQUENCY_BK0010);
+                addReadOnlyMemory(resources, R.raw.monit10, 0100000);
                 break;
         }
         audioOutput = new AudioOutput(this);
