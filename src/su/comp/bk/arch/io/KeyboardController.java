@@ -22,6 +22,7 @@ package su.comp.bk.arch.io;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.KeyEvent;
+import su.comp.bk.arch.Computer;
 import su.comp.bk.arch.cpu.Cpu;
 
 /**
@@ -76,10 +77,14 @@ public class KeyboardController implements Device {
     // Pressed key code data register value
     private int dataRegister;
 
+    /** Key pressing delay (in nanoseconds) */
+    public final static long KEY_PRESS_DELAY = (250L * Computer.NANOSECS_IN_MSEC);
     // Key pressed state flag in SEL1 register
     private boolean isKeyPressed;
+    // Last key press timestamp (in CPU clock ticks)
+    private long lastKeyPressTimestamp = -1L;
 
-    private final Cpu cpu;
+    private final Computer computer;
 
     public enum BkButton {
         // Buttons - first row
@@ -198,8 +203,8 @@ public class KeyboardController implements Device {
         }
     }
 
-    public KeyboardController(Cpu cpu) {
-        this.cpu = cpu;
+    public KeyboardController(Computer computer) {
+        this.computer = computer;
     }
 
     @Override
@@ -209,18 +214,22 @@ public class KeyboardController implements Device {
 
     @Override
     public void init(long cpuTime) {
-        setKeyPressed(false);
+        setKeyPressed(cpuTime, false);
         writeDataRegister(0);
         setStatusRegisterDataReadyFlag(false);
         writeStatusRegister(STATUS_VIRQ_MASK);
     }
 
-    protected boolean isKeyPressed() {
-        return isKeyPressed;
+    protected boolean isKeyPressed(long cpuTime) {
+        return (lastKeyPressTimestamp < 0 || computer.getCpuTimeNanos(cpuTime -
+                    lastKeyPressTimestamp) > KEY_PRESS_DELAY) ? isKeyPressed : true;
     }
 
-    protected void setKeyPressed(boolean isKeyPressed) {
+    protected void setKeyPressed(long cpuTime, boolean isKeyPressed) {
         this.isKeyPressed = isKeyPressed;
+        if (isKeyPressed) {
+            this.lastKeyPressTimestamp = cpuTime;
+        }
     }
 
     protected boolean isAr2Pressed() {
@@ -244,10 +253,10 @@ public class KeyboardController implements Device {
                 : (this.statusRegister & ~STATUS_DATA_READY);
         if (isDataReady) {
             if (isStatusRegisterVirqEnabled()) {
-                cpu.requestVirq(isAr2Pressed ? VIRQ_ADDRESS_AR2 : VIRQ_ADDRESS_NORMAL);
+                computer.getCpu().requestVirq(isAr2Pressed ? VIRQ_ADDRESS_AR2 : VIRQ_ADDRESS_NORMAL);
             }
         } else {
-            cpu.clearVirqRequest();
+            computer.getCpu().clearVirqRequest();
         }
     }
 
@@ -286,7 +295,7 @@ public class KeyboardController implements Device {
             case DATA_REGISTER_ADDRESS:
                 return readDataRegister();
             default:
-                return isKeyPressed() ? 0 : SEL1_REGISTER_KEY_PRESSED;
+                return isKeyPressed(cpuTime) ? 0 : SEL1_REGISTER_KEY_PRESSED;
         }
     }
 
@@ -316,7 +325,7 @@ public class KeyboardController implements Device {
         if (bkButton != null) {
             if (bkButton.getBkKeyCode() != BK_KEY_CODE_NONE) {
                 // Handle button with key code
-                setKeyPressed(isKeyPress);
+                setKeyPressed(computer.getCpu().getTime(), isKeyPress);
                 // Write new key code to data register only if previous key code was read
                 if (isKeyPress && !isStatusRegisterDataReady()) { //
                     writeDataRegister(bkButton.getBkKeyCode());
@@ -326,7 +335,7 @@ public class KeyboardController implements Device {
                 switch (bkButton) {
                     case STOP:
                         if (isKeyPress) {
-                            cpu.requestIrq1();
+                            computer.getCpu().requestIrq1();
                         }
                         break;
                     case LOW_REGISTER:

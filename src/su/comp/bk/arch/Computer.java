@@ -142,7 +142,7 @@ public class Computer implements Runnable {
         videoController = new VideoController(videoMemory);
         addDevice(videoController);
         addDevice(new Sel1RegisterSystemBits(0100000));
-        keyboardController = new KeyboardController(getCpu());
+        keyboardController = new KeyboardController(this);
         addDevice(keyboardController);
         addDevice(new PeripheralPort());
         addDevice(new Timer());
@@ -611,7 +611,7 @@ public class Computer implements Runnable {
         lastUptimeSyncTimestamp = timestamp;
         lastCpuTimeSyncTimestamp = cpu.getTime();
         long uptimeCpuTimeDifference = getCpuTimeNanos() - uptime;
-        uptimeCpuTimeDifference = (uptimeCpuTimeDifference > 0L) ? uptimeCpuTimeDifference : 1L;
+        uptimeCpuTimeDifference = (uptimeCpuTimeDifference > 0) ? uptimeCpuTimeDifference : 1L;
         long uptimeCpuTimeDifferenceMillis = uptimeCpuTimeDifference / NANOSECS_IN_MSEC;
         int uptimeCpuTimeDifferenceNanos = (int) (uptimeCpuTimeDifference % NANOSECS_IN_MSEC);
         try {
