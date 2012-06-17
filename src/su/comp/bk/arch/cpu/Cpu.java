@@ -214,7 +214,7 @@ public class Cpu {
     public final static int PSW_FLAG_M = 04000;
 
     // Processor Status Word (PSW)
-    private short processorStatusWord;
+    private int processorStatusWord;
 
     // Registers (R0-R7)
     private final short[] registers = new short[8];
@@ -368,7 +368,7 @@ public class Cpu {
      */
     public void saveState(Bundle outState) {
         // Save PSW
-        outState.putShort(STATE_PSW, getPswState());
+        outState.putInt(STATE_PSW, getPswState());
         // Save registers
         outState.putShortArray(STATE_REGISTERS, getRegisters());
         // Save state flags
@@ -388,7 +388,7 @@ public class Cpu {
      */
     public void restoreState(Bundle inState) throws Exception {
         // Restore PSW
-        setPswState(inState.getShort(STATE_PSW));
+        setPswState(inState.getInt(STATE_PSW));
         // Restore registers
         putRegisters(inState.getShortArray(STATE_REGISTERS));
         // Restore state flags
@@ -446,7 +446,7 @@ public class Cpu {
      * Get processor status word (PSW).
      * @return processor status word value
      */
-    public short getPswState() {
+    public int getPswState() {
         return processorStatusWord;
     }
 
@@ -454,7 +454,7 @@ public class Cpu {
      * Set processor status word (PSW).
      * @param psw processor status word value to set
      */
-    public void setPswState(short psw) {
+    public void setPswState(int psw) {
         this.processorStatusWord = psw;
     }
 

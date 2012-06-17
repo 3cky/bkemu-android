@@ -28,6 +28,8 @@ public class RandomAccessMemory implements Memory {
     private final int size;
     private final short[] data;
 
+    private final int endAddress;
+
     /**
      * Create new RAM page with initialization.
      * @param startAddress RAM page starting address
@@ -35,6 +37,7 @@ public class RandomAccessMemory implements Memory {
      */
     public RandomAccessMemory(int startAddress, int size) {
         this.startAddress = startAddress;
+        this.endAddress = startAddress + (size << 1) - 1;
         this.size = size;
         this.data = new short[getSize()];
         initMemoryData();
@@ -89,7 +92,7 @@ public class RandomAccessMemory implements Memory {
     }
 
     private int getWordIndex(int address) {
-        return (address - getStartAddress()) >> 1;
+        return (address - startAddress) >> 1;
     }
 
     private int readByte(int address) {
@@ -136,7 +139,7 @@ public class RandomAccessMemory implements Memory {
 
     @Override
     public boolean isRelatedAddress(int address) {
-        return address >= getStartAddress() && address < (getStartAddress() + (getSize() << 1));
+        return (address >= startAddress) && (address <= endAddress);
     }
 
 }

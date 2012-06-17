@@ -59,6 +59,9 @@
 						<platform>14</platform>
 					</sdk>
 					<deleteConflictingFiles>true</deleteConflictingFiles>
+					<proguard>
+						<skip>false</skip>
+					</proguard>
 				</configuration>
 				<extensions>true</extensions>
 			</plugin>

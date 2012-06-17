@@ -102,7 +102,7 @@ public class Computer implements Runnable {
     private int clockFrequency;
 
     /** Uptime sync threshold (in nanoseconds) */
-    public static final long SYNC_UPTIME_THRESHOLD = (1L * NANOSECS_IN_MSEC);
+    public static final long SYNC_UPTIME_THRESHOLD = (10L * NANOSECS_IN_MSEC);
     // Uptime sync threshold (in CPU clock ticks, depends from CPU clock frequency)
     private long syncUptimeThresholdCpuTicks;
 
@@ -564,6 +564,10 @@ public class Computer implements Runnable {
     public void release() {
         Log.d(TAG, "releasing computer");
         audioOutput.release();
+        float effectiveClockFrequency = (float) getCpu().getTime()
+                * NANOSECS_IN_MSEC / getUptime();
+        Log.d(TAG, "effective clock frequency: " + effectiveClockFrequency + " kHz (" +
+                effectiveClockFrequency / getClockFrequency() * 100f + " %)");
     }
 
     /**
