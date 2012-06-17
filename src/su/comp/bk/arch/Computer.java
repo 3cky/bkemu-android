@@ -310,8 +310,10 @@ public class Computer implements Runnable {
     public synchronized void loadImage(byte[] imageData) throws IOException {
         DataInputStream imageDataInputStream = new DataInputStream(
                 new ByteArrayInputStream(imageData, 0, imageData.length));
-        int imageAddress = imageDataInputStream.readByte() | (imageDataInputStream.readByte() << 8);
-        int imageLength = imageDataInputStream.readByte() | (imageDataInputStream.readByte() << 8);
+        int imageAddress = (imageDataInputStream.readByte() & 0377)
+                | ((imageDataInputStream.readByte() & 0377) << 8);
+        int imageLength = (imageDataInputStream.readByte() & 0377)
+                | ((imageDataInputStream.readByte() & 0377) << 8);
         Log.d(TAG, "image file address 0" + Integer.toOctalString(imageAddress) +
                 ", length: " + imageLength);
         for (int imageIndex = 0; imageIndex < imageLength; imageIndex++) {
