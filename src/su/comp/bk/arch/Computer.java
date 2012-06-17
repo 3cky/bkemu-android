@@ -425,7 +425,7 @@ public class Computer implements Runnable {
     /**
      * Reset computer state.
      */
-    public void reset() {
+    public synchronized void reset() {
         getCpu().reset();
     }
 

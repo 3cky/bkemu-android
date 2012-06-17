@@ -4,5 +4,6 @@
     <string name="fps_string">%d FPS</string>
     <string name="toggle_keyboard">Toggle on-screen keyboard</string>
     <string name="load_image">Load image</string>
-    <string name="toggle_screen_mode">Toggle screen mode</string>
+    <string name="toggle_screen_mode">Toggle color mode</string>
+    <string name="reset">Reset</string>
 </resources>

@@ -170,6 +170,9 @@ public class BkEmuActivity extends Activity {
             case R.id.screen_mode:
                 toggleScreenMode();
                 return true;
+            case R.id.reset:
+                computer.reset();
+                return true;
             default:
                 return super.onOptionsItemSelected(item);
         }
