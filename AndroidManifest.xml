@@ -15,6 +15,18 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-        </activity>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:host="*" android:scheme="file" />
+                <data android:pathPattern=".*\\.bin" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:host="*" android:scheme="file" />
+                <data android:mimeType="application/unknown" />
+            </intent-filter>
+</activity>
     </application>
 </manifest>

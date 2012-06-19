@@ -307,29 +307,23 @@ public class Computer implements Runnable {
      * @param imageData image data byte array
      * @throws IOException in case of loading error
      */
-    public synchronized void loadImage(byte[] imageData) throws IOException {
+    public synchronized int loadBinImage(byte[] imageData) throws IOException {
+        if (imageData.length < 5 || imageData.length > 01000000) {
+            throw new IllegalArgumentException("Invalid binary image file length: " +
+                    imageData.length);
+        }
         DataInputStream imageDataInputStream = new DataInputStream(
                 new ByteArrayInputStream(imageData, 0, imageData.length));
         int imageAddress = (imageDataInputStream.readByte() & 0377)
                 | ((imageDataInputStream.readByte() & 0377) << 8);
         int imageLength = (imageDataInputStream.readByte() & 0377)
                 | ((imageDataInputStream.readByte() & 0377) << 8);
-        Log.d(TAG, "image file address 0" + Integer.toOctalString(imageAddress) +
-                ", length: " + imageLength);
         for (int imageIndex = 0; imageIndex < imageLength; imageIndex++) {
             writeMemory(true, imageAddress + imageIndex, imageDataInputStream.read());
         }
-    }
-
-    /**
-     * Load image in bin format (address/length/data) from raw resource.
-     * @param resources {@link Resources} reference
-     * @param imageResourceId image raw resource id
-     * @throws IOException
-     */
-    public synchronized void loadImage(Resources resources, int imageResourceId)
-            throws IOException {
-        loadImage(loadRawResourceData(resources, imageResourceId));
+        Log.d(TAG, "loaded bin image file: address 0" + Integer.toOctalString(imageAddress) +
+                ", length: " + imageLength);
+        return imageAddress;
     }
 
     /**

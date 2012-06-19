@@ -231,6 +231,21 @@ public class Cpu {
     // CPU time (in clock ticks)
     private long time;
 
+    private OnTrapListener onTrapListener;
+
+    /**
+     * Hardware/software interrupts event listener interface.
+     */
+    public interface OnTrapListener {
+        /**
+         * Called on hardware/software interrupt immediately after
+         * pushing PSW/PC to stack.
+         * @param cpu interrupted CPU object reference
+         * @param trapVectorAddress interrupt trap vector address
+         */
+        void onTrap(Cpu cpu, int trapVectorAddress);
+    }
+
     public Cpu(Computer computer) {
         this.computer = computer;
         initializeAddressingModes();
@@ -360,6 +375,14 @@ public class Cpu {
 
     private void addAddressingMode(AddressingMode addressingMode) {
         this.addressingModes[addressingMode.getCode()] = addressingMode;
+    }
+
+    public OnTrapListener getOnTrapListener() {
+        return onTrapListener;
+    }
+
+    public void setOnTrapListener(OnTrapListener onTrapListener) {
+        this.onTrapListener = onTrapListener;
     }
 
     /**
@@ -791,8 +814,8 @@ public class Cpu {
      * or <false> if bus error happens while vector loading
      */
     public boolean processTrap(int trapVectorAddress, boolean pushReturnState) {
-        Log.d(TAG, ">>> TRAP " + Integer.toOctalString(trapVectorAddress) +
-                ", PC: 0" + Integer.toOctalString(readRegister(false, PC)));
+//        Log.d(TAG, ">>> TRAP " + Integer.toOctalString(trapVectorAddress) +
+//                ", PC: 0" + Integer.toOctalString(readRegister(false, PC)));
         boolean isVectorLoaded = false;
         if (!pushReturnState || (push(getPswState()) && push(readRegister(false, PC)))) {
             int trapAddress = readMemory(false, trapVectorAddress);
@@ -805,8 +828,12 @@ public class Cpu {
                 }
             }
         }
-        Log.d(TAG, "<<< TRAP " + Integer.toOctalString(trapVectorAddress) +
-                ", PC: 0" + Integer.toOctalString(readRegister(false, PC)));
+        OnTrapListener listener = getOnTrapListener();
+        if (isVectorLoaded && onTrapListener != null) {
+            listener.onTrap(this, trapVectorAddress);
+        }
+//        Log.d(TAG, "<<< TRAP " + Integer.toOctalString(trapVectorAddress) +
+//                ", PC: 0" + Integer.toOctalString(readRegister(false, PC)));
         return isVectorLoaded;
     }
 
@@ -816,7 +843,7 @@ public class Cpu {
      * <code>false</code> otherwise
      */
     public void returnFromTrap(boolean isTraceTrap) {
-        Log.d(TAG, ">>> return from TRAP, PC: 0" + Integer.toOctalString(readRegister(false, PC)));
+//        Log.d(TAG, ">>> return from TRAP, PC: 0" + Integer.toOctalString(readRegister(false, PC)));
         int pc = pop();
         if (pc != Computer.BUS_ERROR) {
             writeRegister(false, PC, pc);
@@ -826,7 +853,7 @@ public class Cpu {
                 setDeferredTraceTrap();
             }
         }
-        Log.d(TAG, "<<< return from TRAP, PC: 0" + Integer.toOctalString(readRegister(false, PC)));
+//        Log.d(TAG, "<<< return from TRAP, PC: 0" + Integer.toOctalString(readRegister(false, PC)));
     }
 
     /**
