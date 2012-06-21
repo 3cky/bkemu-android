@@ -143,9 +143,15 @@ public class VideoController implements Device {
     public Bitmap renderVideoBuffer() {
         short[] videoData = videoMemory.getData();
         videoBuffer.eraseColor(Color.BLACK);
-        int videoDataOffset = isFullFrameMode() ? 0 : videoData.length
-                - SCREEN_HEIGHT_EXTMEM * SCREEN_SCANLINE_LENGTH;
-        int scrollShift = (readScrollRegister() - SCROLL_BASE_VALUE) & 0377;
+        int videoDataOffset;
+        int scrollShift;
+        if (isFullFrameMode()) {
+            videoDataOffset = 0;
+            scrollShift = (readScrollRegister() - SCROLL_BASE_VALUE) & 0377;
+        } else {
+            videoDataOffset = videoData.length - SCREEN_HEIGHT_EXTMEM * SCREEN_SCANLINE_LENGTH;
+            scrollShift = (SCROLL_EXTMEM_VALUE - SCROLL_BASE_VALUE) & 0377;
+        }
         int videoBufferX;
         int videoBufferY;
         synchronized (videoDataToPixelsTable) {
@@ -194,11 +200,7 @@ public class VideoController implements Device {
     }
 
     private void writeScrollRegister(int value) {
-        if ((value & EXTMEM_CONTROL_BIT) != 0) {
-            this.scrollRegister = EXTMEM_CONTROL_BIT | (value & 0377);
-        } else {
-            this.scrollRegister = SCROLL_EXTMEM_VALUE;
-        }
+        this.scrollRegister = (value & EXTMEM_CONTROL_BIT) | (value & 0377);
     }
 
     private int readScrollRegister() {
