@@ -267,7 +267,7 @@ public class Computer implements Runnable {
      */
     public void setClockFrequency(int clockFrequency) {
         this.clockFrequency = clockFrequency;
-        this.syncUptimeThresholdCpuTicks = getNanosCpuTime(SYNC_UPTIME_THRESHOLD);
+        this.syncUptimeThresholdCpuTicks = nanosToCpuTime(SYNC_UPTIME_THRESHOLD);
     }
 
     private void addReadOnlyMemory(Resources resources, int romDataResId, int address)
@@ -571,7 +571,7 @@ public class Computer implements Runnable {
      * @return current CPU time in nanoseconds
      */
     public long getCpuTimeNanos() {
-        return getCpuTimeNanos(cpu.getTime());
+        return cpuTimeToNanos(cpu.getTime());
     }
 
     /**
@@ -579,7 +579,7 @@ public class Computer implements Runnable {
      * @param cpuTime CPU time (in clock ticks) to convert
      * @return CPU time in nanoseconds
      */
-    public long getCpuTimeNanos(long cpuTime) {
+    public long cpuTimeToNanos(long cpuTime) {
         return cpuTime * NANOSECS_IN_MSEC / clockFrequency;
     }
 
@@ -588,7 +588,7 @@ public class Computer implements Runnable {
      * @param nanosecs time (in nanoseconds) to convert to CPU ticks
      * @return CPU ticks for given time
      */
-    public long getNanosCpuTime(long nanosecs) {
+    public long nanosToCpuTime(long nanosecs) {
         return nanosecs * clockFrequency / NANOSECS_IN_MSEC;
     }
 

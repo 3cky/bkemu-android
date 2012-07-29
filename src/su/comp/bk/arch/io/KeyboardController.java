@@ -220,7 +220,7 @@ public class KeyboardController implements Device {
     }
 
     protected boolean isKeyPressed(long cpuTime) {
-        return (lastKeyPressTimestamp < 0 || computer.getCpuTimeNanos(cpuTime -
+        return (lastKeyPressTimestamp < 0 || computer.cpuTimeToNanos(cpuTime -
                     lastKeyPressTimestamp) > KEY_PRESS_DELAY) ? isKeyPressed : true;
     }
 

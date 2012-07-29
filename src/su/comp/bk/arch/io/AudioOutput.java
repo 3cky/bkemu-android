@@ -51,8 +51,10 @@ public class AudioOutput implements Device, Runnable {
     // Audio samples buffer
     private final short[] samplesBuffer;
 
-    private short lastSampleValue = Short.MIN_VALUE;
-    private long lastSampleTimestamp;
+    // Current PCM sample value
+    private short currentSample = Short.MIN_VALUE;
+    // Last PCM sample timestamp (in CPU ticks)
+    private long lastPcmTimestamp;
 
     // PCM timestamps circular buffer, one per output state change
     private final long[] pcmTimestamps;
@@ -79,7 +81,7 @@ public class AudioOutput implements Device, Runnable {
         player = new AudioTrack(AudioManager.STREAM_MUSIC, OUTPUT_SAMPLE_RATE,
                 AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT,
                 minBufferSize, AudioTrack.MODE_STREAM);
-        samplesBuffer = new short[minBufferSize / 4]; // two bytes per sample
+        samplesBuffer = new short[minBufferSize / 2]; // two bytes per sample
         int pcmTimestampsBufferSize = (int) (samplesBuffer.length * computer.getClockFrequency()
                 * 1000L / (OUTPUT_SAMPLE_RATE * BaseOpcode.getBaseExecutionTime()));
         pcmTimestamps = new long[pcmTimestampsBufferSize];
@@ -95,7 +97,6 @@ public class AudioOutput implements Device, Runnable {
 
     @Override
     public void init(long cpuTime) {
-        lastSampleTimestamp = cpuTime;
     }
 
     public void start() {
@@ -166,48 +167,51 @@ public class AudioOutput implements Device, Runnable {
         }
     }
 
-    private synchronized void removePcmTimestamp() {
-        if (pcmTimestampsCapacity < pcmTimestamps.length) {
-            getPcmTimestampIndex = ++getPcmTimestampIndex % pcmTimestamps.length;
-            pcmTimestampsCapacity++;
-        } else {
-            Log.w(TAG, "PCM buffer underflow!");
-        }
-    }
-
-    private synchronized long peekPcmTimestamp() {
+    private synchronized long getPcmTimestamp() {
         long pcmTimestamp = -1L;
         if (pcmTimestampsCapacity < pcmTimestamps.length) {
-            pcmTimestamp = pcmTimestamps[getPcmTimestampIndex];
+            pcmTimestamp = pcmTimestamps[getPcmTimestampIndex++];
+            getPcmTimestampIndex %= pcmTimestamps.length;
+            pcmTimestampsCapacity++;
         }
         return pcmTimestamp;
+    }
+
+    private final long pcmSamplesToCpuTime(long numPcmSamples) {
+        return computer.nanosToCpuTime(numPcmSamples * NANOSECS_IN_SECOND / OUTPUT_SAMPLE_RATE);
+    }
+
+    private final long cpuTimeToPcmSamples(long cpuTime) {
+        return computer.cpuTimeToNanos(cpuTime) * OUTPUT_SAMPLE_RATE / NANOSECS_IN_SECOND;
     }
 
     @Override
     public void run() {
         Log.d(TAG, "audio output started");
+        long pcmTimestamp;
+        int numPcmSamples = 0;
+        lastPcmTimestamp = computer.getCpu().getTime() - pcmSamplesToCpuTime(samplesBuffer.length);
         while (isRunning) {
             int sampleIndex = 0;
-            long lastPcmTimestamp = lastSampleTimestamp;
-            long pcmTimestamp = peekPcmTimestamp();
             while (sampleIndex < samplesBuffer.length) {
-                short sampleValue = lastSampleValue;
-                int numSamples = samplesBuffer.length - sampleIndex;
-                if (pcmTimestamp >= 0 && pcmTimestamp < lastSampleTimestamp) {
-                    removePcmTimestamp();
-                    numSamples = Math.min((int) (computer.getCpuTimeNanos(pcmTimestamp -
-                            lastPcmTimestamp) * OUTPUT_SAMPLE_RATE / NANOSECS_IN_SECOND),
-                            numSamples);
-                    lastPcmTimestamp = pcmTimestamp;
-                    pcmTimestamp = peekPcmTimestamp();
-                    lastSampleValue = (sampleValue > 0) ? Short.MIN_VALUE : Short.MAX_VALUE;
+                if (numPcmSamples <= 0) {
+                    pcmTimestamp = getPcmTimestamp();
+                    if (pcmTimestamp >= 0) {
+                        numPcmSamples = (int) (cpuTimeToPcmSamples(pcmTimestamp - lastPcmTimestamp));
+                        currentSample = (currentSample > 0) ? Short.MIN_VALUE : Short.MAX_VALUE;
+                        lastPcmTimestamp += pcmSamplesToCpuTime(numPcmSamples);
+                    } else {
+                        numPcmSamples = samplesBuffer.length - sampleIndex;
+                        lastPcmTimestamp = computer.getCpu().getTime() -
+                                pcmSamplesToCpuTime(samplesBuffer.length);
+                    }
                 }
-                while (numSamples-- > 0) {
-                    samplesBuffer[sampleIndex++] = sampleValue;
+                int numPcmSamplesToWrite = Math.min(numPcmSamples, samplesBuffer.length - sampleIndex);
+                numPcmSamples -= numPcmSamplesToWrite;
+                while (numPcmSamplesToWrite-- > 0) {
+                    samplesBuffer[sampleIndex++] = currentSample;
                 }
             }
-            lastSampleTimestamp += computer.getNanosCpuTime(samplesBuffer.length
-                    * NANOSECS_IN_SECOND / OUTPUT_SAMPLE_RATE);
             player.write(samplesBuffer, 0, samplesBuffer.length);
         }
         Log.d(TAG, "audio output stopped");

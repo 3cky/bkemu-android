@@ -112,6 +112,10 @@ public class BkEmuActivity extends Activity {
                         activityHandler.post(new IntentDataProgramImageLoader());
                     }
                     break;
+                case 036: // EMT 36 - tape I/O
+                    Log.d(TAG, "EMT 36, R1=0" + Integer.toOctalString(
+                            cpu.readRegister(false, Cpu.R1)));
+                    break;
                 case Computer.BUS_ERROR:
                     Log.w(TAG, "Can't get EMT number");
                     break;
