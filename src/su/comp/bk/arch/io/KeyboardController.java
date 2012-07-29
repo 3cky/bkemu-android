@@ -117,7 +117,6 @@ public class KeyboardController implements Device {
         BACKSPACE(0030, KeyEvent.KEYCODE_DEL),  // Backspace
 
         // Buttons - third row
-        CTRL_SYMBOL(0015, KeyEvent.KEYCODE_TAB),  // Tabulation (ТАБ)
         TAB(0015, KeyEvent.KEYCODE_TAB),  // Tabulation (ТАБ)
         J(0112, KeyEvent.KEYCODE_J),  // Й J
         C(0103, KeyEvent.KEYCODE_C),  // Ц C
@@ -135,7 +134,7 @@ public class KeyboardController implements Device {
         LINE_RETURN(0023, KeyEvent.KEYCODE_PAGE_DOWN), // ВС
 
         // Buttons - fourth row
-        CONTROL_SYMBOL(BK_KEY_CODE_NONE, KeyEvent.KEYCODE_CTRL_LEFT),  // Control symbol (СУ)
+        CTRL_SYMBOL(BK_KEY_CODE_NONE, KeyEvent.KEYCODE_CTRL_LEFT),  // Control symbol (СУ)
         F(0106, KeyEvent.KEYCODE_F),  // Ф F
         Y(0131, KeyEvent.KEYCODE_Y),  // Ы Y
         W(0127, KeyEvent.KEYCODE_W),  // В W
