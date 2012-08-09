@@ -1,0 +1,995 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:layout_gravity="center_horizontal"
+    android:orientation="vertical"
+    android:visibility="visible" >
+
+    <!-- First row horizontal container -->
+    <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+        xmlns:tools="http://schemas.android.com/tools"
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/btn_row_height"
+        android:gravity="center_horizontal"
+        android:weightSum="31"
+        tools:ignore="HardcodedText" >
+
+        <Button
+            android:id="@+id/btn_repeat"
+            android:tag="REPEAT"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="3"
+            android:padding="0dp"
+            android:background="@drawable/btn_gray"
+            android:text="ПОВТ"
+            android:textColor="@color/btn_text"
+            android:textSize="@dimen/btn_text_size" />
+
+        <Button
+            android:id="@+id/btn_kt"
+            android:tag="KT"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="3"
+            android:padding="0dp"
+            android:background="@drawable/btn_gray"
+            android:text="КТ"
+            android:textColor="@color/btn_text"
+            android:textSize="@dimen/btn_text_size" />
+
+        <ImageButton
+            android:id="@+id/btn_erase"
+            android:tag="ERASE"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="3"
+            android:background="@drawable/btn_gray"
+            android:padding="@dimen/btn_image_padding"
+            android:src="@drawable/arrow_erase"
+            android:scaleType="fitCenter"
+            android:contentDescription="@string/desc_erase" />
+
+        <ImageButton
+            android:id="@+id/btn_collapse"
+            android:tag="COLLAPSE"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="3"
+            android:background="@drawable/btn_gray"
+            android:padding="@dimen/btn_image_padding"
+            android:src="@drawable/arrow_collapse"
+            android:scaleType="fitCenter"
+            android:contentDescription="@string/desc_collapse"/>
+
+        <ImageButton
+            android:id="@+id/btn_expand"
+            android:tag="EXPAND"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="3"
+            android:background="@drawable/btn_gray"
+            android:padding="@dimen/btn_image_padding"
+            android:src="@drawable/arrow_expand"
+            android:scaleType="fitCenter"
+            android:contentDescription="@string/desc_expand" />
+
+        <Button
+            android:id="@+id/btn_ind_ctrl_sym"
+            android:tag="IND_CTRL_SYMBOL"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="3"
+            android:padding="0dp"
+            android:background="@drawable/btn_gray"
+            android:text="ИНД\nСУ"
+            android:textColor="@color/btn_text"
+            android:textSize="@dimen/btn_text_size" />
+
+        <Button
+            android:id="@+id/btn_block_edit"
+            android:tag="BLOCK_EDIT"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="3"
+            android:padding="0dp"
+            android:background="@drawable/btn_gray"
+            android:text="БЛОК\nРЕД"
+            android:textColor="@color/btn_text"
+            android:textSize="@dimen/btn_text_size" />
+
+        <Button
+            android:id="@+id/btn_step"
+            android:tag="STEP"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="3"
+            android:padding="0dp"
+            android:background="@drawable/btn_gray"
+            android:text="ШАГ"
+            android:textColor="@color/btn_text"
+            android:textSize="@dimen/btn_text_size" />
+
+        <Button
+            android:id="@+id/btn_clear"
+            android:tag="CLEAR"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="3"
+            android:padding="0dp"
+            android:background="@drawable/btn_gray"
+            android:text="СБР"
+            android:textColor="@color/btn_text"
+            android:textSize="@dimen/btn_text_size" />
+
+        <Button
+            android:id="@+id/btn_stop"
+            android:tag="STOP"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="4"
+            android:padding="0dp"
+            android:background="@drawable/btn_red"
+            android:text="СТОП"
+            android:textColor="@color/btn_text"
+            android:textSize="@dimen/btn_text_size" />
+
+    </LinearLayout>
+
+    <!-- Second row horizontal container -->
+    <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+        xmlns:tools="http://schemas.android.com/tools"
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/btn_row_height"
+        android:gravity="center_horizontal"
+        android:weightSum="31"
+        tools:ignore="HardcodedText" >
+
+        <ImageButton
+            android:id="@+id/btn_low_register"
+            android:tag="LOW_REGISTER"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="2"
+            android:background="@drawable/btn_gray"
+            android:padding="@dimen/btn_image_padding"
+            android:src="@drawable/arrow_shift"
+            android:scaleType="fitCenter"
+            android:contentDescription="@string/desc_shift" />
+
+        <Button
+            android:id="@+id/btn_semicolon"
+            android:tag="SEMICOLON"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="2"
+            android:padding="0dp"
+            android:background="@drawable/btn_white"
+            android:text=";\n+"
+            android:textColor="@color/btn_text"
+            android:textSize="@dimen/btn_text_size" />
+
+        <Button
+            android:id="@+id/btn_1"
+            android:tag="ONE"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="2"
+            android:padding="0dp"
+            android:background="@drawable/btn_white"
+            android:text="1\n!"
+            android:textColor="@color/btn_text"
+            android:textSize="@dimen/btn_text_size" />
+
+        <Button
+            android:id="@+id/btn_2"
+            android:tag="TWO"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="2"
+            android:padding="0dp"
+            android:background="@drawable/btn_white"
+            android:text="2\n&quot;"
+            android:textColor="@color/btn_text"
+            android:textSize="@dimen/btn_text_size" />
+
+        <Button
+            android:id="@+id/btn_3"
+            android:tag="THREE"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="2"
+            android:padding="0dp"
+            android:background="@drawable/btn_white"
+            android:text="3\n#"
+            android:textColor="@color/btn_text"
+            android:textSize="@dimen/btn_text_size" />
+
+        <Button
+            android:id="@+id/btn_4"
+            android:tag="FOUR"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="2"
+            android:padding="0dp"
+            android:background="@drawable/btn_white"
+            android:text="4\n¤"
+            android:textColor="@color/btn_text"
+            android:textSize="@dimen/btn_text_size" />
+
+        <Button
+            android:id="@+id/btn_5"
+            android:tag="FIVE"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="2"
+            android:padding="0dp"
+            android:background="@drawable/btn_white"
+            android:text="5\n%"
+            android:textColor="@color/btn_text"
+            android:textSize="@dimen/btn_text_size" />
+
+        <Button
+            android:id="@+id/btn_6"
+            android:tag="SIX"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="2"
+            android:padding="0dp"
+            android:background="@drawable/btn_white"
+            android:text="6\n&amp;"
+            android:textColor="@color/btn_text"
+            android:textSize="@dimen/btn_text_size" />
+
+        <Button
+            android:id="@+id/btn_7"
+            android:tag="SEVEN"
+            android:layout_width="0dp"
+            android:padding="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="2"
+            android:background="@drawable/btn_white"
+            android:text="7\n'"
+            android:textColor="@color/btn_text"
+            android:textSize="@dimen/btn_text_size" />
+
+        <Button
+            android:id="@+id/btn_8"
+            android:tag="EIGHT"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="2"
+            android:padding="0dp"
+            android:background="@drawable/btn_white"
+            android:text="8\n("
+            android:textColor="@color/btn_text"
+            android:textSize="@dimen/btn_text_size" />
+
+        <Button
+            android:id="@+id/btn_9"
+            android:tag="NINE"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="2"
+            android:padding="0dp"
+            android:background="@drawable/btn_white"
+            android:text="9\n)"
+            android:textColor="@color/btn_text"
+            android:textSize="@dimen/btn_text_size" />
+
+        <Button
+            android:id="@+id/btn_0"
+            android:tag="ZERO"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="2"
+            android:padding="0dp"
+            android:background="@drawable/btn_white"
+            android:text="0\n{"
+            android:textColor="@color/btn_text"
+            android:textSize="@dimen/btn_text_size" />
+
+        <Button
+            android:id="@+id/btn_minus"
+            android:tag="MINUS"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="2"
+            android:padding="0dp"
+            android:background="@drawable/btn_white"
+            android:text="-\n="
+            android:textColor="@color/btn_text"
+            android:textSize="@dimen/btn_text_size" />
+
+        <Button
+            android:id="@+id/btn_slash"
+            android:tag="SLASH"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="2"
+            android:padding="0dp"
+            android:background="@drawable/btn_white"
+            android:text="/\n?"
+            android:textColor="@color/btn_text"
+            android:textSize="@dimen/btn_text_size" />
+
+        <ImageButton
+            android:id="@+id/btn_backspace"
+            android:tag="BACKSPACE"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="3"
+            android:background="@drawable/btn_gray"
+            android:padding="@dimen/btn_image_padding"
+            android:src="@drawable/arrow_back"
+            android:scaleType="fitCenter"
+            android:contentDescription="@string/desc_backspace" />
+
+    </LinearLayout>
+
+    <!-- Third row horizontal container -->
+	<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+	    xmlns:tools="http://schemas.android.com/tools"
+	    android:layout_width="match_parent"
+	    android:layout_height="@dimen/btn_row_height"
+	    android:gravity="center_horizontal"
+	    android:weightSum="31"
+	    tools:ignore="HardcodedText" >
+
+	    <Button
+	        android:id="@+id/btn_tab"
+	        android:tag="TAB"
+	        android:layout_width="0dp"
+	        android:layout_height="match_parent"
+	        android:layout_weight="3"
+	        android:padding="0dp"
+	        android:background="@drawable/btn_gray"
+	        android:text="ТАБ"
+	        android:textColor="@color/btn_text"
+	        android:textSize="@dimen/btn_text_size" />
+
+	    <Button
+	        android:id="@+id/btn_j"
+	        android:tag="J"
+	        android:layout_width="0dp"
+	        android:layout_height="match_parent"
+	        android:layout_weight="2"
+	        android:padding="0dp"
+	        android:background="@drawable/btn_white"
+	        android:text="Й\nJ"
+	        android:textColor="@color/btn_text"
+	        android:textSize="@dimen/btn_text_size" />
+
+	    <Button
+	        android:id="@+id/btn_c"
+	        android:tag="C"
+	        android:layout_width="0dp"
+	        android:layout_height="match_parent"
+	        android:layout_weight="2"
+	        android:padding="0dp"
+	        android:background="@drawable/btn_white"
+	        android:text="Ц\nC"
+	        android:textColor="@color/btn_text"
+	        android:textSize="@dimen/btn_text_size" />
+
+	    <Button
+	        android:id="@+id/btn_u"
+	        android:tag="U"
+	        android:layout_width="0dp"
+	        android:layout_height="match_parent"
+	        android:layout_weight="2"
+	        android:padding="0dp"
+	        android:background="@drawable/btn_white"
+	        android:text="У\nU"
+	        android:textColor="@color/btn_text"
+	        android:textSize="@dimen/btn_text_size" />
+
+	    <Button
+	        android:id="@+id/btn_k"
+	        android:tag="K"
+	        android:layout_width="0dp"
+	        android:layout_height="match_parent"
+	        android:layout_weight="2"
+	        android:padding="0dp"
+	        android:background="@drawable/btn_white"
+	        android:text="К\nK"
+	        android:textColor="@color/btn_text"
+	        android:textSize="@dimen/btn_text_size" />
+
+	    <Button
+	        android:id="@+id/btn_e"
+	        android:tag="E"
+	        android:layout_width="0dp"
+	        android:layout_height="match_parent"
+	        android:layout_weight="2"
+	        android:padding="0dp"
+	        android:background="@drawable/btn_white"
+	        android:text="E\nЕ"
+	        android:textColor="@color/btn_text"
+	        android:textSize="@dimen/btn_text_size" />
+
+	    <Button
+	        android:id="@+id/btn_n"
+	        android:tag="N"
+	        android:layout_width="0dp"
+	        android:layout_height="match_parent"
+	        android:layout_weight="2"
+	        android:padding="0dp"
+	        android:background="@drawable/btn_white"
+	        android:text="Н\nN"
+	        android:textColor="@color/btn_text"
+	        android:textSize="@dimen/btn_text_size" />
+
+	    <Button
+	        android:id="@+id/btn_g"
+	        android:tag="G"
+	        android:layout_width="0dp"
+	        android:layout_height="match_parent"
+	        android:layout_weight="2"
+	        android:padding="0dp"
+	        android:background="@drawable/btn_white"
+	        android:text="Г\nG"
+	        android:textColor="@color/btn_text"
+	        android:textSize="@dimen/btn_text_size" />
+
+	    <Button
+	        android:id="@+id/btn_left_bracket"
+	        android:tag="LEFT_BRACKET"
+	        android:layout_width="0dp"
+	        android:layout_height="match_parent"
+	        android:layout_weight="2"
+	        android:padding="0dp"
+	        android:background="@drawable/btn_white"
+	        android:text="Ш\n["
+	        android:textColor="@color/btn_text"
+	        android:textSize="@dimen/btn_text_size" />
+
+	    <Button
+	        android:id="@+id/btn_right_bracket"
+	        android:tag="RIGHT_BRACKET"
+	        android:layout_width="0dp"
+	        android:layout_height="match_parent"
+	        android:layout_weight="2"
+	        android:padding="0dp"
+	        android:background="@drawable/btn_white"
+	        android:text="Щ\n]"
+	        android:textColor="@color/btn_text"
+	        android:textSize="@dimen/btn_text_size" />
+
+	    <Button
+	        android:id="@+id/btn_z"
+	        android:tag="Z"
+	        android:layout_width="0dp"
+	        android:layout_height="match_parent"
+	        android:layout_weight="2"
+	        android:padding="0dp"
+	        android:background="@drawable/btn_white"
+	        android:text="З\nZ"
+	        android:textColor="@color/btn_text"
+	        android:textSize="@dimen/btn_text_size" />
+
+	    <Button
+	        android:id="@+id/btn_h"
+	        android:tag="H"
+	        android:layout_width="0dp"
+	        android:layout_height="match_parent"
+	        android:layout_weight="2"
+	        android:padding="0dp"
+	        android:background="@drawable/btn_white"
+	        android:text="X\nH"
+	        android:textColor="@color/btn_text"
+	        android:textSize="@dimen/btn_text_size" />
+
+	    <Button
+	        android:id="@+id/btn_colon"
+	        android:tag="COLON"
+	        android:layout_width="0dp"
+	        android:layout_height="match_parent"
+	        android:layout_weight="2"
+	        android:padding="0dp"
+	        android:background="@drawable/btn_white"
+	        android:text=":\n*"
+	        android:textColor="@color/btn_text"
+	        android:textSize="@dimen/btn_text_size" />
+
+	    <Button
+	        android:id="@+id/btn_right_curly_bracket"
+	        android:tag="RIGHT_CURLY_BRACKET"
+	        android:layout_width="0dp"
+	        android:layout_height="match_parent"
+	        android:layout_weight="2"
+	        android:padding="0dp"
+	        android:background="@drawable/btn_white"
+	        android:text="Ъ\n}"
+	        android:textColor="@color/btn_text"
+	        android:textSize="@dimen/btn_text_size" />
+
+	    <Button
+	        android:id="@+id/btn_line_return"
+	        android:tag="LINE_RETURN"
+	        android:layout_width="0dp"
+	        android:layout_height="match_parent"
+	        android:layout_weight="2"
+	        android:padding="0dp"
+	        android:background="@drawable/btn_gray"
+	        android:text="ВС"
+	        android:textColor="@color/btn_text"
+	        android:textSize="@dimen/btn_text_size" />
+
+	</LinearLayout>
+
+	<!-- Fourth row horizontal container -->
+    <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+        xmlns:tools="http://schemas.android.com/tools"
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/btn_row_height"
+        android:weightSum="31"
+        android:gravity="center_horizontal"
+        tools:ignore="HardcodedText" >
+
+        <su.comp.bk.ui.keyboard.ModifierButton
+            android:id="@+id/btn_ctrl_symbol"
+            android:tag="CTRL_SYMBOL"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="3"
+            android:padding="0dp"
+            android:background="@drawable/btn_toggle_bg"
+            android:textOn="СУ"
+            android:textOff="СУ"
+            android:textColor="@color/btn_text"
+            android:textSize="@dimen/btn_text_size" />
+
+        <Button
+            android:id="@+id/btn_f"
+            android:tag="F"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="2"
+            android:padding="0dp"
+            android:background="@drawable/btn_white"
+            android:text="Ф\nF"
+            android:textColor="@color/btn_text"
+            android:textSize="@dimen/btn_text_size" />
+
+        <Button
+            android:id="@+id/btn_y"
+            android:tag="Y"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="2"
+            android:padding="0dp"
+            android:background="@drawable/btn_white"
+            android:text="Ы\nY"
+            android:textColor="@color/btn_text"
+            android:textSize="@dimen/btn_text_size" />
+
+        <Button
+            android:id="@+id/btn_w"
+            android:tag="W"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="2"
+            android:padding="0dp"
+            android:background="@drawable/btn_white"
+            android:text="В\nW"
+            android:textColor="@color/btn_text"
+            android:textSize="@dimen/btn_text_size" />
+
+        <Button
+            android:id="@+id/btn_a"
+            android:tag="A"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="2"
+            android:padding="0dp"
+            android:background="@drawable/btn_white"
+            android:text="А\nA"
+            android:textColor="@color/btn_text"
+            android:textSize="@dimen/btn_text_size" />
+
+        <Button
+            android:id="@+id/btn_p"
+            android:tag="P"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="2"
+            android:padding="0dp"
+            android:background="@drawable/btn_white"
+            android:text="П\nP"
+            android:textColor="@color/btn_text"
+            android:textSize="@dimen/btn_text_size" />
+
+        <Button
+            android:id="@+id/btn_r"
+            android:tag="R"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="2"
+            android:padding="0dp"
+            android:background="@drawable/btn_white"
+            android:text="Р\nR"
+            android:textColor="@color/btn_text"
+            android:textSize="@dimen/btn_text_size" />
+
+        <Button
+            android:id="@+id/btn_o"
+            android:tag="O"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="2"
+            android:padding="0dp"
+            android:background="@drawable/btn_white"
+            android:text="О\nO"
+            android:textColor="@color/btn_text"
+            android:textSize="@dimen/btn_text_size" />
+
+        <Button
+            android:id="@+id/btn_l"
+            android:tag="L"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="2"
+            android:padding="0dp"
+            android:background="@drawable/btn_white"
+            android:text="Л\nL"
+            android:textColor="@color/btn_text"
+            android:textSize="@dimen/btn_text_size" />
+
+        <Button
+            android:id="@+id/btn_d"
+            android:tag="D"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="2"
+            android:padding="0dp"
+            android:background="@drawable/btn_white"
+            android:text="Д\nD"
+            android:textColor="@color/btn_text"
+            android:textSize="@dimen/btn_text_size" />
+
+        <Button
+            android:id="@+id/btn_v"
+            android:tag="V"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="2"
+            android:padding="0dp"
+            android:background="@drawable/btn_white"
+            android:text="Ж\nV"
+            android:textColor="@color/btn_text"
+            android:textSize="@dimen/btn_text_size" />
+
+        <Button
+            android:id="@+id/btn_backslash"
+            android:tag="BACKSLASH"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="2"
+            android:padding="0dp"
+            android:background="@drawable/btn_white"
+            android:text="Э\n\\"
+            android:textColor="@color/btn_text"
+            android:textSize="@dimen/btn_text_size" />
+
+        <Button
+            android:id="@+id/btn_period"
+            android:tag="PERIOD"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="2"
+            android:padding="0dp"
+            android:background="@drawable/btn_white"
+            android:text=".\n&gt;"
+            android:textColor="@color/btn_text"
+            android:textSize="@dimen/btn_text_size" />
+
+        <ImageButton
+            android:id="@+id/btn_enter"
+            android:tag="ENTER"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="3"
+            android:background="@drawable/btn_gray"
+            android:src="@drawable/arrow_enter"
+            android:padding="@dimen/btn_image_padding"
+            android:scaleType="fitCenter"
+            android:contentDescription="@string/desc_enter" />
+    </LinearLayout>
+
+    <!-- Fifth and sixth rows plus cursor block horizontal container -->
+    <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+        xmlns:tools="http://schemas.android.com/tools"
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/btn_row_height_x2"
+        android:gravity="center_horizontal"
+        android:weightSum="31"
+        android:baselineAligned="false" >
+
+        <!-- Fifth and sixth rows vertical container -->
+        <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+            xmlns:tools="http://schemas.android.com/tools"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:layout_weight="24" >
+            <!-- Fifth row horizontal container -->
+            <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+                xmlns:tools="http://schemas.android.com/tools"
+                android:layout_width="match_parent"
+                android:layout_height="@dimen/btn_row_height"
+                android:weightSum="24"
+                tools:ignore="HardcodedText" >
+
+                <Button
+                    android:id="@+id/btn_uppercase"
+                    android:tag="UPPERCASE"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="2"
+                    android:padding="0dp"
+                    android:background="@drawable/btn_gray"
+                    android:text="ЗАГЛ"
+                    android:textColor="@color/btn_text"
+                    android:textSize="@dimen/btn_text_size" />
+
+                <Button
+                    android:id="@+id/btn_lowercase"
+                    android:tag="LOWERCASE"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="2"
+                    android:padding="0dp"
+                    android:background="@drawable/btn_gray"
+                    android:text="СТР"
+                    android:textColor="@color/btn_text"
+                    android:textSize="@dimen/btn_text_size" />
+
+                <Button
+                    android:id="@+id/btn_q"
+                    android:tag="Q"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="2"
+                    android:padding="0dp"
+                    android:background="@drawable/btn_white"
+                    android:text="Я\nQ"
+                    android:textColor="@color/btn_text"
+                    android:textSize="@dimen/btn_text_size" />
+
+                <Button
+                    android:id="@+id/btn_accent"
+                    android:tag="ACCENT"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="2"
+                    android:padding="0dp"
+                    android:background="@drawable/btn_white"
+                    android:text="Ч\n¬"
+                    android:textColor="@color/btn_text"
+                    android:textSize="@dimen/btn_text_size" />
+
+                <Button
+                    android:id="@+id/btn_s"
+                    android:tag="S"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="2"
+                    android:padding="0dp"
+                    android:background="@drawable/btn_white"
+                    android:text="С\nS"
+                    android:textColor="@color/btn_text"
+                    android:textSize="@dimen/btn_text_size" />
+
+                <Button
+                    android:id="@+id/btn_m"
+                    android:tag="M"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="2"
+                    android:padding="0dp"
+                    android:background="@drawable/btn_white"
+                    android:text="М\nM"
+                    android:textColor="@color/btn_text"
+                    android:textSize="@dimen/btn_text_size" />
+
+                <Button
+                    android:id="@+id/btn_i"
+                    android:tag="I"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="2"
+                    android:padding="0dp"
+                    android:background="@drawable/btn_white"
+                    android:text="И\nI"
+                    android:textColor="@color/btn_text"
+                    android:textSize="@dimen/btn_text_size" />
+
+                <Button
+                    android:id="@+id/btn_t"
+                    android:tag="T"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="2"
+                    android:padding="0dp"
+                    android:background="@drawable/btn_white"
+                    android:text="Т\nT"
+                    android:textColor="@color/btn_text"
+                    android:textSize="@dimen/btn_text_size" />
+
+                <Button
+                    android:id="@+id/btn_x"
+                    android:tag="X"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="2"
+                    android:padding="0dp"
+                    android:background="@drawable/btn_white"
+                    android:text="Ь\nX"
+                    android:textColor="@color/btn_text"
+                    android:textSize="@dimen/btn_text_size" />
+
+                <Button
+                    android:id="@+id/btn_b"
+                    android:tag="B"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="2"
+                    android:padding="0dp"
+                    android:background="@drawable/btn_white"
+                    android:text="Б\nB"
+                    android:textColor="@color/btn_text"
+                    android:textSize="@dimen/btn_text_size" />
+
+                <Button
+                    android:id="@+id/btn_commercial_at"
+                    android:tag="COMMERCIAL_AT"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="2"
+                    android:padding="0dp"
+                    android:background="@drawable/btn_white"
+                    android:text="Ю\n@"
+                    android:textColor="@color/btn_text"
+                    android:textSize="@dimen/btn_text_size" />
+
+                <Button
+                    android:id="@+id/btn_comma"
+                    android:tag="COMMA"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="2"
+                    android:padding="0dp"
+                    android:background="@drawable/btn_white"
+                    android:text=",\n&lt;"
+                    android:textColor="@color/btn_text"
+                    android:textSize="@dimen/btn_text_size" />
+
+            </LinearLayout>
+            <!-- Sixth row horizontal container -->
+            <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+                xmlns:tools="http://schemas.android.com/tools"
+                android:layout_width="match_parent"
+                android:layout_height="@dimen/btn_row_height"
+                android:weightSum="24"
+                tools:ignore="HardcodedText" >
+
+                <Button
+                    android:id="@+id/btn_rus"
+                    android:tag="RUS"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="3"
+                    android:padding="0dp"
+                    android:background="@drawable/btn_gray"
+                    android:text="РУС"
+                    android:textColor="@color/btn_text"
+                    android:textSize="@dimen/btn_text_size" />
+
+		        <su.comp.bk.ui.keyboard.ModifierButton
+		            android:id="@+id/btn_ar2"
+		            android:tag="AR2"
+		            android:layout_width="0dp"
+		            android:layout_height="match_parent"
+		            android:layout_weight="2"
+		            android:padding="0dp"
+		            android:background="@drawable/btn_toggle_bg"
+		            android:textOn="АР2"
+		            android:textOff="АР2"
+		            android:textColor="@color/btn_text"
+		            android:textSize="@dimen/btn_text_size" />
+
+                <Button
+                    android:id="@+id/btn_space"
+                    android:tag="SPACE"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="16"
+                    android:padding="0dp"
+                    android:background="@drawable/btn_gray"
+                    android:textColor="@color/btn_text"
+                    android:textSize="@dimen/btn_text_size" />
+
+                <Button
+                    android:id="@+id/btn_lat"
+                    android:tag="LAT"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="3"
+                    android:padding="0dp"
+                    android:background="@drawable/btn_gray"
+                    android:text="ЛАТ"
+                    android:textColor="@color/btn_text"
+                    android:textSize="@dimen/btn_text_size" />
+
+            </LinearLayout>
+        </LinearLayout>
+	    <!-- Cursor block horizontal container -->
+	    <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+	        xmlns:tools="http://schemas.android.com/tools"
+	        android:layout_width="0dp"
+	        android:layout_height="match_parent"
+            android:layout_weight="6"
+            android:weightSum="3"
+            tools:ignore="HardcodedText" >
+            <!-- Left cursor button -->
+            <ImageButton
+                android:id="@+id/btn_left"
+                android:tag="LEFT"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:background="@drawable/btn_gray"
+                android:padding="@dimen/btn_image_padding"
+                android:src="@drawable/arrow_left"
+                android:scaleType="fitCenter"
+                android:contentDescription="@string/desc_left" />
+            <!-- Up and down cursor buttons vertical container -->
+            <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+	            xmlns:tools="http://schemas.android.com/tools"
+	            android:layout_width="0dp"
+	            android:layout_height="match_parent"
+	            android:layout_weight="1"
+	            android:orientation="vertical"
+	            android:weightSum="2"
+	            tools:ignore="HardcodedText" >
+                <!-- Up cursor button -->
+	            <ImageButton
+	                android:id="@+id/btn_up"
+	                android:tag="UP"
+	                android:layout_width="match_parent"
+	                android:layout_height="0dp"
+	                android:layout_weight="1"
+	                android:background="@drawable/btn_gray"
+	                android:padding="@dimen/btn_image_padding"
+	                android:src="@drawable/arrow_up"
+                    android:scaleType="fitCenter"
+                    android:contentDescription="@string/desc_up"/>
+	            <ImageButton
+	                android:id="@+id/btn_down"
+	                android:tag="DOWN"
+	                android:layout_width="match_parent"
+	                android:layout_height="0dp"
+                    android:layout_weight="1"
+	                android:background="@drawable/btn_gray"
+	                android:padding="@dimen/btn_image_padding"
+	                android:src="@drawable/arrow_down"
+                    android:scaleType="fitCenter"
+                    android:contentDescription="@string/desc_down" />
+            </LinearLayout>
+            <!-- Right cursor button -->
+            <ImageButton
+                android:id="@+id/btn_right"
+                android:tag="RIGHT"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:background="@drawable/btn_gray"
+                android:padding="@dimen/btn_image_padding"
+                android:src="@drawable/arrow_right"
+                android:scaleType="fitCenter"
+                android:contentDescription="@string/desc_right" />
+	    </LinearLayout>
+    </LinearLayout>
+</LinearLayout>

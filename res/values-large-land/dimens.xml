@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="btn_row_height">30dp</dimen>
+    <dimen name="btn_row_height_x2">60dp</dimen>
+    <dimen name="btn_text_size">12dp</dimen>
+    <dimen name="btn_image_padding">5dp</dimen>
+</resources>

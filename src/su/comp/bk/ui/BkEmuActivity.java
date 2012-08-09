@@ -28,9 +28,9 @@ import su.comp.bk.R;
 import su.comp.bk.arch.Computer;
 import su.comp.bk.arch.cpu.Cpu;
 import su.comp.bk.arch.cpu.opcode.EmtOpcode;
+import su.comp.bk.arch.io.KeyboardController;
 import su.comp.bk.arch.io.VideoController;
 import android.app.Activity;
-import android.content.Context;
 import android.os.Bundle;
 import android.os.Handler;
 import android.util.Log;
@@ -40,7 +40,6 @@ import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
-import android.view.inputmethod.InputMethodManager;
 
 /**
  * Main application activity.
@@ -156,6 +155,10 @@ public class BkEmuActivity extends Activity {
         bkEmuView = (BkEmuView) mainView.findViewById(R.id.emu_view);
         this.intentDataProgramImagePath = getIntent().getDataString();
         initializeComputer(savedInstanceState);
+        View keyboardView = mainView.findViewById(R.id.keyboard);
+        KeyboardController keyboardController = this.computer.getKeyboardController();
+        keyboardController.setOnScreenKeyboardView(keyboardView);
+        keyboardController.setOnScreenKeyboardVisibility(false);
         setContentView(mainView);
     }
 
@@ -241,13 +244,21 @@ public class BkEmuActivity extends Activity {
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
         return this.computer.getKeyboardController().handleKeyCode(keyCode, true)
-                ? true : super.onKeyDown(keyCode, event);
+                || super.onKeyDown(keyCode, event);
     }
 
     @Override
     public boolean onKeyUp(int keyCode, KeyEvent event) {
-        return this.computer.getKeyboardController().handleKeyCode(keyCode, false)
-                ? true : super.onKeyUp(keyCode, event);
+        boolean isHandled = false;
+        if (keyCode == KeyEvent.KEYCODE_BACK && this.computer
+                .getKeyboardController().isOnScreenKeyboardVisible()) {
+            this.computer.getKeyboardController().setOnScreenKeyboardVisibility(false);
+            isHandled = true;
+        } else {
+            isHandled = this.computer.getKeyboardController().handleKeyCode(keyCode, false)
+                    || super.onKeyUp(keyCode, event);
+        }
+        return isHandled;
     }
 
     @Override
@@ -294,8 +305,9 @@ public class BkEmuActivity extends Activity {
 
     private void toggleOnScreenKeyboard() {
         Log.d(TAG, "toggling on-screen keyboard");
-        InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-        imm.toggleSoftInput(InputMethodManager.SHOW_FORCED, 0);
+        KeyboardController keyboardController = computer.getKeyboardController();
+        keyboardController.setOnScreenKeyboardVisibility(!keyboardController
+                .isOnScreenKeyboardVisible());
     }
 
     private void toggleScreenMode() {

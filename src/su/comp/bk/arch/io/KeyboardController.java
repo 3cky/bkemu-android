@@ -19,16 +19,22 @@
  */
 package su.comp.bk.arch.io;
 
+import su.comp.bk.R;
+import su.comp.bk.arch.Computer;
+import su.comp.bk.arch.cpu.Cpu;
+import su.comp.bk.ui.keyboard.ModifierButton;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.KeyEvent;
-import su.comp.bk.arch.Computer;
-import su.comp.bk.arch.cpu.Cpu;
+import android.view.MotionEvent;
+import android.view.View;
+import android.view.View.OnTouchListener;
+import android.widget.ImageButton;
 
 /**
  * BK-0010 keyboard controller (К1801ВП1-014).
  */
-public class KeyboardController implements Device {
+public class KeyboardController implements Device, OnTouchListener {
 
     private static final String TAG = KeyboardController.class.getName();
 
@@ -43,8 +49,8 @@ public class KeyboardController implements Device {
     /** Keyboard data register (bits 0-6 - pressed key code value, read only) */
     public final static int DATA_REGISTER_ADDRESS = 0177662;
 
-    // Key pressed state flag in SEL1 register (0 - key is pressed, 1 - not pressed, read only)
-    private final static int SEL1_REGISTER_KEY_PRESSED = (1 << 6);
+    // Button pressed state flag in SEL1 register (0 - key is pressed, 1 - not pressed, read only)
+    private final static int SEL1_REGISTER_BUTTON_PRESSED = (1 << 6);
 
     private final static int[] ADDRESSES = {
         Cpu.REG_SEL1, STATUS_REGISTER_ADDRESS, DATA_REGISTER_ADDRESS
@@ -65,11 +71,20 @@ public class KeyboardController implements Device {
     private static final String STATE_STATUS_REGISTER =
             KeyboardController.class.getName() + "#status_reg";
 
-    // Shift key is pressed flag
-    private boolean isShiftPressed;
+    // Low register modifier key codes lookup table
+    private static final byte[] lowRegisterKeyCodeTable = new byte[256];
+
+    // Uppercase mode flag
+    private boolean isUppercaseMode;
+
+    // Low register modifier key is pressed flag
+    private boolean isLowRegisterPressed;
 
     // AR2 (Alternative Register 2) key is pressed flag
     private boolean isAr2Pressed;
+
+    // Control symbol key is pressed flag
+    private boolean isCtrlSymbolPressed;
 
     // Status register value
     private int statusRegister;
@@ -79,12 +94,26 @@ public class KeyboardController implements Device {
 
     /** Key pressing delay (in nanoseconds) */
     public final static long KEY_PRESS_DELAY = (250L * Computer.NANOSECS_IN_MSEC);
-    // Key pressed state flag in SEL1 register
-    private boolean isKeyPressed;
-    // Last key press timestamp (in CPU clock ticks)
-    private long lastKeyPressTimestamp = -1L;
+    // Button pressed state flag in SEL1 register
+    private boolean isButtonPressed;
+    // Non-modifier button was pressed flag
+    private boolean wasButtonPressed;
+    // Last button press timestamp (in CPU clock ticks)
+    private long lastButtonPressTimestamp = -1L;
 
     private final Computer computer;
+
+    private boolean isOnScreenKeyboardVisible = false;
+
+    private View onScreenKeyboardView;
+
+    private ModifierButton ar2Button;
+    private ModifierButton ctrlSymbolButton;
+    private ImageButton lowRegisterButton;
+
+    static {
+        initializeLookupTables();
+    }
 
     public enum BkButton {
         // Buttons - first row
@@ -206,6 +235,75 @@ public class KeyboardController implements Device {
         this.computer = computer;
     }
 
+    private static void initializeLookupTables() {
+        // Initialize low register modifier key codes lookup table
+        for (int i = 0; i < 256; i++) {
+            lowRegisterKeyCodeTable[i] = (byte) i;
+        }
+        for (int i = 'A'; i <= 'Z'; i++) {
+            lowRegisterKeyCodeTable[i] = (byte) (i ^ 040);
+            lowRegisterKeyCodeTable[i ^ 040] = (byte) i;
+        }
+        lowRegisterKeyCodeTable[';'] = '+';
+        lowRegisterKeyCodeTable['1'] = '!';
+        lowRegisterKeyCodeTable['2'] = '"';
+        lowRegisterKeyCodeTable['3'] = '#';
+        lowRegisterKeyCodeTable['4'] = '$';
+        lowRegisterKeyCodeTable['5'] = '%';
+        lowRegisterKeyCodeTable['6'] = '&';
+        lowRegisterKeyCodeTable['7'] = '\'';
+        lowRegisterKeyCodeTable['8'] = '(';
+        lowRegisterKeyCodeTable['9'] = ')';
+        lowRegisterKeyCodeTable['0'] = '{';
+        lowRegisterKeyCodeTable['-'] = '=';
+        lowRegisterKeyCodeTable['/'] = '?';
+        lowRegisterKeyCodeTable[':'] = '*';
+        lowRegisterKeyCodeTable['\\'] = '|';
+        lowRegisterKeyCodeTable['.'] = '>';
+        lowRegisterKeyCodeTable[','] = '<';
+        lowRegisterKeyCodeTable[0137] = '}';
+    }
+
+    public void setOnScreenKeyboardView(View keyboardView) {
+        this.onScreenKeyboardView = keyboardView;
+        for (BkButton bkButton : BkButton.values()) {
+            View buttonView = keyboardView.findViewWithTag(bkButton.name());
+            if (buttonView != null) {
+                buttonView.setOnTouchListener(this);
+            } else {
+                Log.w(TAG, "Can't find view for button: " + bkButton.name());
+            }
+        }
+        this.ctrlSymbolButton = (ModifierButton) onScreenKeyboardView
+                .findViewById(R.id.btn_ctrl_symbol);
+        this.ar2Button = (ModifierButton) onScreenKeyboardView
+                .findViewById(R.id.btn_ar2);
+        this.lowRegisterButton = (ImageButton) onScreenKeyboardView
+                .findViewById(R.id.btn_low_register);
+    }
+
+    public void setOnScreenKeyboardVisibility(boolean isVisible) {
+        this.isOnScreenKeyboardVisible = isVisible;
+        onScreenKeyboardView.setVisibility(isVisible ? View.VISIBLE : View.GONE);
+    }
+
+    public boolean isOnScreenKeyboardVisible() {
+        return this.isOnScreenKeyboardVisible;
+    }
+
+    @Override
+    public boolean onTouch(View v, MotionEvent event) {
+        if (event.getAction() == MotionEvent.ACTION_UP
+                || event.getAction() == MotionEvent.ACTION_DOWN) {
+            BkButton bkButton = BkButton.valueOf(v.getTag().toString());
+            boolean isPressed = event.getAction() == MotionEvent.ACTION_DOWN;
+            Log.d(TAG, "handle button touch event " + (isPressed ? "press" : "release") +
+                    ", button: " + bkButton);
+            handleBkButton(bkButton, isPressed);
+        }
+        return false;
+    }
+
     @Override
     public int[] getAddresses() {
         return ADDRESSES;
@@ -213,22 +311,55 @@ public class KeyboardController implements Device {
 
     @Override
     public void init(long cpuTime) {
-        setKeyPressed(cpuTime, false);
+        setButtonPressed(cpuTime, false);
         writeDataRegister(0);
         setStatusRegisterDataReadyFlag(false);
         writeStatusRegister(STATUS_VIRQ_MASK);
     }
 
-    protected boolean isKeyPressed(long cpuTime) {
-        return (lastKeyPressTimestamp < 0 || computer.cpuTimeToNanos(cpuTime -
-                    lastKeyPressTimestamp) > KEY_PRESS_DELAY) ? isKeyPressed : true;
+    protected int getLowRegisterKeyCode(int keyCode) {
+        return lowRegisterKeyCodeTable[keyCode] & 0377;
     }
 
-    protected void setKeyPressed(long cpuTime, boolean isKeyPressed) {
-        this.isKeyPressed = isKeyPressed;
-        if (isKeyPressed) {
-            this.lastKeyPressTimestamp = cpuTime;
+    protected boolean isUppercaseMode() {
+        return isUppercaseMode;
+    }
+
+    protected void setUppercaseMode(boolean isUppercaseMode) {
+        this.isUppercaseMode = isUppercaseMode;
+    }
+
+    protected boolean isButtonPressed(long cpuTime) {
+        return (lastButtonPressTimestamp < 0 || computer.cpuTimeToNanos(cpuTime -
+                    lastButtonPressTimestamp) > KEY_PRESS_DELAY) ? isButtonPressed : true;
+    }
+
+    protected void setButtonPressed(long cpuTime, boolean isPressed) {
+        this.isButtonPressed = isPressed;
+        if (isPressed) {
+            this.wasButtonPressed = true;
+            this.lastButtonPressTimestamp = cpuTime;
         }
+    }
+
+    protected boolean wasButtonPressed() {
+        return wasButtonPressed;
+    }
+
+    protected void clearModifierFlags() {
+        setLowRegisterPressed(false);
+        setCtrlSymbolPressed(false);
+        setAr2Pressed(false);
+        this.wasButtonPressed = false;
+    }
+
+    protected boolean isCtrlSymbolPressed() {
+        return isCtrlSymbolPressed;
+    }
+
+    protected void setCtrlSymbolPressed(boolean isCtrlSymbolPressed) {
+        this.isCtrlSymbolPressed = isCtrlSymbolPressed;
+        this.ctrlSymbolButton.setChecked(isCtrlSymbolPressed);
     }
 
     protected boolean isAr2Pressed() {
@@ -237,14 +368,17 @@ public class KeyboardController implements Device {
 
     protected void setAr2Pressed(boolean isAr2Pressed) {
         this.isAr2Pressed = isAr2Pressed;
+        this.ar2Button.setChecked(isAr2Pressed);
     }
 
-    protected boolean isShiftPressed() {
-        return isShiftPressed;
+    protected boolean isLowRegisterPressed() {
+        return isLowRegisterPressed;
     }
 
-    protected void setShiftPressed(boolean isShiftPressed) {
-        this.isShiftPressed = isShiftPressed;
+    protected void setLowRegisterPressed(boolean isLowRegisterPressed) {
+        this.isLowRegisterPressed = isLowRegisterPressed;
+        this.lowRegisterButton.setImageResource(isLowRegisterPressed
+                ? R.drawable.arrow_shift_on : R.drawable.arrow_shift);
     }
 
     private void setStatusRegisterDataReadyFlag(boolean isDataReady) {
@@ -252,7 +386,8 @@ public class KeyboardController implements Device {
                 : (this.statusRegister & ~STATUS_DATA_READY);
         if (isDataReady) {
             if (isStatusRegisterVirqEnabled()) {
-                computer.getCpu().requestVirq(isAr2Pressed ? VIRQ_ADDRESS_AR2 : VIRQ_ADDRESS_NORMAL);
+                computer.getCpu().requestVirq((dataRegister & 0200) != 0
+                        ? VIRQ_ADDRESS_AR2 : VIRQ_ADDRESS_NORMAL);
             }
         } else {
             computer.getCpu().clearVirqRequest();
@@ -283,7 +418,7 @@ public class KeyboardController implements Device {
 
     private int readDataRegister() {
         setStatusRegisterDataReadyFlag(false);
-        return this.dataRegister;
+        return this.dataRegister & 0177;
     }
 
     @Override
@@ -294,7 +429,7 @@ public class KeyboardController implements Device {
             case DATA_REGISTER_ADDRESS:
                 return readDataRegister();
             default:
-                return isKeyPressed(cpuTime) ? 0 : SEL1_REGISTER_KEY_PRESSED;
+                return isButtonPressed(cpuTime) ? 0 : SEL1_REGISTER_BUTTON_PRESSED;
         }
     }
 
@@ -319,29 +454,75 @@ public class KeyboardController implements Device {
      */
     public boolean handleKeyCode(int keyCode, boolean isKeyPress) {
         Log.d(TAG, "handle key " + (isKeyPress ? "press" : "release") + ", code: " + keyCode);
-        boolean isKeyCodeHandled = false;
         BkButton bkButton = BkButton.getByAndroidKeyCode(keyCode);
+        return handleBkButton(bkButton, isKeyPress);
+    }
+
+    /**
+     * Handle BK keyboard button key press/release.
+     * @param bkButton {@link BkButton} to handle
+     * @param isPressed <code>true</code> if button was pressed, <code>false</code> if released
+     * @return <code>true</code> if key code was handled by keyboard controller,
+     * <code>false</code> otherwise
+     */
+    public synchronized boolean handleBkButton(BkButton bkButton, boolean isPressed) {
+        boolean isKeyCodeHandled = false;
         if (bkButton != null) {
-            if (bkButton.getBkKeyCode() != BK_KEY_CODE_NONE) {
+            int bkKeyCode = bkButton.getBkKeyCode();
+            if (bkKeyCode != BK_KEY_CODE_NONE) {
                 // Handle button with key code
-                setKeyPressed(computer.getCpu().getTime(), isKeyPress);
+                setButtonPressed(computer.getCpu().getTime(), isPressed);
+                // Check Control Symbol modifier state
+                if (isCtrlSymbolPressed() && (bkKeyCode & 0100) != 0) {
+                    bkKeyCode &= 037;
+                }
+                // Check Low Register modifier and uppercase mode states
+                if ((!isUppercaseMode() && Character.isLetter(bkKeyCode))
+                        ^ isLowRegisterPressed()) {
+                    bkKeyCode = getLowRegisterKeyCode(bkKeyCode);
+                }
                 // Write new key code to data register only if previous key code was read
-                if (isKeyPress && !isStatusRegisterDataReady()) { //
-                    writeDataRegister(bkButton.getBkKeyCode());
+                if (isPressed && !isStatusRegisterDataReady()) {
+                    writeDataRegister(isAr2Pressed() ? (bkKeyCode | 0200) : bkKeyCode);
                 }
             } else {
                 // Handle special buttons
                 switch (bkButton) {
                     case STOP:
-                        if (isKeyPress) {
+                        if (isPressed) {
                             computer.getCpu().requestIrq1();
                         }
                         break;
                     case LOW_REGISTER:
-                        setShiftPressed(isKeyPress);
+                        boolean lowRegisterModifierState = isLowRegisterPressed();
+                        if (isPressed || wasButtonPressed()) {
+                            clearModifierFlags();
+                            setLowRegisterPressed(!lowRegisterModifierState);
+                        }
                         break;
                     case AR2:
-                        setAr2Pressed(isKeyPress);
+                        boolean ar2ModifierState = isAr2Pressed();
+                        if (isPressed || wasButtonPressed()) {
+                            clearModifierFlags();
+                            setAr2Pressed(!ar2ModifierState);
+                        }
+                        break;
+                    case CTRL_SYMBOL:
+                        boolean ctrlSymbolrState = isCtrlSymbolPressed();
+                        if (isPressed || wasButtonPressed()) {
+                            clearModifierFlags();
+                            setCtrlSymbolPressed(!ctrlSymbolrState);
+                        }
+                        break;
+                    case UPPERCASE:
+                        if (isPressed) {
+                            setUppercaseMode(true);
+                        }
+                        break;
+                    case LOWERCASE:
+                        if (isPressed) {
+                            setUppercaseMode(false);
+                        }
                         break;
                     default:
                         break;

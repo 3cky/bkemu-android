@@ -5,4 +5,14 @@
     <string name="toggle_keyboard">Toggle on-screen keyboard</string>
     <string name="toggle_screen_mode">Toggle color mode</string>
     <string name="reset">Reset computer</string>
+    <string name="desc_erase">Erase</string>
+    <string name="desc_collapse">Collapse</string>
+    <string name="desc_expand">Expand</string>
+    <string name="desc_shift">Low register</string>
+    <string name="desc_backspace">Backspace</string>
+    <string name="desc_left">Left</string>
+    <string name="desc_up">Up</string>
+    <string name="desc_down">Down</string>
+    <string name="desc_right">Right</string>
+    <string name="desc_enter">Enter</string>
 </resources>
