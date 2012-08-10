@@ -1,11 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android" >
+    <item android:id="@+id/screen_mode"
+          android:icon="@drawable/colourbars"
+          android:title="@string/toggle_screen_mode"
+          android:showAsAction="ifRoom" />
     <item android:id="@+id/keyboard"
           android:icon="@drawable/keyboard"
           android:title="@string/toggle_keyboard"
           android:showAsAction="ifRoom" />
-    <item android:id="@+id/screen_mode"
-          android:title="@string/toggle_screen_mode" />
     <item android:id="@+id/reset"
           android:title="@string/reset" />
 </menu>
