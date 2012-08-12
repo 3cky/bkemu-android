@@ -74,8 +74,11 @@ public class KeyboardController implements Device, OnTouchListener {
     // Low register modifier key codes lookup table
     private static final byte[] lowRegisterKeyCodeTable = new byte[256];
 
+    // Latin mode flag
+    private boolean isLatinMode = true;
+
     // Uppercase mode flag
-    private boolean isUppercaseMode;
+    private boolean isUppercaseMode = true;
 
     // Low register modifier key is pressed flag
     private boolean isLowRegisterPressed;
@@ -146,7 +149,7 @@ public class KeyboardController implements Device, OnTouchListener {
         BACKSPACE(0030, KeyEvent.KEYCODE_DEL),  // Backspace
 
         // Buttons - third row
-        TAB(0015, KeyEvent.KEYCODE_TAB),  // Tabulation (ТАБ)
+        TAB(0211, KeyEvent.KEYCODE_TAB),  // Tabulation (ТАБ)
         J(0112, KeyEvent.KEYCODE_J),  // Й J
         C(0103, KeyEvent.KEYCODE_C),  // Ц C
         U(0125, KeyEvent.KEYCODE_U),  // У U
@@ -175,7 +178,7 @@ public class KeyboardController implements Device, OnTouchListener {
         D(0104, KeyEvent.KEYCODE_D),  // Д D
         V(0126, KeyEvent.KEYCODE_V),  // Ж V
         BACKSLASH(0134, KeyEvent.KEYCODE_BACKSLASH),  // Э Backslash
-        PERIOD(0076, KeyEvent.KEYCODE_PERIOD),  // . >
+        PERIOD(0056, KeyEvent.KEYCODE_PERIOD),  // . >
         ENTER(0012, KeyEvent.KEYCODE_ENTER),  // ENTER
 
         // Buttons - fifth row
@@ -190,7 +193,7 @@ public class KeyboardController implements Device, OnTouchListener {
         X(0130, KeyEvent.KEYCODE_X),  // Ь X
         B(0102, KeyEvent.KEYCODE_B),  // Б B
         COMMERCIAL_AT(0100, KeyEvent.KEYCODE_DPAD_CENTER),  // Ю @
-        COMMA(0074, KeyEvent.KEYCODE_COMMA),  // , <
+        COMMA(0054, KeyEvent.KEYCODE_COMMA),  // , <
 
         // Buttons - sixth row and arrows block
         RUS(0016, KeyEvent.KEYCODE_F11),  // Russian mode (РУС)
@@ -260,8 +263,9 @@ public class KeyboardController implements Device, OnTouchListener {
         lowRegisterKeyCodeTable[':'] = '*';
         lowRegisterKeyCodeTable['\\'] = '|';
         lowRegisterKeyCodeTable['.'] = '>';
+        lowRegisterKeyCodeTable['@'] = '`';
         lowRegisterKeyCodeTable[','] = '<';
-        lowRegisterKeyCodeTable[0137] = '}';
+        lowRegisterKeyCodeTable[0137] = 0177;
     }
 
     public void setOnScreenKeyboardView(View keyboardView) {
@@ -327,6 +331,14 @@ public class KeyboardController implements Device, OnTouchListener {
 
     protected void setUppercaseMode(boolean isUppercaseMode) {
         this.isUppercaseMode = isUppercaseMode;
+    }
+
+    protected boolean isLatinMode() {
+        return isLatinMode;
+    }
+
+    protected void setLatinMode(boolean isLatinMode) {
+        this.isLatinMode = isLatinMode;
     }
 
     protected boolean isButtonPressed(long cpuTime) {
@@ -471,16 +483,23 @@ public class KeyboardController implements Device, OnTouchListener {
             int bkKeyCode = bkButton.getBkKeyCode();
             if (bkKeyCode != BK_KEY_CODE_NONE) {
                 // Handle button with key code
+                if (bkButton == BkButton.LAT || bkButton == BkButton.RUS) {
+                    if (isPressed) {
+                        setLatinMode(bkButton == BkButton.LAT);
+                    }
+                } else {
+                    // Check Control Symbol modifier state
+                    if (isCtrlSymbolPressed() && (bkKeyCode & 0100) != 0) {
+                        bkKeyCode &= 037;
+                    }
+                    // Check Low Register modifier and uppercase mode states
+                    if (((isLatinMode() ^ isUppercaseMode()) && isLetterButton(bkKeyCode))
+                            ^ isLowRegisterPressed()) {
+                        bkKeyCode = getLowRegisterKeyCode(bkKeyCode);
+                    }
+                }
+                // Set button pressed state
                 setButtonPressed(computer.getCpu().getTime(), isPressed);
-                // Check Control Symbol modifier state
-                if (isCtrlSymbolPressed() && (bkKeyCode & 0100) != 0) {
-                    bkKeyCode &= 037;
-                }
-                // Check Low Register modifier and uppercase mode states
-                if ((!isUppercaseMode() && Character.isLetter(bkKeyCode))
-                        ^ isLowRegisterPressed()) {
-                    bkKeyCode = getLowRegisterKeyCode(bkKeyCode);
-                }
                 // Write new key code to data register only if previous key code was read
                 if (isPressed && !isStatusRegisterDataReady()) {
                     writeDataRegister(isAr2Pressed() ? (bkKeyCode | 0200) : bkKeyCode);
@@ -531,6 +550,13 @@ public class KeyboardController implements Device, OnTouchListener {
             isKeyCodeHandled = true;
         }
         return isKeyCodeHandled;
+    }
+
+    private static boolean isLetterButton(int bkKeyCode) {
+        return ('A' <= bkKeyCode && bkKeyCode <= 'Z') || ('a' <= bkKeyCode && bkKeyCode <= 'z')
+                || (bkKeyCode == 0137) || (bkKeyCode == 0177) // Ъ
+                || (bkKeyCode == '\\') || (bkKeyCode == '|')  // Э
+                || (bkKeyCode == '@') || (bkKeyCode == '`');  // Ю
     }
 
     @Override
