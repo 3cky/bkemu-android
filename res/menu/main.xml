@@ -10,4 +10,6 @@
           android:showAsAction="ifRoom" />
     <item android:id="@+id/reset"
           android:title="@string/reset" />
+    <item android:id="@+id/change_model"
+          android:title="@string/change_model" />
 </menu>

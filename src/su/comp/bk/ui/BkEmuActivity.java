@@ -23,14 +23,22 @@ package su.comp.bk.ui;
 import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
 
 import su.comp.bk.R;
 import su.comp.bk.arch.Computer;
+import su.comp.bk.arch.Computer.Configuration;
 import su.comp.bk.arch.cpu.Cpu;
 import su.comp.bk.arch.cpu.opcode.EmtOpcode;
 import su.comp.bk.arch.io.KeyboardController;
 import su.comp.bk.arch.io.VideoController;
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.app.Dialog;
+import android.content.DialogInterface;
+import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.os.Handler;
 import android.util.Log;
@@ -40,6 +48,7 @@ import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.ListView;
 
 /**
  * Main application activity.
@@ -49,6 +58,8 @@ public class BkEmuActivity extends Activity {
     protected static final String TAG = BkEmuActivity.class.getName();
 
     public final static int STACK_TOP_ADDRESS = 01000;
+
+    private static final int DIALOG_COMPUTER_MODEL = 1;
 
     private BkEmuView bkEmuView;
 
@@ -178,8 +189,7 @@ public class BkEmuActivity extends Activity {
             // Computer state can't be restored, do startup initialization
             try {
                 this.computer.configure(getResources(), (intentDataProgramImagePath == null)
-                        ? Computer.Configuration.BK_0010_BASIC
-                                : Computer.Configuration.BK_0010_MONITOR);
+                        ? getComputerConfiguration() : Computer.Configuration.BK_0010_MONITOR);
                 this.computer.reset();
                 isComputerInitialized = true;
             } catch (Exception e) {
@@ -278,11 +288,92 @@ public class BkEmuActivity extends Activity {
                 toggleScreenMode();
                 return true;
             case R.id.reset:
-                computer.reset();
+                resetComputer();
+                return true;
+            case R.id.change_model:
+                showDialog(DIALOG_COMPUTER_MODEL);
                 return true;
             default:
                 return super.onOptionsItemSelected(item);
         }
+    }
+
+    @Override
+    protected Dialog onCreateDialog(int id) {
+        switch (id) {
+            case DIALOG_COMPUTER_MODEL:
+                final CharSequence[] models;
+                List<String> modelList = new ArrayList<String>();
+                for (Configuration model: Configuration.values()) {
+                    int modelNameId = getResources().getIdentifier(model.name().toLowerCase(),
+                            "string", getPackageName());
+                    modelList.add((modelNameId != 0) ? getString(modelNameId) : model.name());
+                }
+                models = modelList.toArray(new String[modelList.size()]);
+                return new AlertDialog.Builder(this)
+                    .setTitle(R.string.select_model)
+                    .setSingleChoiceItems(models, getComputerConfiguration().ordinal(),
+                            new DialogInterface.OnClickListener() {
+                        public void onClick(DialogInterface dialog, int which) {
+                            // Mark selected item by tag
+                            ListView listView = ((AlertDialog) dialog).getListView();
+                            listView.setTag(Integer.valueOf(which));
+                        }
+                    })
+                    .setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
+                        public void onClick(DialogInterface dialog, int whichButton) {
+                            // Get tagged selected item, if any
+                            ListView listView = ((AlertDialog) dialog).getListView();
+                            Integer selected = (Integer) listView.getTag();
+                            if (selected != null) {
+                                Configuration config = Configuration.values()[selected];
+                                if (computer.getConfiguration() != config) {
+                                    // Set new computer configuration and restart activity
+                                    setComputerConfiguration(config);
+                                    restartActivity();
+                                }
+                            }
+                        }
+                    })
+                    .setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
+                        public void onClick(DialogInterface dialog, int whichButton) {
+                            // Do nothing on cancel
+                        }
+                    })
+                   .create();
+        }
+        return null;
+    }
+
+    /**
+     * Do actifity restart.
+     */
+    protected void restartActivity() {
+        Intent intent = getIntent();
+        intent.setData(null);
+        finish();
+        startActivity(intent);
+    }
+
+    /**
+     * Get current computer configuration as {@link Configuration} enum value.
+     * @return configuration enum value
+     */
+    protected Configuration getComputerConfiguration() {
+        SharedPreferences prefs = getPreferences(MODE_PRIVATE);
+        String configName = prefs.getString(Configuration.class.getName(), null);
+        return (configName == null) ? Configuration.BK_0010_BASIC : Configuration.valueOf(configName);
+    }
+
+    /**
+     * Set current computer configuration set as {@link Configuration} enum value.
+     * @param configuration configuration enum value to set
+     */
+    protected void setComputerConfiguration(Configuration configuration) {
+        SharedPreferences prefs = getPreferences(MODE_PRIVATE);
+        SharedPreferences.Editor prefsEditor = prefs.edit();
+        prefsEditor.putString(Configuration.class.getName(), configuration.name());
+        prefsEditor.commit();
     }
 
     /**
@@ -314,5 +405,17 @@ public class BkEmuActivity extends Activity {
         Log.d(TAG, "toggling screen mode");
         VideoController videoController = computer.getVideoController();
         videoController.setColorMode(!videoController.isColorMode());
+    }
+
+    private void resetComputer() {
+        Log.d(TAG, "resetting computer");
+        Configuration config = getComputerConfiguration();
+        if (computer.getConfiguration() != config) {
+            // Set new computer configuration and restart activity
+            setComputerConfiguration(config);
+            restartActivity();
+        } else {
+            computer.reset();
+        }
     }
 }
