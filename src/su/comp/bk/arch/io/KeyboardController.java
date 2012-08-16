@@ -75,10 +75,10 @@ public class KeyboardController implements Device, OnTouchListener {
     private static final byte[] lowRegisterKeyCodeTable = new byte[256];
 
     // Latin mode flag
-    private boolean isLatinMode = true;
+    private boolean isLatinMode;
 
     // Uppercase mode flag
-    private boolean isUppercaseMode = true;
+    private boolean isUppercaseMode;
 
     // Low register modifier key is pressed flag
     private boolean isLowRegisterPressed;
@@ -284,6 +284,7 @@ public class KeyboardController implements Device, OnTouchListener {
                 .findViewById(R.id.btn_ar2);
         this.lowRegisterButton = (ImageButton) onScreenKeyboardView
                 .findViewById(R.id.btn_low_register);
+        clearModifierFlags();
     }
 
     public void setOnScreenKeyboardVisibility(boolean isVisible) {
@@ -316,6 +317,8 @@ public class KeyboardController implements Device, OnTouchListener {
     @Override
     public void init(long cpuTime) {
         setButtonPressed(cpuTime, false);
+        setUppercaseMode(true);
+        setLatinMode(true);
         writeDataRegister(0);
         setStatusRegisterDataReadyFlag(false);
         writeStatusRegister(STATUS_VIRQ_MASK);
