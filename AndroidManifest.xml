@@ -32,5 +32,6 @@
                 <data android:pathPattern=".*\\.BIN" />
             </intent-filter>
         </activity>
+        <activity android:name=".ui.BkEmuFileDialog" android:label="@string/open_image"></activity>
     </application>
 </manifest>

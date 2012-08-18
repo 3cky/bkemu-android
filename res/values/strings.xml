@@ -9,6 +9,7 @@
     <string name="select_model">Select computer model</string>
     <string name="ok">OK</string>
     <string name="cancel">Cancel</string>
+    <string name="open_image">Open .bin image</string>
     <string name="bk_0010_monitor">BK 0010 (Monitor only)</string>
     <string name="bk_0010_basic">BK 0010 (Basic)</string>
     <string name="bk_0010_mstd">BK 0010 (Focal + tests)</string>
@@ -22,4 +23,14 @@
     <string name="desc_down">Down</string>
     <string name="desc_right">Right</string>
     <string name="desc_enter">Enter</string>
+
+    <string name="location">Location</string>
+    <string name="cant_read_folder">folder can\'t be read!</string>
+    <string name="new_file">New</string>
+    <string name="select">Select</string>
+    <string name="file_name">File name:</string>
+    <string name="create">Save</string>
+    <string name="no_data">No Data</string>
+    <color name="gray">#ffff0000</color>
+    <string name="err">Error</string>
 </resources>
