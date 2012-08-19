@@ -24,6 +24,7 @@ import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
+import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.util.ArrayList;
@@ -439,8 +440,16 @@ public class BkEmuActivity extends Activity {
      */
     protected void showBinImageFileLoadDialog(int requestCode, String tapeFileName) {
         Intent intent = new Intent(getBaseContext(), BkEmuFileDialog.class);
-        intent.putExtra(BkEmuFileDialog.INTENT_START_PATH, Environment.getExternalStorageDirectory()
-                .getPath());
+        String startPath = Environment.getExternalStorageDirectory().getPath();
+        if (lastBinImageFilePath != null) {
+            Uri lastBinImageFileUri = Uri.parse(lastBinImageFilePath);
+            File lastBinImageFile = new File(lastBinImageFileUri.getPath());
+            File lastBinImageDir = lastBinImageFile.getParentFile();
+            if (lastBinImageDir.exists()) {
+                startPath = lastBinImageDir.getPath();
+            }
+        }
+        intent.putExtra(BkEmuFileDialog.INTENT_START_PATH, startPath);
         if (tapeFileName == null || tapeFileName.length() == 0) {
             intent.putExtra(BkEmuFileDialog.INTENT_FORMAT_FILTER, new String[] { "bin" });
         }
