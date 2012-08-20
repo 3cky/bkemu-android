@@ -2,14 +2,14 @@
 <resources>
     <string name="app_name">BkEmu</string>
     <string name="fps_string">%d FPS</string>
-    <string name="toggle_keyboard">Toggle on-screen keyboard</string>
-    <string name="toggle_screen_mode">Toggle color mode</string>
-    <string name="reset">Reset computer</string>
-    <string name="change_model">Change model</string>
-    <string name="select_model">Select computer model</string>
+    <string name="menu_toggle_keyboard">Toggle on-screen keyboard</string>
+    <string name="menu_toggle_screen_mode">Toggle color mode</string>
+    <string name="menu_reset">Reset computer</string>
+    <string name="menu_change_model">Change model</string>
+    <string name="menu_select_model">Select computer model</string>
+    <string name="menu_open_image">Open emulator image</string>
     <string name="ok">OK</string>
     <string name="cancel">Cancel</string>
-    <string name="open_image">Open .bin image</string>
     <string name="bk_0010_monitor">BK 0010 (Monitor only)</string>
     <string name="bk_0010_basic">BK 0010 (Basic)</string>
     <string name="bk_0010_mstd">BK 0010 (Focal + tests)</string>
@@ -23,14 +23,13 @@
     <string name="desc_down">Down</string>
     <string name="desc_right">Right</string>
     <string name="desc_enter">Enter</string>
-
-    <string name="location">Location</string>
-    <string name="cant_read_folder">folder can\'t be read!</string>
-    <string name="new_file">New</string>
-    <string name="select">Select</string>
-    <string name="file_name">File name:</string>
-    <string name="create">Save</string>
-    <string name="no_data">No Data</string>
-    <color name="gray">#ffff0000</color>
+    <string name="fd_title">Open image (%s)</string>
+    <string name="fd_location">Location</string>
+    <string name="fd_cant_read_folder">folder can\'t be read!</string>
+    <string name="fd_new_file">New</string>
+    <string name="fd_select">Select</string>
+    <string name="fd_file_name">File name:</string>
+    <string name="fd_create">Save</string>
+    <string name="fd_no_data">No Data</string>
     <string name="err">Error</string>
 </resources>

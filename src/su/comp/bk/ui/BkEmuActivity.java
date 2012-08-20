@@ -367,19 +367,19 @@ public class BkEmuActivity extends Activity {
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
-            case R.id.keyboard:
+            case R.id.menu_toggle_keyboard:
                 toggleOnScreenKeyboard();
                 return true;
-            case R.id.screen_mode:
+            case R.id.menu_toggle_screen_mode:
                 toggleScreenMode();
                 return true;
-            case R.id.reset:
+            case R.id.menu_reset:
                 resetComputer();
                 return true;
-            case R.id.change_model:
+            case R.id.menu_change_model:
                 showDialog(DIALOG_COMPUTER_MODEL);
                 return true;
-            case R.id.open_image:
+            case R.id.menu_open_image:
                 showBinImageFileLoadDialog(REQUEST_MENU_BIN_IMAGE_FILE_LOAD, null);
                 return true;
             default:
@@ -400,7 +400,7 @@ public class BkEmuActivity extends Activity {
                 }
                 models = modelList.toArray(new String[modelList.size()]);
                 return new AlertDialog.Builder(this)
-                    .setTitle(R.string.select_model)
+                    .setTitle(R.string.menu_select_model)
                     .setSingleChoiceItems(models, getComputerConfiguration().ordinal(),
                             new DialogInterface.OnClickListener() {
                         public void onClick(DialogInterface dialog, int which) {
@@ -450,8 +450,8 @@ public class BkEmuActivity extends Activity {
             }
         }
         intent.putExtra(BkEmuFileDialog.INTENT_START_PATH, startPath);
-        if (tapeFileName == null || tapeFileName.length() == 0) {
-            intent.putExtra(BkEmuFileDialog.INTENT_FORMAT_FILTER, new String[] { "bin" });
+        if (tapeFileName != null && tapeFileName.length() > 0) {
+            intent.putExtra(BkEmuFileDialog.INTENT_FORMAT_FILTER, new String[] { tapeFileName });
         }
         startActivityForResult(intent, requestCode);
     }

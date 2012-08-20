@@ -50,6 +50,7 @@ public class BkEmuFileDialog extends ListActivity {
     private String parentPath;
     protected String currentPath;
 
+    private final static String[] DEFAULT_FORMAT_FILTER = new String[] { ".BIN" };
     private String[] formatFilter = null;
 
     private HashMap<String, Integer> lastDirPositions = new HashMap<String, Integer>();
@@ -64,7 +65,7 @@ public class BkEmuFileDialog extends ListActivity {
         getListView().setFastScrollEnabled(true);
 
         pathTextView = (TextView) findViewById(R.id.path);
-        fileNameEditText = (EditText) findViewById(R.id.fdEditTextFile);
+        fileNameEditText = (EditText) findViewById(R.id.fd_edit_text_file);
 
         inputManager = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
 
@@ -72,6 +73,10 @@ public class BkEmuFileDialog extends ListActivity {
         layoutCreate.setVisibility(View.GONE);
 
         formatFilter = getIntent().getStringArrayExtra(INTENT_FORMAT_FILTER);
+        if (formatFilter == null) {
+            formatFilter = DEFAULT_FORMAT_FILTER;
+        }
+        setTitle(getResources().getString(R.string.fd_title, getFormatFilterString(formatFilter)));
 
         final Button cancelButton = (Button) findViewById(R.id.fd_btn_cancel);
         cancelButton.setOnClickListener(new OnClickListener() {
@@ -86,7 +91,8 @@ public class BkEmuFileDialog extends ListActivity {
             @Override
             public void onClick(View v) {
                 if (fileNameEditText.getText().length() > 0) {
-                    getIntent().putExtra(INTENT_RESULT_PATH, currentPath + "/" + fileNameEditText.getText());
+                    getIntent().putExtra(INTENT_RESULT_PATH, currentPath +
+                            "/" + fileNameEditText.getText());
                     setResult(RESULT_OK, getIntent());
                     finish();
                 }
@@ -97,6 +103,17 @@ public class BkEmuFileDialog extends ListActivity {
         startPath = (startPath != null) ? startPath : ROOT_PATH;
 
         getDir(startPath);
+    }
+
+    private static String getFormatFilterString(String[] formatFilterArray) {
+        StringBuffer formatFilterStringBuf = new StringBuffer();
+        for (int idx = 0; idx < formatFilterArray.length; idx++) {
+            formatFilterStringBuf.append(formatFilterArray[idx]);
+            if (idx < (formatFilterArray.length - 1)) {
+                formatFilterStringBuf.append(", ");
+            }
+        }
+        return formatFilterStringBuf.toString();
     }
 
     private void getDir(String dirPath) {
@@ -122,7 +139,7 @@ public class BkEmuFileDialog extends ListActivity {
             f = new File(currentPath);
             files = f.listFiles();
         }
-        pathTextView.setText(getText(R.string.location) + ": " + currentPath);
+        pathTextView.setText(getText(R.string.fd_location) + ": " + currentPath);
 
         if (!currentPath.equals(ROOT_PATH)) {
 
@@ -209,7 +226,7 @@ public class BkEmuFileDialog extends ListActivity {
                 getDir(path.get(position));
             } else {
                 new AlertDialog.Builder(this).setIcon(R.drawable.icon)
-                        .setTitle("[" + file.getName() + "] " + getText(R.string.cant_read_folder))
+                        .setTitle("[" + file.getName() + "] " + getText(R.string.fd_cant_read_folder))
                         .setPositiveButton("OK", new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
