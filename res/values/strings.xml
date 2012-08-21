@@ -32,4 +32,6 @@
     <string name="fd_create">Save</string>
     <string name="fd_no_data">No Data</string>
     <string name="err">Error</string>
+    <string name="exit_confirm_title">Quit emulator</string>
+    <string name="exit_confirm_message">Do you really want to quit?</string>
 </resources>

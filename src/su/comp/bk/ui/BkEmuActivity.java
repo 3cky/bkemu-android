@@ -41,6 +41,7 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.DialogInterface;
+import android.content.DialogInterface.OnKeyListener;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.net.Uri;
@@ -345,16 +346,48 @@ public class BkEmuActivity extends Activity {
 
     @Override
     public boolean onKeyUp(int keyCode, KeyEvent event) {
-        boolean isHandled = false;
-        if (keyCode == KeyEvent.KEYCODE_BACK && this.computer
-                .getKeyboardController().isOnScreenKeyboardVisible()) {
-            this.computer.getKeyboardController().setOnScreenKeyboardVisibility(false);
-            isHandled = true;
+        return this.computer.getKeyboardController().handleKeyCode(keyCode, false)
+                || super.onKeyUp(keyCode, event);
+    }
+
+    @Override
+    public void onBackPressed() {
+        KeyboardController keyboardController = this.computer
+                .getKeyboardController();
+        if (keyboardController.isOnScreenKeyboardVisible()) {
+            keyboardController.setOnScreenKeyboardVisibility(false);
         } else {
-            isHandled = this.computer.getKeyboardController().handleKeyCode(keyCode, false)
-                    || super.onKeyUp(keyCode, event);
+            this.computer.pause();
+            new AlertDialog.Builder(this)
+                    .setIcon(android.R.drawable.ic_dialog_alert)
+                    .setTitle(R.string.exit_confirm_title)
+                    .setMessage(R.string.exit_confirm_message)
+                    .setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialog, int which) {
+                                    finish();
+                                }
+                            })
+                    .setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialog, int which) {
+                                    BkEmuActivity.this.computer.resume();
+                                }
+                            })
+                    .setOnKeyListener(new OnKeyListener() {
+                                @Override
+                                public boolean onKey(DialogInterface dialog, int keyCode,
+                                        KeyEvent event) {
+                                    if (keyCode == KeyEvent.KEYCODE_BACK &&
+                                            event.getAction() == KeyEvent.ACTION_UP &&
+                                            !event.isCanceled()) {
+                                        BkEmuActivity.this.computer.resume();
+                                    }
+                                    return false;
+                                }
+                            })
+                    .show();
         }
-        return isHandled;
     }
 
     @Override
