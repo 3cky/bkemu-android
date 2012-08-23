@@ -4,7 +4,7 @@
 	<groupId>su.comp.bk</groupId>
 	<artifactId>bkemu</artifactId>
 	<packaging>apk</packaging>
-	<version>0.0.1-SNAPSHOT</version>
+	<version>0.1.0-SNAPSHOT</version>
 	<name>Emulator of 16-bit PDP-11-compatible Soviet home computers Elektronika BK-001x for Android platform</name>
 
     <properties>
@@ -64,8 +64,57 @@
 					</proguard>
 				</configuration>
 				<extensions>true</extensions>
+				<executions>
+					<execution>
+						<id>update-manifest</id>
+						<goals>
+							<goal>manifest-update</goal>
+						</goals>
+						<configuration>
+							<manifest>
+								<versionCodeUpdateFromVersion>true</versionCodeUpdateFromVersion>
+								<debuggable>false</debuggable>
+						    </manifest>
+						</configuration>
+					</execution>
+				</executions>
 			</plugin>
 		</plugins>
+		<pluginManagement>
+			<plugins>
+				<!--This plugin's configuration is used to store Eclipse m2e settings only. It has no influence on the Maven build itself.-->
+				<plugin>
+					<groupId>org.eclipse.m2e</groupId>
+					<artifactId>lifecycle-mapping</artifactId>
+					<version>1.0.0</version>
+					<configuration>
+						<lifecycleMappingMetadata>
+							<pluginExecutions>
+								<pluginExecution>
+									<pluginExecutionFilter>
+										<groupId>
+											com.jayway.maven.plugins.android.generation2
+										</groupId>
+										<artifactId>
+											android-maven-plugin
+										</artifactId>
+										<versionRange>
+											[3.3.0,)
+										</versionRange>
+										<goals>
+											<goal>manifest-update</goal>
+										</goals>
+									</pluginExecutionFilter>
+									<action>
+										<ignore></ignore>
+									</action>
+								</pluginExecution>
+							</pluginExecutions>
+						</lifecycleMappingMetadata>
+					</configuration>
+				</plugin>
+			</plugins>
+		</pluginManagement>
 	</build>
 
 	<dependencies>

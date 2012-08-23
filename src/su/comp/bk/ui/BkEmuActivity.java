@@ -44,6 +44,7 @@ import android.content.DialogInterface;
 import android.content.DialogInterface.OnKeyListener;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager.NameNotFoundException;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
@@ -56,6 +57,7 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.ListView;
+import android.widget.TextView;
 
 /**
  * Main application activity.
@@ -72,10 +74,12 @@ public class BkEmuActivity extends Activity {
 
     // Dialog IDs
     private static final int DIALOG_COMPUTER_MODEL = 1;
+    private static final int DIALOG_ABOUT = 2;
 
     // Intent request IDs
     private static final int REQUEST_MENU_BIN_IMAGE_FILE_LOAD = 1;
     private static final int REQUEST_EMT_BIN_IMAGE_FILE_LOAD = 2;
+
 
     // Last loaded emulator binary image address
     protected int lastBinImageAddress;
@@ -352,8 +356,7 @@ public class BkEmuActivity extends Activity {
 
     @Override
     public void onBackPressed() {
-        KeyboardController keyboardController = this.computer
-                .getKeyboardController();
+        KeyboardController keyboardController = this.computer.getKeyboardController();
         if (keyboardController.isOnScreenKeyboardVisible()) {
             keyboardController.setOnScreenKeyboardVisibility(false);
         } else {
@@ -415,6 +418,9 @@ public class BkEmuActivity extends Activity {
             case R.id.menu_open_image:
                 showBinImageFileLoadDialog(REQUEST_MENU_BIN_IMAGE_FILE_LOAD, null);
                 return true;
+            case R.id.menu_about:
+                showDialog(DIALOG_ABOUT);
+                return true;
             default:
                 return super.onOptionsItemSelected(item);
         }
@@ -463,6 +469,22 @@ public class BkEmuActivity extends Activity {
                         }
                     })
                    .create();
+            case DIALOG_ABOUT:
+                Dialog dialog = new Dialog(this);
+                dialog.setTitle(R.string.menu_about);
+                dialog.setContentView(R.layout.about_dialog);
+                TextView versionTextView = (TextView) dialog.findViewById(R.id.about_version);
+                try {
+                    versionTextView.setText(getResources().getString(R.string.about_version,
+                            getPackageManager().getPackageInfo(getPackageName(), 0).versionName));
+                } catch (NameNotFoundException e) {
+                }
+                TextView perfTextView = (TextView) dialog.findViewById(R.id.about_perf);
+                float effectiveClockFrequency = this.computer.getEffectiveClockFrequency();
+                perfTextView.setText(getResources().getString(R.string.about_perf,
+                        effectiveClockFrequency / 1000f, effectiveClockFrequency
+                            / this.computer.getClockFrequency() * 100f));
+                return dialog;
         }
         return null;
     }

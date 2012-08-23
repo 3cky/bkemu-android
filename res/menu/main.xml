@@ -14,4 +14,6 @@
           android:title="@string/menu_reset" />
     <item android:id="@+id/menu_change_model"
           android:title="@string/menu_change_model" />
+    <item android:id="@+id/menu_about"
+          android:title="@string/menu_about" />
 </menu>

@@ -534,10 +534,14 @@ public class Computer implements Runnable {
     public void release() {
         Log.d(TAG, "releasing computer");
         audioOutput.release();
-        float effectiveClockFrequency = (float) getCpu().getTime()
-                * NANOSECS_IN_MSEC / getUptime();
-        Log.d(TAG, "effective clock frequency: " + effectiveClockFrequency + " kHz (" +
-                effectiveClockFrequency / getClockFrequency() * 100f + " %)");
+    }
+
+    /**
+     * Get effective emulation clock frequency.
+     * @return effective emulation clock frequency (in kHz)
+     */
+    public float getEffectiveClockFrequency() {
+        return (float) getCpu().getTime() * NANOSECS_IN_MSEC / getUptime();
     }
 
     /**
