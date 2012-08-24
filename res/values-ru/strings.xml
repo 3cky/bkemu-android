@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="fps_string">%d КВС</string>
+    <string name="menu_toggle_keyboard">Клавиатура</string>
+    <string name="menu_toggle_screen_mode">Режим экрана</string>
+    <string name="menu_reset">Аппаратный сброс</string>
+    <string name="menu_change_model">Выбрать модель</string>
+    <string name="menu_select_model">Выберите модель</string>
+    <string name="menu_open_image">Открыть файл</string>
+    <string name="menu_about">Об эмуляторе</string>
+    <string name="ok">OK</string>
+    <string name="cancel">Отмена</string>
+    <string name="bk_0010_monitor">БК 0010&#8211;01 (Монитор)</string>
+    <string name="bk_0010_basic">БК 0010&#8211;01 (Бейсик Вильнюс)</string>
+    <string name="bk_0010_mstd">БК 0010&#8211;01 (Фокал + тесты)</string>
+    <string name="desc_erase">Удалить</string>
+    <string name="desc_collapse">Сдвинуть</string>
+    <string name="desc_expand">Расширить</string>
+    <string name="desc_shift">Нижний регистр</string>
+    <string name="desc_backspace">Забой</string>
+    <string name="desc_left">Влево</string>
+    <string name="desc_up">Вверх</string>
+    <string name="desc_down">Вниз</string>
+    <string name="desc_right">Вправо</string>
+    <string name="desc_enter">Ввод</string>
+    <string name="fd_title">Выберите образ программы (%s)</string>
+    <string name="fd_location">Текущий путь</string>
+    <string name="fd_cant_read_folder">Не могу прочитать содержимое директории!</string>
+    <string name="fd_new_file">Новый</string>
+    <string name="fd_select">Выбрать</string>
+    <string name="fd_file_name">Имя файла:</string>
+    <string name="fd_create">Сохранить</string>
+    <string name="fd_no_data">Нет файлов</string>
+    <string name="err">Ошибка</string>
+    <string name="exit_confirm_title">Выход</string>
+    <string name="exit_confirm_message">Вы действительно хотите выйти из программы?</string>
+    <string name="about_info">Эмулятор семейства 16-разрядных PDP-11-совместимых советских домашних компьютеров <b>Электроника БК&#8211;0010</b></string>
+    <string name="about_perf">Эффективная частота процессора: %1$.3f МГц (%2$.2f%%)</string>
+</resources>

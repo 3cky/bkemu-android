@@ -55,6 +55,7 @@ import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.Window;
 import android.widget.ListView;
 import android.widget.TextView;
 
@@ -471,7 +472,10 @@ public class BkEmuActivity extends Activity {
             case DIALOG_ABOUT:
                 Dialog dialog = new Dialog(this);
                 dialog.setTitle(R.string.menu_about);
+                dialog.requestWindowFeature(Window.FEATURE_LEFT_ICON);
                 dialog.setContentView(R.layout.about_dialog);
+                dialog.getWindow().setFeatureDrawableResource(Window.FEATURE_LEFT_ICON,
+                        android.R.drawable.ic_dialog_info);
                 TextView versionTextView = (TextView) dialog.findViewById(R.id.about_version);
                 try {
                     versionTextView.setText(getResources().getString(R.string.about_version,
