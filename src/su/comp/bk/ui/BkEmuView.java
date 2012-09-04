@@ -61,7 +61,7 @@ public class BkEmuView extends SurfaceView implements SurfaceHolder.Callback {
     protected int fpsValue;
 
     // FPS drawing enabled flag
-    protected static boolean isFpsDrawingEnabled = true;
+    protected static boolean isFpsDrawingEnabled = false;
     // Low FPS value
     private final static int FPS_LOW_VALUE = 10;
     // Low FPS drawing color
@@ -98,9 +98,8 @@ public class BkEmuView extends SurfaceView implements SurfaceHolder.Callback {
             return true;
         }
         @Override
-        public boolean onDoubleTap(MotionEvent e) {
-            // TODO Handle double tap
-            return true;
+        public void onLongPress(MotionEvent e) {
+            setFpsDrawingEnabled(!isFpsDrawingEnabled());
         }
     }
 
@@ -171,14 +170,17 @@ public class BkEmuView extends SurfaceView implements SurfaceHolder.Callback {
 					FPS_COLOR_NORMAL : FPS_COLOR_LOW);
 			// Set indicator FPS value text
 			fpsIndicator.setText(String.format(fpsIndicatorString, fpsValue));
-			// Set visibility flag
-			fpsIndicator.setVisibility(isFpsDrawingEnabled ? VISIBLE : INVISIBLE);
+			// Set FPS indicator visibility
+			if (isFpsDrawingEnabled()) {
+			    fpsIndicator.setVisibility(VISIBLE);
+			}
 		}
 	}
 
 	public BkEmuView(Context context, AttributeSet attrs) {
         super(context, attrs);
         gestureDetector = new GestureDetector(context, new GestureListener());
+        gestureDetector.setIsLongpressEnabled(true);
         this.uiUpdateHandler = new Handler();
         // Enable focus grabbing by view
         this.setFocusable(true);
@@ -192,8 +194,16 @@ public class BkEmuView extends SurfaceView implements SurfaceHolder.Callback {
         this.computer = computer;
     }
 
-    public void setFpsDrawingEnabled(boolean isEnabled) {
+    public synchronized void setFpsDrawingEnabled(boolean isEnabled) {
         isFpsDrawingEnabled = isEnabled;
+        // Set FPS indicator visibility
+        if (!isEnabled) {
+            fpsIndicator.setVisibility(INVISIBLE);
+        }
+    }
+
+    public synchronized boolean isFpsDrawingEnabled() {
+        return isFpsDrawingEnabled;
     }
 
     protected void updateFpsCounters(long currentTime) {
@@ -209,7 +219,7 @@ public class BkEmuView extends SurfaceView implements SurfaceHolder.Callback {
                 // Clear accumulated FPS frame and time
                 fpsFrameCounter = 0;
                 fpsAccumulatedTime = 0;
-                if (isFpsDrawingEnabled) {
+                if (isFpsDrawingEnabled()) {
                 	// Update FPS indicator
                 	uiUpdateHandler.post(fpsIndicatorUpdateRunnable);
                 }
