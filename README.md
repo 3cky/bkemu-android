@@ -6,6 +6,10 @@
 PDP-11-совместимых советских 16-разрядных домашних компьютеров
 [Электроника БК 001x](http://ru.wikipedia.org/wiki/БК) для платформы Android.
 
+<a href="https://play.google.com/store/apps/details?id=su.comp.bk" alt="Download from Google Play">
+  <img src="http://www.android.com/images/brand/android_app_on_play_large.png">
+</a>
+
 # Лицензия
 
 * [GNU General Public License v.3.0](http://www.gnu.org/licenses/gpl-3.0.html)
