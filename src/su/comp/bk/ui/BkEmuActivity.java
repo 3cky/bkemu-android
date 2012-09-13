@@ -80,6 +80,9 @@ public class BkEmuActivity extends Activity {
     private static final int REQUEST_MENU_BIN_IMAGE_FILE_LOAD = 1;
     private static final int REQUEST_EMT_BIN_IMAGE_FILE_LOAD = 2;
 
+    // Google Play application URL to share
+    private static final String APPLICATION_SHARE_URL = "https://play.google.com" +
+    		"/store/apps/details?id=su.comp.bk";
 
     // Last loaded emulator binary image address
     protected int lastBinImageAddress;
@@ -421,6 +424,9 @@ public class BkEmuActivity extends Activity {
             case R.id.menu_about:
                 showDialog(DIALOG_ABOUT);
                 return true;
+            case R.id.menu_share:
+                shareApplication();
+                return true;
             default:
                 return super.onOptionsItemSelected(item);
         }
@@ -643,6 +649,13 @@ public class BkEmuActivity extends Activity {
         Log.d(TAG, "loaded bin image file: address 0" + Integer.toOctalString(lastBinImageAddress) +
                 ", length: " + lastBinImageLength);
         return lastBinImageAddress;
+    }
+
+    private void shareApplication() {
+        Intent appShareIntent = new Intent(Intent.ACTION_SEND);
+        appShareIntent.setType("text/plain");
+        appShareIntent.putExtra(Intent.EXTRA_TEXT, APPLICATION_SHARE_URL);
+        startActivity(Intent.createChooser(appShareIntent, null));
     }
 
     private void toggleOnScreenKeyboard() {
