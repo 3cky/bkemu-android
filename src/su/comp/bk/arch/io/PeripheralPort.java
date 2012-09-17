@@ -18,6 +18,7 @@
  */
 package su.comp.bk.arch.io;
 
+import su.comp.bk.arch.Computer;
 import android.os.Bundle;
 
 /**
@@ -27,9 +28,32 @@ public class PeripheralPort implements Device {
 
     public final static int DATA_REGISTER_ADDRESS = 0177714;
 
+    public final static int JOYSTICK_BUTTON1 = 1;
+    public final static int JOYSTICK_BUTTON2 = 2;
+    public final static int JOYSTICK_BUTTON3 = 4;
+    public final static int JOYSTICK_BUTTON4 = 010;
+    public final static int JOYSTICK_LEFT = 01000;
+    public final static int JOYSTICK_DOWN = 040;
+    public final static int JOYSTICK_RIGHT = 020;
+    public final static int JOYSTICK_UP = 02000;
+
+    /** Joystick buttons pressing delay (in nanoseconds) */
+    public final static long JOYSTICK_PRESS_DELAY = (250L * Computer.NANOSECS_IN_MSEC);
+
+    /** Joystick buttons pressing scroll threshold (in pixels) */
+    public final static float JOYSTICK_PRESS_THRESHOLD = 1f;
+
     private final static int[] ADDRESSES = { DATA_REGISTER_ADDRESS };
 
-    public PeripheralPort() {
+    private final Computer computer;
+
+    // Last state change timestamp (in CPU clock ticks)
+    private long stateTimestamp;
+    // Current port state
+    private int state;
+
+    public PeripheralPort(Computer computer) {
+        this.computer = computer;
     }
 
     @Override
@@ -39,12 +63,12 @@ public class PeripheralPort implements Device {
 
     @Override
     public void init(long cpuTime) {
-        // TODO
+        resetState(cpuTime);
     }
 
     @Override
     public int read(long cpuTime, int address) {
-        return 0; // TODO
+        return getState(cpuTime);
     }
 
     @Override
@@ -62,4 +86,50 @@ public class PeripheralPort implements Device {
         // Do nothing
     }
 
+    private long getStateTimestamp() {
+        return this.stateTimestamp;
+    }
+
+    private void setStateTimestamp(long timestamp) {
+        this.stateTimestamp = timestamp;
+    }
+
+    private void resetState(long cpuTime) {
+        setState(cpuTime, 0);
+    }
+
+    private synchronized int getState(long cpuTime) {
+        if (computer.cpuTimeToNanos(cpuTime - getStateTimestamp()) > JOYSTICK_PRESS_DELAY) {
+            resetState(cpuTime);
+        }
+        return state;
+    }
+
+    private synchronized void setState(long cpuTime, int state) {
+        this.state = state;
+        setStateTimestamp(cpuTime);
+    }
+
+    public boolean handleMotionEvent(long cpuTime, float distanceX, float distanceY) {
+        int nextState = getState(cpuTime);
+        nextState &= ~(JOYSTICK_LEFT | JOYSTICK_RIGHT | JOYSTICK_UP | JOYSTICK_DOWN);
+        if (Math.abs(distanceX) > JOYSTICK_PRESS_THRESHOLD) {
+            nextState |= (Math.signum(distanceX) > 0 ? JOYSTICK_LEFT : JOYSTICK_RIGHT);
+        }
+        if (Math.abs(distanceY) > JOYSTICK_PRESS_THRESHOLD) {
+            nextState |= (Math.signum(distanceY) > 0 ? JOYSTICK_UP : JOYSTICK_DOWN);
+        }
+        setState(cpuTime, nextState);
+        return true;
+    }
+
+    public boolean handleSingleTapEvent(long cpuTime) {
+        setState(cpuTime, (getState(cpuTime) | JOYSTICK_BUTTON1));
+        return true;
+    }
+
+    public boolean handleDoubleTapEvent(long cpuTime) {
+        setState(cpuTime, (getState(cpuTime) | JOYSTICK_BUTTON2));
+        return true;
+    }
 }

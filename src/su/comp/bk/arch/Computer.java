@@ -73,6 +73,9 @@ public class Computer implements Runnable {
     // Keyboard controller reference
     private KeyboardController keyboardController;
 
+    // Periferal port reference
+    private PeripheralPort periferalPort;
+
     // Audio output reference
     private AudioOutput audioOutput;
 
@@ -141,7 +144,8 @@ public class Computer implements Runnable {
         addDevice(new Sel1RegisterSystemBits(0100000));
         keyboardController = new KeyboardController(this);
         addDevice(keyboardController);
-        addDevice(new PeripheralPort());
+        periferalPort = new PeripheralPort(this);
+        addDevice(periferalPort);
         addDevice(new Timer());
         switch (config) {
             case BK_0010_BASIC:
@@ -308,7 +312,7 @@ public class Computer implements Runnable {
     }
 
     /**
-     * Get {@link VideoController} reference
+     * Get {@link VideoController} reference.
      * @return video controller reference
      */
     public VideoController getVideoController() {
@@ -316,11 +320,19 @@ public class Computer implements Runnable {
     }
 
     /**
-     * Get {@link KeyboardController} reference
+     * Get {@link KeyboardController} reference.
      * @return keyboard controller reference
      */
     public KeyboardController getKeyboardController() {
         return keyboardController;
+    }
+
+    /**
+     * Get {@link PeripheralPort} reference.
+     * @return peripheral port reference
+     */
+    public PeripheralPort getPeripheralPort() {
+        return periferalPort;
     }
 
     /**

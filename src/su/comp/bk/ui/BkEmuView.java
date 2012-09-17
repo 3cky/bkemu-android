@@ -101,6 +101,19 @@ public class BkEmuView extends SurfaceView implements SurfaceHolder.Callback {
         public void onLongPress(MotionEvent e) {
             setFpsDrawingEnabled(!isFpsDrawingEnabled());
         }
+        @Override
+        public boolean onScroll(MotionEvent e1, MotionEvent e2, float distanceX, float distanceY) {
+            return computer.getPeripheralPort().handleMotionEvent(computer.getCpu().getTime(),
+                    distanceX, distanceY);
+        }
+        @Override
+        public boolean onSingleTapConfirmed(MotionEvent e) {
+            return computer.getPeripheralPort().handleSingleTapEvent(computer.getCpu().getTime());
+        }
+        @Override
+        public boolean onDoubleTap(MotionEvent e) {
+            return computer.getPeripheralPort().handleDoubleTapEvent(computer.getCpu().getTime());
+        }
     }
 
 	/*
