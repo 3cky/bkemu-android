@@ -9,6 +9,7 @@
     <string name="menu_open_image">Открыть файл</string>
     <string name="menu_about">Об эмуляторе</string>
     <string name="menu_share">Поделиться!</string>
+    <string name="menu_changelog">Список изменений</string>
     <string name="ok">OK</string>
     <string name="cancel">Отмена</string>
     <string name="bk_0010_monitor">БК 0010&#8211;01 (Монитор)</string>
@@ -37,4 +38,7 @@
     <string name="exit_confirm_message">Вы действительно хотите выйти из программы?</string>
     <string name="about_info">Эмулятор семейства 16-разрядных PDP-11-совместимых советских домашних компьютеров <b>Электроника БК&#8211;0010</b></string>
     <string name="about_perf">Эффективная частота процессора: %1$.3f МГц (%2$.2f%%)</string>
+    <string name="changelog_title">Что нового?</string>
+    <string name="changelog_title_full">Списк изменений</string>
+    <string name="changelog_show_full">Полный список</string>
 </resources>

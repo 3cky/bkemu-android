@@ -1,0 +1,36 @@
+<html>
+<head>
+<style type='text/css'>
+a {
+		color: #a0a0e0;
+}
+div.version {
+        color: #f0f0f0;
+		font-size: 1.2em;
+		font-weight: bold;
+		margin-top: 1em;
+		margin-bottom: 0.5em;
+		text-align: left
+}
+div.date {
+        color: #f0f0f0;
+		font-size: 0.8em;
+		text-align: left
+}
+div.changes {
+		color: #c0c0c0;
+}
+</style>
+</head>
+<body>
+{{#releases}}
+<div class='version'>v. {{version}}</div>
+<div class='date'>{{date}}</div>
+<div class='changes'><ul>
+{{#changes}}
+<li>{{this}}</li>
+{{/changes}}
+</ul></div>
+{{/releases}}
+</body>
+</html>

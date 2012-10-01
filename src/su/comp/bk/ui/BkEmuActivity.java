@@ -256,6 +256,16 @@ public class BkEmuActivity extends Activity {
         keyboardController.setOnScreenKeyboardView(keyboardView);
         keyboardController.setOnScreenKeyboardVisibility(false);
         setContentView(mainView);
+        // Show change log with latest changes once after application update
+        BkEmuChangeLog changeLog = new BkEmuChangeLog(this);
+        if (changeLog.isCurrentVersionGreaterThanLast()) {
+            // Store current version to preferences store
+            changeLog.saveCurrentVersionName();
+            // Show change log dialog but not at the first run
+            if (!changeLog.isFirstRun()) {
+                changeLog.getDialog(false).show();
+            }
+        }
     }
 
     private void initializeComputer(Bundle savedInstanceState) {
@@ -427,6 +437,9 @@ public class BkEmuActivity extends Activity {
             case R.id.menu_share:
                 shareApplication();
                 return true;
+            case R.id.menu_changelog:
+                showChangelogDialog();
+                return true;
             default:
                 return super.onOptionsItemSelected(item);
         }
@@ -496,6 +509,13 @@ public class BkEmuActivity extends Activity {
                 return dialog;
         }
         return null;
+    }
+
+    /**
+     * Show full changelog dialog.
+     */
+    private void showChangelogDialog() {
+        new BkEmuChangeLog(this).getDialog(true).show();
     }
 
     /**

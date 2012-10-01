@@ -303,6 +303,12 @@
 		</dependency>
 
 		<dependency>
+            <groupId>com.samskivert</groupId>
+            <artifactId>jmustache</artifactId>
+            <version>1.6</version>
+        </dependency>
+
+		<dependency>
 			<groupId>com.google.android</groupId>
 			<artifactId>android-test</artifactId>
 			<version>4.0.1.2</version>

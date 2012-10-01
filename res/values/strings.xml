@@ -10,6 +10,7 @@
     <string name="menu_open_image">Open .BIN image</string>
     <string name="menu_about">About</string>
     <string name="menu_share">Share!</string>
+    <string name="menu_changelog">Changelog</string>
     <string name="ok">OK</string>
     <string name="cancel">Cancel</string>
     <string name="bk_0010_monitor">BK 0010&#8211;01 (Monitor only)</string>
@@ -40,4 +41,7 @@
     <string name="about_info">Emulator of 16-bit PDP-11-compatible Soviet home computer Elektronika BK-0010</string>
     <string name="about_perf">Effective clock frequency: %1$.3f MHz (%2$.2f%%)</string>
     <string name="about_link">https://github.com/3cky/bkemu-android</string>
+    <string name="changelog_title">What\'s new?</string>
+    <string name="changelog_title_full">Changelog</string>
+    <string name="changelog_show_full">Full changelog</string>
 </resources>
