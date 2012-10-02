@@ -1,5 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <releases>
+    <release version="0.1.1" date="2012-10-02">
+        <changes>
+            <change>Added standard two-button joystick emulation. Use single tap to press left joystick button, double tap to press right joystick button, scroll to move joystick handle in given direction.</change>
+            <change>Implemented change log displaying.</change>
+            <change>Added "Share" menu item.</change>
+        </changes>
+    </release>
     <release version="0.1.0" date="2012-09-04">
         <changes>
             <change>First public release.</change>
