@@ -16,6 +16,7 @@
     <string name="bk_0010_monitor">BK 0010&#8211;01 (Monitor only)</string>
     <string name="bk_0010_basic">BK 0010&#8211;01 (Basic)</string>
     <string name="bk_0010_mstd">BK 0010&#8211;01 (Focal + tests)</string>
+    <string name="bk_0010_kngmd">BK 0010&#8211;01 (with floppy controller)</string>
     <string name="desc_erase">Erase</string>
     <string name="desc_collapse">Collapse</string>
     <string name="desc_expand">Expand</string>

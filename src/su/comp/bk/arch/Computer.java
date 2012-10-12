@@ -31,6 +31,7 @@ import su.comp.bk.R;
 import su.comp.bk.arch.cpu.Cpu;
 import su.comp.bk.arch.io.AudioOutput;
 import su.comp.bk.arch.io.Device;
+import su.comp.bk.arch.io.FloppyController;
 import su.comp.bk.arch.io.KeyboardController;
 import su.comp.bk.arch.io.PeripheralPort;
 import su.comp.bk.arch.io.Sel1RegisterSystemBits;
@@ -79,12 +80,14 @@ public class Computer implements Runnable {
     // Audio output reference
     private AudioOutput audioOutput;
 
-    /** I/O registers space start address */
-    public final static int IO_REGISTERS_START_ADDRESS = 0177600;
+    /** I/O registers space min start address */
+    public final static int IO_REGISTERS_MIN_ADDRESS = 0170000;
     // I/O devices list
     private final List<Device> deviceList = new ArrayList<Device>();
     // I/O registers space addresses mapped to devices
-    private final List<?>[] deviceTable = new List[4096];
+    private final List<?>[] deviceTable = new List[2048];
+    // Devices start address (depends from connected RAM/ROM)
+    private int devicesStartAddress = IO_REGISTERS_MIN_ADDRESS;
 
     private boolean isRunning = false;
 
@@ -120,7 +123,9 @@ public class Computer implements Runnable {
         /** BK0010 - monitor and Basic */
         BK_0010_BASIC,
         /** BK0010 - monitor, Focal and tests */
-        BK_0010_MSTD
+        BK_0010_MSTD,
+        /** BK0010 with connected floppy drive controller (КНГМД) */
+        BK_0010_KNGMD
     }
 
     public Computer() {
@@ -160,6 +165,12 @@ public class Computer implements Runnable {
                 addReadOnlyMemory(resources, R.raw.monit10, 0100000);
                 addReadOnlyMemory(resources, R.raw.focal, 0120000);
                 addReadOnlyMemory(resources, R.raw.tests, 0160000);
+                break;
+            case BK_0010_KNGMD:
+                setClockFrequency(CLOCK_FREQUENCY_BK0010);
+                addReadOnlyMemory(resources, R.raw.monit10, 0100000);
+                addReadOnlyMemory(resources, R.raw.disk_327, 0160000);
+                addDevice(new FloppyController());
                 break;
             default:
                 setClockFrequency(CLOCK_FREQUENCY_BK0010);
@@ -361,6 +372,11 @@ public class Computer implements Runnable {
         for (int memoryBlockIdx = 0; memoryBlockIdx < memoryBlocksCount; memoryBlockIdx++) {
             memoryTable[memoryStartBlock + memoryBlockIdx] = memory;
         }
+        // Correct devices start address, if needed
+        int memoryEndAddress = memory.getStartAddress() + (memory.getSize() << 1);
+        if (getDevicesStartAddress() < memoryEndAddress) {
+            setDevicesStartAddress(memoryEndAddress);
+        }
     }
 
     /**
@@ -371,7 +387,7 @@ public class Computer implements Runnable {
         deviceList.add(device);
         int[] deviceAddresses = device.getAddresses();
         for (int deviceAddress : deviceAddresses) {
-            int deviceTableIndex = (deviceAddress - IO_REGISTERS_START_ADDRESS) >> 1;
+            int deviceTableIndex = (deviceAddress - IO_REGISTERS_MIN_ADDRESS) >> 1;
             @SuppressWarnings("unchecked")
             List<Device> addressDevices = (List<Device>) deviceTable[deviceTableIndex];
             if (addressDevices == null) {
@@ -387,9 +403,25 @@ public class Computer implements Runnable {
         return (memory != null && memory.isRelatedAddress(address)) ? memory : null;
     }
 
+    /**
+     * Get I/O devices start address.
+     * @return I/O devices start address value
+     */
+    public int getDevicesStartAddress() {
+        return devicesStartAddress;
+    }
+
+    /**
+     * Set I/O devices start address.
+     * @param devicesStartAddress I/O devices start address value to set
+     */
+    public void setDevicesStartAddress(int devicesStartAddress) {
+        this.devicesStartAddress = devicesStartAddress;
+    }
+
     @SuppressWarnings("unchecked")
     private List<Device> getDevices(int address) {
-        return (List<Device>) deviceTable[(address - IO_REGISTERS_START_ADDRESS) >> 1];
+        return (List<Device>) deviceTable[(address - IO_REGISTERS_MIN_ADDRESS) >> 1];
     }
 
     /**
@@ -418,7 +450,7 @@ public class Computer implements Runnable {
     public int readMemory(boolean isByteMode, int address) {
         int readValue = BUS_ERROR;
         // First check for I/O registers
-        if (address >= IO_REGISTERS_START_ADDRESS) {
+        if (address >= getDevicesStartAddress()) {
             List<Device> subdevices = getDevices(address);
             if (subdevices != null) {
                 long cpuClock = getCpu().getTime();
@@ -455,7 +487,7 @@ public class Computer implements Runnable {
     public boolean writeMemory(boolean isByteMode, int address, int value) {
         boolean isWritten = false;
         // First check for I/O registers
-        if (address >= IO_REGISTERS_START_ADDRESS) {
+        if (address >= getDevicesStartAddress()) {
             List<Device> devices = getDevices(address);
             if (devices != null) {
                 long cpuClock = getCpu().getTime();
