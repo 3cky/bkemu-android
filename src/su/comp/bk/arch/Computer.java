@@ -39,6 +39,7 @@ import su.comp.bk.arch.io.Timer;
 import su.comp.bk.arch.io.VideoController;
 import su.comp.bk.arch.memory.Memory;
 import su.comp.bk.arch.memory.RandomAccessMemory;
+import su.comp.bk.arch.memory.RandomAccessMemory.Type;
 import su.comp.bk.arch.memory.ReadOnlyMemory;
 
 /**
@@ -79,6 +80,9 @@ public class Computer implements Runnable {
 
     // Audio output reference
     private AudioOutput audioOutput;
+
+    // FLoppy controller reference (<code>null</code> if no floppy controller attached)
+    private FloppyController floppyController;
 
     /** I/O registers space min start address */
     public final static int IO_REGISTERS_MIN_ADDRESS = 0170000;
@@ -169,12 +173,13 @@ public class Computer implements Runnable {
             case BK_0010_KNGMD:
                 setClockFrequency(CLOCK_FREQUENCY_BK0010);
                 addReadOnlyMemory(resources, R.raw.monit10, 0100000);
+                addMemory(new RandomAccessMemory(0120000, 020000, Type.K537RU10));
                 addReadOnlyMemory(resources, R.raw.disk_327, 0160000);
-                addDevice(new FloppyController());
+                floppyController = new FloppyController(this);
+                addDevice(floppyController);
                 break;
             default:
                 setClockFrequency(CLOCK_FREQUENCY_BK0010);
-                addReadOnlyMemory(resources, R.raw.monit10, 0100000);
                 break;
         }
         audioOutput = new AudioOutput(this);
@@ -344,6 +349,14 @@ public class Computer implements Runnable {
      */
     public PeripheralPort getPeripheralPort() {
         return periferalPort;
+    }
+
+    /**
+     * Get {@link FloppyController} reference.
+     * @return floppyController reference or <code>null</code> if not attached
+     */
+    public FloppyController getFloppyController() {
+        return floppyController;
     }
 
     /**

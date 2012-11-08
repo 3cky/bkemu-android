@@ -30,16 +30,36 @@ public class RandomAccessMemory implements Memory {
     private final int endAddress;
 
     /**
-     * Create new RAM page with initialization.
+     * RAM types enumeration.
+     */
+    public enum Type {
+        K565RU6, // Dynamic RAM (clone of 4116)
+        K537RU10 // Static RAM (clone of I6264)
+    }
+
+    /**
+     * Create new RAM page of given type (dynamic/static).
      * @param startAddress RAM page starting address
      * @param size RAM page size (in words)
+     * @param type RAM {@link Type}
      */
-    public RandomAccessMemory(int startAddress, int size) {
+    public RandomAccessMemory(int startAddress, int size, Type type) {
         this.startAddress = startAddress;
         this.endAddress = startAddress + (size << 1) - 1;
         this.size = size;
         this.data = new short[getSize()];
-        initMemoryData();
+        if (type == Type.K565RU6) {
+            initMemoryData();
+        }
+    }
+
+    /**
+     * Create new dynamic RAM page.
+     * @param startAddress RAM page starting address
+     * @param size RAM page size (in words)
+     */
+    public RandomAccessMemory(int startAddress, int size) {
+        this(startAddress, size, Type.K565RU6);
     }
 
     /**

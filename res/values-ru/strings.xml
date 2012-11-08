@@ -7,6 +7,7 @@
     <string name="menu_change_model">Выбрать модель</string>
     <string name="menu_select_model">Выберите модель</string>
     <string name="menu_open_image">Открыть файл</string>
+    <string name="menu_mount_disk_image">Монтировать образ диска</string>
     <string name="menu_about">Об эмуляторе</string>
     <string name="menu_share">Поделиться!</string>
     <string name="menu_changelog">Список изменений</string>
@@ -26,7 +27,7 @@
     <string name="desc_down">Вниз</string>
     <string name="desc_right">Вправо</string>
     <string name="desc_enter">Ввод</string>
-    <string name="fd_title">Выберите образ программы (%s)</string>
+    <string name="fd_title">Выберите файл образа (%s)</string>
     <string name="fd_location">Текущий путь</string>
     <string name="fd_cant_read_folder">Не могу прочитать содержимое директории!</string>
     <string name="fd_new_file">Новый</string>

@@ -34,8 +34,10 @@ import su.comp.bk.arch.Computer;
 import su.comp.bk.arch.Computer.Configuration;
 import su.comp.bk.arch.cpu.Cpu;
 import su.comp.bk.arch.cpu.opcode.EmtOpcode;
+import su.comp.bk.arch.io.FloppyController;
 import su.comp.bk.arch.io.KeyboardController;
 import su.comp.bk.arch.io.VideoController;
+import su.comp.bk.arch.io.FloppyController.FloppyDriveIdentifier;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
@@ -66,9 +68,12 @@ public class BkEmuActivity extends Activity {
 
     protected static final String TAG = BkEmuActivity.class.getName();
 
-    // State save/restore: Last loaded emulator binary image path
-    private static final String LAST_BIN_IMAGE_FILE_PATH = BkEmuActivity.class.getName() +
-            "#last_bin_image_file_path";
+    // State save/restore: Last loaded emulator binary image file URI
+    private static final String LAST_BIN_IMAGE_FILE_URI = BkEmuActivity.class.getName() +
+            "#last_bin_image_file_uri";
+    // State save/restore: Last selected disk image file URI
+    private static final String LAST_DISK_IMAGE_FILE_URI = BkEmuActivity.class.getName() +
+            "#last_disk_image_file_uri";
 
     public final static int STACK_TOP_ADDRESS = 01000;
 
@@ -79,6 +84,7 @@ public class BkEmuActivity extends Activity {
     // Intent request IDs
     private static final int REQUEST_MENU_BIN_IMAGE_FILE_LOAD = 1;
     private static final int REQUEST_EMT_BIN_IMAGE_FILE_LOAD = 2;
+    private static final int REQUEST_MENU_DISK_IMAGE_FILE_SELECT = 3;
 
     // Google Play application URL to share
     private static final String APPLICATION_SHARE_URL = "https://play.google.com" +
@@ -88,8 +94,11 @@ public class BkEmuActivity extends Activity {
     protected int lastBinImageAddress;
     // Last loaded emulator binary image length
     protected int lastBinImageLength;
-    // Last loaded emulator binary image path
-    protected String lastBinImageFilePath;
+    // Last loaded emulator binary image URI string
+    protected String lastBinImageFileUri;
+
+    // Last selected disk image URI string
+    protected String lastDiskImageFileUri;
 
     // EMT 36 parameters block address
     protected int emtParamsBlockAddr;
@@ -138,12 +147,12 @@ public class BkEmuActivity extends Activity {
         @Override
         public void run() {
             boolean isBinImageLoaded = false;
-            if (lastBinImageFilePath != null) {
+            if (lastBinImageFileUri != null) {
                 String binImageFilePath = null;
                 try {
                     // Trying to load image file from last used location
-                    binImageFilePath = lastBinImageFilePath.substring(0,
-                            lastBinImageFilePath.lastIndexOf('/') + 1).concat(tapeFileName);
+                    binImageFilePath = lastBinImageFileUri.substring(0,
+                            lastBinImageFileUri.lastIndexOf('/') + 1).concat(tapeFileName);
                     loadBinImageFile(binImageFilePath);
                     isBinImageLoaded = true;
                 } catch (Exception e) {
@@ -343,7 +352,9 @@ public class BkEmuActivity extends Activity {
     protected void onSaveInstanceState(Bundle outState) {
         Log.d(TAG, "onSaveInstanceState()");
         // Save last emulator image file path
-        outState.putString(LAST_BIN_IMAGE_FILE_PATH, lastBinImageFilePath);
+        outState.putString(LAST_BIN_IMAGE_FILE_URI, lastBinImageFileUri);
+        // Save last disk image file path
+        outState.putString(LAST_DISK_IMAGE_FILE_URI, lastDiskImageFileUri);
         this.computer.saveState(getResources(), outState);
         super.onSaveInstanceState(outState);
     }
@@ -351,7 +362,9 @@ public class BkEmuActivity extends Activity {
     @Override
     protected void onRestoreInstanceState(Bundle savedInstanceState) {
         // Restore last emulator image file path
-        lastBinImageFilePath = savedInstanceState.getString(LAST_BIN_IMAGE_FILE_PATH);
+        lastBinImageFileUri = savedInstanceState.getString(LAST_BIN_IMAGE_FILE_URI);
+        // Restore last disk image file path
+        lastDiskImageFileUri = savedInstanceState.getString(LAST_DISK_IMAGE_FILE_URI);
         super.onRestoreInstanceState(savedInstanceState);
     }
 
@@ -414,6 +427,14 @@ public class BkEmuActivity extends Activity {
     }
 
     @Override
+    public boolean onPrepareOptionsMenu(Menu menu) {
+        boolean isFloppyControllerAttached = (computer.getFloppyController() != null);
+        menu.findItem(R.id.menu_mount_disk_image).setEnabled(isFloppyControllerAttached);
+        menu.findItem(R.id.menu_mount_disk_image).setVisible(isFloppyControllerAttached);
+        return true;
+    }
+
+    @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
             case R.id.menu_toggle_keyboard:
@@ -430,6 +451,9 @@ public class BkEmuActivity extends Activity {
                 return true;
             case R.id.menu_open_image:
                 showBinImageFileLoadDialog(REQUEST_MENU_BIN_IMAGE_FILE_LOAD, null);
+                return true;
+            case R.id.menu_mount_disk_image:
+                showMountDiskImageFileDialog();
                 return true;
             case R.id.menu_about:
                 showDialog(DIALOG_ABOUT);
@@ -519,25 +543,48 @@ public class BkEmuActivity extends Activity {
     }
 
     /**
+     * Get directory path for given file URI.
+     * @param fileUriString file URI as string or <code>null</code>
+     * @return directory path or external storage path if file URI is <code>null</code>
+     * or given file directory doesn't exist
+     */
+    private static String getFileDirectoryPath(String fileUriString) {
+        String directoryPath = Environment.getExternalStorageDirectory().getPath();
+        if (fileUriString != null) {
+            Uri fileUri = Uri.parse(fileUriString);
+            File filePath = new File(fileUri.getPath());
+            File fileDir = filePath.getParentFile();
+            if (fileDir.exists()) {
+                directoryPath = fileDir.getPath();
+            }
+        }
+        return directoryPath;
+    }
+
+    /**
      * Show BIN emulator image file to load selection dialog.
      * @param tapeFileName file name to load (or <code>null</code> to load any file)
      */
     protected void showBinImageFileLoadDialog(int requestCode, String tapeFileName) {
         Intent intent = new Intent(getBaseContext(), BkEmuFileDialog.class);
-        String startPath = Environment.getExternalStorageDirectory().getPath();
-        if (lastBinImageFilePath != null) {
-            Uri lastBinImageFileUri = Uri.parse(lastBinImageFilePath);
-            File lastBinImageFile = new File(lastBinImageFileUri.getPath());
-            File lastBinImageDir = lastBinImageFile.getParentFile();
-            if (lastBinImageDir.exists()) {
-                startPath = lastBinImageDir.getPath();
-            }
-        }
+        String startPath = getFileDirectoryPath(lastBinImageFileUri);
         intent.putExtra(BkEmuFileDialog.INTENT_START_PATH, startPath);
         if (tapeFileName != null && tapeFileName.length() > 0) {
             intent.putExtra(BkEmuFileDialog.INTENT_FORMAT_FILTER, new String[] { tapeFileName });
         }
         startActivityForResult(intent, requestCode);
+    }
+
+    /**
+     * Show floppy disk image to mount selection dialog.
+     */
+    protected void showMountDiskImageFileDialog() {
+        Intent intent = new Intent(getBaseContext(), BkEmuFileDialog.class);
+        String startPath = getFileDirectoryPath(lastDiskImageFileUri);
+        intent.putExtra(BkEmuFileDialog.INTENT_START_PATH, startPath);
+        intent.putExtra(BkEmuFileDialog.INTENT_FORMAT_FILTER,
+                BkEmuFileDialog.FORMAT_FILTER_DISK_IMAGES);
+        startActivityForResult(intent, REQUEST_MENU_DISK_IMAGE_FILE_SELECT);
     }
 
     @Override
@@ -564,6 +611,19 @@ public class BkEmuActivity extends Activity {
                     }
                 }
                 doFinishBinImageLoad(isImageLoaded);
+                break;
+            case REQUEST_MENU_DISK_IMAGE_FILE_SELECT:
+                FloppyController floppyController = computer.getFloppyController();
+                if (resultCode == Activity.RESULT_OK && floppyController != null) {
+                    String diskImageFilePath = data.getStringExtra(BkEmuFileDialog.INTENT_RESULT_PATH);
+                    String diskImageFileUri = "file:" + diskImageFilePath;
+                    try {
+                        floppyController.mountDiskImage(diskImageFileUri, FloppyDriveIdentifier.A, false);
+                        lastDiskImageFileUri = diskImageFileUri;
+                    } catch (Exception e) {
+                        Log.e(TAG, "can't mount disk image '" + diskImageFileUri + "'", e);
+                    }
+                }
                 break;
             default:
                 break;
@@ -638,7 +698,7 @@ public class BkEmuActivity extends Activity {
         while ((readByte = binImageInput.read()) != -1) {
             binImageOutput.write(readByte);
         }
-        this.lastBinImageFilePath = binImageFilePath;
+        this.lastBinImageFileUri = binImageFilePath;
         return loadBinImage(binImageOutput.toByteArray());
     }
 

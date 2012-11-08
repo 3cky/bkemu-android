@@ -50,7 +50,8 @@ public class BkEmuFileDialog extends ListActivity {
     private String parentPath;
     protected String currentPath;
 
-    private final static String[] DEFAULT_FORMAT_FILTER = new String[] { ".BIN" };
+    public final static String[] FORMAT_FILTER_BIN_IMAGES = new String[] { ".BIN" };
+    public final static String[] FORMAT_FILTER_DISK_IMAGES = new String[] { ".BKD", ".IMG" };
     private String[] formatFilter = null;
 
     private HashMap<String, Integer> lastDirPositions = new HashMap<String, Integer>();
@@ -74,7 +75,7 @@ public class BkEmuFileDialog extends ListActivity {
 
         formatFilter = getIntent().getStringArrayExtra(INTENT_FORMAT_FILTER);
         if (formatFilter == null) {
-            formatFilter = DEFAULT_FORMAT_FILTER;
+            formatFilter = FORMAT_FILTER_BIN_IMAGES;
         }
         setTitle(getResources().getString(R.string.fd_title, getFormatFilterString(formatFilter)));
 
