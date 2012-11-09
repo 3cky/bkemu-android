@@ -101,12 +101,13 @@ public class ControlOpcodesTest {
             int regHaltPc;
             int regHaltPsw;
             @Override
-            public void write(long cpuTime, boolean isByteMode, int address, int value) {
+            public boolean write(long cpuTime, boolean isByteMode, int address, int value) {
                 if (address == Cpu.REG_HALT_PC) {
                     regHaltPc = value;
                 } else {
                     regHaltPsw = value;
                 }
+                return true;
             }
             @Override
             public int read(long cpuTime, int address) {
@@ -133,8 +134,9 @@ public class ControlOpcodesTest {
         Device haltBitRegister = new Device() {
             int haltBitValue;
             @Override
-            public void write(long cpuTime, boolean isByteMode, int address, int value) {
+            public boolean write(long cpuTime, boolean isByteMode, int address, int value) {
                 haltBitValue = value;
+                return true;
             }
             @Override
             public int read(long cpuTime, int address) {

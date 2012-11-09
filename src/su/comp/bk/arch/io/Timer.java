@@ -141,7 +141,7 @@ public class Timer implements Device {
     }
 
     @Override
-    public void write(long cpuTime, boolean isByteMode, int address, int value) {
+    public boolean write(long cpuTime, boolean isByteMode, int address, int value) {
         switch (address & 0177776) {
             case PRESET_REGISTER_ADDRESS:
                 setPresetRegister(cpuTime, value);
@@ -153,6 +153,7 @@ public class Timer implements Device {
                 // Counter register is read only
                 break;
         }
+        return true;
     }
 
     private void updateSettingsChangeTime(long cpuTime) {

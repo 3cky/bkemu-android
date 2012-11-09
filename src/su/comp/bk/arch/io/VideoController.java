@@ -212,7 +212,7 @@ public class VideoController implements Device {
     }
 
     @Override
-    public void write(long cpuTime, boolean isByteMode, int address, int value) {
+    public boolean write(long cpuTime, boolean isByteMode, int address, int value) {
         int registerValue;
         if (isByteMode) {
             if ((address & 1) != 0) {
@@ -224,6 +224,7 @@ public class VideoController implements Device {
             registerValue = value;
         }
         writeScrollRegister(registerValue);
+        return true;
     }
 
 }

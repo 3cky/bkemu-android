@@ -728,7 +728,7 @@ public class FloppyController implements Device {
     }
 
     @Override
-    public synchronized void write(long cpuTime, boolean isByteMode, int address, int value) {
+    public synchronized boolean write(long cpuTime, boolean isByteMode, int address, int value) {
         if (isDebugEnabled) {
             d(TAG, "write: " + Integer.toOctalString(address) +
                     ", value: " + Integer.toOctalString(value) + ", isByteMode: " + isByteMode);
@@ -740,6 +740,7 @@ public class FloppyController implements Device {
                 writeDataRegister(cpuTime, value);
             }
         }
+        return true;
     }
 
     protected int readControlRegister(long cpuTime) {

@@ -63,6 +63,7 @@ public interface Device {
      * @param value value to write to device
      * @param isByteAddressing <code>true</code> to write byte value, <code>false</code> to write
      * word value
+     * @return <code>true</code> if value successfully written, <code>false</code> if not
      */
-    void write(long cpuTime, boolean isByteMode, int address, int value);
+    boolean write(long cpuTime, boolean isByteMode, int address, int value);
 }

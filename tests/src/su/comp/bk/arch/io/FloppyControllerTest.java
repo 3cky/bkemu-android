@@ -207,7 +207,7 @@ public class FloppyControllerTest {
 
     @Test
     public void testFloppyControllerOperations() throws Exception {
-        floppyController.setDebugEnabled(true);
+//        floppyController.setDebugEnabled(true);
         // Mount disk image file
         byte[] testDiskImageData = mountTestDiskImage();
         Cpu cpu = computer.getCpu();

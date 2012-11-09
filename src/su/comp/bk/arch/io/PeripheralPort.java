@@ -72,8 +72,9 @@ public class PeripheralPort implements Device {
     }
 
     @Override
-    public void write(long cpuTime, boolean isByteMode, int address, int value) {
+    public boolean write(long cpuTime, boolean isByteMode, int address, int value) {
         // TODO
+        return true;
     }
 
     @Override

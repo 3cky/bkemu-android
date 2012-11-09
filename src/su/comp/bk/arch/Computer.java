@@ -505,9 +505,11 @@ public class Computer implements Runnable {
             if (devices != null) {
                 long cpuClock = getCpu().getTime();
                 for (Device device: devices) {
-                    device.write(cpuClock, isByteMode, address, value);
+                    if (device.write(cpuClock, isByteMode, address, value)) {
+                        isWritten = true;
+                    }
                 }
-                isWritten = true;
+
             }
         } else {
             // Check for memory at given address

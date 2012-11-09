@@ -62,9 +62,10 @@ public class Sel1RegisterSystemBits implements Device {
     }
 
     @Override
-    public void write(long cpuTime, boolean isByteMode, int address, int value) {
+    public boolean write(long cpuTime, boolean isByteMode, int address, int value) {
         // Only set write flag
         setWriteFlagState(true);
+        return true;
     }
 
 

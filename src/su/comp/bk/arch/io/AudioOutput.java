@@ -148,12 +148,13 @@ public class AudioOutput implements Device, Runnable {
     }
 
     @Override
-    public void write(long cpuTime, boolean isByteMode, int address, int value) {
+    public boolean write(long cpuTime, boolean isByteMode, int address, int value) {
         int outputState = value & OUTPUT_BIT;
         if ((outputState ^ lastOutputState) != 0) {
             putPcmTimestamp(cpuTime);
         }
         lastOutputState = outputState;
+        return true;
     }
 
     private synchronized void putPcmTimestamp(long pcmTimestamp) {

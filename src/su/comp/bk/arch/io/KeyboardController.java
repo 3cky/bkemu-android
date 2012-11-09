@@ -448,15 +448,21 @@ public class KeyboardController implements Device, OnTouchListener {
     }
 
     @Override
-    public void write(long cpuTime, boolean isByteMode, int address, int value) {
+    public boolean write(long cpuTime, boolean isByteMode, int address, int value) {
+        boolean isWritten = true;
         switch (address & 0177776) {
             case STATUS_REGISTER_ADDRESS:
                 writeStatusRegister(value);
                 break;
+            case DATA_REGISTER_ADDRESS:
+                // Data register is read only and not respond to the CPU bus write request
+                isWritten = false;
+                break;
             default:
-                // Data register and corresponding SEL1 register bit are read only
+                // Corresponding SEL1 register bit is read only
                 break;
         }
+        return isWritten;
     }
 
     /**
