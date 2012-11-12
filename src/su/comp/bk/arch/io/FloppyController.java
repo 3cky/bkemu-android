@@ -30,6 +30,7 @@ import java.nio.channels.FileChannel;
 import su.comp.bk.arch.Computer;
 import su.comp.bk.util.Crc16;
 import android.os.Bundle;
+import android.util.Log;
 
 import static su.comp.bk.arch.Computer.*;
 
@@ -106,6 +107,43 @@ public class FloppyController implements Device {
     public final static int BYTES_PER_DISK = TRACKS_PER_DISK * SECTORS_PER_TRACK * BYTES_PER_SECTOR * 2;
 
     private final static int[] ADDRESSES = { CONTROL_REGISTER_ADDRESS, DATA_REGISTER_ADDRESS };
+
+    // State save/restore: Synchronous read flag state
+    private static final String STATE_SYNCHRONOUS_READ = FloppyController.class.getName() +
+            "#synch_read";
+    // State save/restore: Marker found flag state
+    private static final String STATE_MARKER_FOUND = FloppyController.class.getName() +
+            "#marker_found";
+    // State save/restore: Data ready flag state
+    private static final String STATE_DATA_READY = FloppyController.class.getName() +
+            "#data_ready";
+    // State save/restore: Data ready read position
+    private static final String STATE_DATA_READY_READ_POSITION = FloppyController.class.getName() +
+            "#data_ready_read_position";
+    // State save/restore: CRC correct flag state
+    private static final String STATE_CRC_CORRECT = FloppyController.class.getName() +
+            "#crc_correct";
+    // State save/restore: Last data register read time
+    private static final String STATE_LAST_DATA_REGISTER_READ_TIME = FloppyController.class.getName() +
+            "#last_data_register_read_time";
+    // State save/restore: Selected floppy drive
+    private static final String STATE_SELECTED_FLOPPY_DRIVE = FloppyController.class.getName() +
+            "#selected_floppy_drive";
+    // State save/restore: Motor started flag state
+    private static final String STATE_MOTOR_STARTED = FloppyController.class.getName() +
+            "#motor_started";
+    // State save/restore: Drive disk image file URI
+    private static final String STATE_DRIVE_IMAGE_FILE_URI = FloppyDrive.class.getName() +
+            "#disk_image_file_uri";
+    // State save/restore: Drive disk image read only flag
+    private static final String STATE_DRIVE_IMAGE_READ_ONLY = FloppyDrive.class.getName() +
+            "#disk_image_read_only";
+    // State save/restore: Drive track number
+    private static final String STATE_DRIVE_TRACK_NUMBER = FloppyDrive.class.getName() +
+            "#track_number";
+    // State save/restore: Drive track side
+    private static final String STATE_DRIVE_TRACK_SIDE = FloppyDrive.class.getName() +
+            "#track_side";
 
     // CPU clock ticks per track
     protected final long clockTicksPerTrack;
@@ -619,12 +657,20 @@ public class FloppyController implements Device {
         }
 
         /**
+         * Get mounted disk image file URI.
+         * @return mounted disk image file URI or <code>null</code> if no disk image mounted
+         */
+        String getMountedDiskImageFileUri() {
+            return mountedDiskImageFileUri;
+        }
+
+        /**
          * Check is disk image mounted to this floppy drive or not.
          * @return <code>true</code> if disk image mounted to this floppy drive,
          * <code>false</code> if not mounted
          */
         boolean isDiskImageMounted() {
-            return (mountedDiskImageFileUri != null);
+            return (getMountedDiskImageFileUri() != null);
         }
 
         /**
@@ -643,8 +689,7 @@ public class FloppyController implements Device {
          * <code>false</code> to mount disk image in read/write mode
          * @throws IOException in case of mounting error
          */
-        void mountDiskImage(String diskImageFileUri,
-                boolean isReadOnly) throws Exception {
+        void mountDiskImage(String diskImageFileUri, boolean isReadOnly) throws Exception {
             if (isDiskImageMounted()) {
                 umountDiskImage();
             }
@@ -710,14 +755,64 @@ public class FloppyController implements Device {
 
     @Override
     public synchronized void saveState(Bundle outState) {
-        // TODO Auto-generated method stub
-
+        outState.putSerializable(STATE_SELECTED_FLOPPY_DRIVE, getSelectedFloppyDriveIdentifier());
+        outState.putBoolean(STATE_SYNCHRONOUS_READ, isSynchronousReadState());
+        outState.putBoolean(STATE_MARKER_FOUND, isMarkerFound());
+        outState.putBoolean(STATE_DATA_READY, isDataReady());
+        outState.putInt(STATE_DATA_READY_READ_POSITION, getDataReadyReadPosition());
+        outState.putBoolean(STATE_CRC_CORRECT, isCrcCorrect());
+        outState.putLong(STATE_LAST_DATA_REGISTER_READ_TIME, getLastDataRegisterReadCpuTime());
+        outState.putBoolean(STATE_MOTOR_STARTED, isMotorStarted());
+        for (FloppyDriveIdentifier driveIdentifier : FloppyDriveIdentifier.values()) {
+            FloppyDrive drive = getFloppyDrive(driveIdentifier);
+            outState.putString(getFloppyDriveStateKey(STATE_DRIVE_IMAGE_FILE_URI, driveIdentifier),
+                    drive.getMountedDiskImageFileUri());
+            outState.putBoolean(getFloppyDriveStateKey(STATE_DRIVE_IMAGE_READ_ONLY, driveIdentifier),
+                    drive.isMountedDiskImageReadOnly());
+            outState.putInt(getFloppyDriveStateKey(STATE_DRIVE_TRACK_NUMBER, driveIdentifier),
+                    drive.getCurrentTrackNumber());
+            outState.putSerializable(getFloppyDriveStateKey(STATE_DRIVE_TRACK_SIDE, driveIdentifier),
+                    drive.getCurrentTrackSide());
+        }
     }
 
     @Override
     public synchronized void restoreState(Bundle inState) {
-        // TODO Auto-generated method stub
+        selectFloppyDrive((FloppyDriveIdentifier) inState.getSerializable(STATE_SELECTED_FLOPPY_DRIVE));
+        setSynchronousReadState(inState.getBoolean(STATE_SYNCHRONOUS_READ));
+        setMarkerFound(inState.getBoolean(STATE_MARKER_FOUND));
+        setDataReady(inState.getBoolean(STATE_DATA_READY));
+        setDataReadyReadPosition(inState.getInt(STATE_DATA_READY_READ_POSITION));
+        setCrcCorrect(inState.getBoolean(STATE_CRC_CORRECT));
+        setLastDataRegisterReadCpuTime(inState.getLong(STATE_LAST_DATA_REGISTER_READ_TIME));
+        setMotorStarted(inState.getBoolean(STATE_MOTOR_STARTED));
+        for (FloppyDriveIdentifier driveIdentifier : FloppyDriveIdentifier.values()) {
+            FloppyDrive drive = getFloppyDrive(driveIdentifier);
+            int driveTrackNumber = inState.getInt(getFloppyDriveStateKey(
+                    STATE_DRIVE_TRACK_NUMBER, driveIdentifier));
+            FloppyDriveSide driveTrackSide = (FloppyDriveSide) inState.getSerializable(
+                    getFloppyDriveStateKey(STATE_DRIVE_TRACK_SIDE, driveIdentifier));
+            drive.setCurrentTrack(driveTrackNumber, driveTrackSide);
+            String diskImageFileUri = inState.getString(getFloppyDriveStateKey(
+                    STATE_DRIVE_IMAGE_FILE_URI, driveIdentifier));
+            if (diskImageFileUri != null) {
+                try {
+                    drive.mountDiskImage(diskImageFileUri, inState.getBoolean(
+                            getFloppyDriveStateKey(STATE_DRIVE_IMAGE_READ_ONLY,driveIdentifier)));
+                } catch (Exception e) {
+                    Log.e(TAG, "can't remount disk file image: " + diskImageFileUri, e);
+                    try {
+                        drive.umountDiskImage();
+                    } catch (Exception e1) {
+                    }
+                }
+            }
+        }
+    }
 
+    private static String getFloppyDriveStateKey(String stateKey,
+            FloppyDriveIdentifier driveIdentifier) {
+        return stateKey + ":" + driveIdentifier.name();
     }
 
     @Override
@@ -967,11 +1062,20 @@ public class FloppyController implements Device {
 
     /**
      * Get selected floppy drive.
-     * @return identifier or selected floppy drive or <code>null</code> if no floppy drive
-     * currently selected)
+     * @return selected floppy drive or <code>null</code> if no floppy drive
+     * currently selected
      */
     protected FloppyDrive getSelectedFloppyDrive() {
-        return getFloppyDrive(selectedFloppyDriveIdentifier);
+        return getFloppyDrive(getSelectedFloppyDriveIdentifier());
+    }
+
+    /**
+     * Get selected floppy drive identifier.
+     * @return selected floppy drive identifier or <code>null</code> if no floppy drive
+     * currently selected
+     */
+    protected FloppyDriveIdentifier getSelectedFloppyDriveIdentifier() {
+        return selectedFloppyDriveIdentifier;
     }
 
     /**
