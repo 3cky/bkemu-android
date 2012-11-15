@@ -166,18 +166,9 @@ public class BkEmuFileDialog extends ListActivity {
                 dirsPathMap.put(dirName, file.getPath());
             } else {
                 final String fileName = file.getName();
-                final String fileNameLwr = fileName.toLowerCase();
-
                 if (formatFilter != null) {
-                    boolean contains = false;
-                    for (int i = 0; i < formatFilter.length; i++) {
-                        final String formatLwr = formatFilter[i].toLowerCase();
-                        if (fileNameLwr.endsWith(formatLwr)) {
-                            contains = true;
-                            break;
-                        }
-                    }
-                    if (contains) {
+                    boolean isFormatMatched = isFileNameFormatMatched(fileName, formatFilter);
+                    if (isFormatMatched) {
                         filesMap.put(fileName, fileName);
                         filesPathMap.put(fileName, file.getPath());
                     }
@@ -208,6 +199,19 @@ public class BkEmuFileDialog extends ListActivity {
 
         setListAdapter(fileList);
 
+    }
+
+    public static boolean isFileNameFormatMatched(final String fileName, final String[] formatExtensions) {
+        final String fileNameLwr = fileName.toLowerCase();
+        boolean isMatched = false;
+        for (int i = 0; i < formatExtensions.length; i++) {
+            final String formatLwr = formatExtensions[i].toLowerCase();
+            if (fileNameLwr.endsWith(formatLwr)) {
+                isMatched = true;
+                break;
+            }
+        }
+        return isMatched;
     }
 
     private void addItem(String fileName, int imageId) {

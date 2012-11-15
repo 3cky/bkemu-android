@@ -109,6 +109,8 @@ public class BkEmuActivity extends Activity {
 
     protected String intentDataProgramImagePath;
 
+    protected String intentDataDiskImagePath;
+
     protected Handler activityHandler;
 
     /**
@@ -131,7 +133,7 @@ public class BkEmuActivity extends Activity {
                     }
                 }
             } catch (Exception e) {
-                Log.e(TAG, "Can't load bootstrap emulator image", e);
+                Log.e(TAG, "Can't load bootstrap emulator program image", e);
             }
         }
     }
@@ -196,6 +198,13 @@ public class BkEmuActivity extends Activity {
                     if (intentDataProgramImagePath != null) {
                         // Monitor command prompt, load program from path from intent data
                         activityHandler.post(new IntentDataProgramImageLoader());
+                    } else if (intentDataDiskImagePath != null) {
+                        // Monitor command prompt, trying to boot from mounted disk image
+                        intentDataDiskImagePath = null;
+                        // FIXME simulate bus error trap in case of boot error
+                        cpu.push(cpu.readMemory(false, Cpu.TRAP_VECTOR_BUS_ERROR));
+                        // Start booting
+                        cpu.writeRegister(false, Cpu.PC, 0160000);
                     }
                     break;
                 case 036: // EMT 36 - tape I/O
@@ -258,8 +267,27 @@ public class BkEmuActivity extends Activity {
         LayoutInflater layoutInflater = getLayoutInflater();
         View mainView = layoutInflater.inflate(R.layout.main, null);
         bkEmuView = (BkEmuView) mainView.findViewById(R.id.emu_view);
-        this.intentDataProgramImagePath = getIntent().getDataString();
+        String intentDataString = getIntent().getDataString();
+        if (intentDataString != null) {
+            if (BkEmuFileDialog.isFileNameFormatMatched(intentDataString,
+                    BkEmuFileDialog.FORMAT_FILTER_BIN_IMAGES)) {
+                this.intentDataProgramImagePath = intentDataString;
+            } else if (BkEmuFileDialog.isFileNameFormatMatched(intentDataString,
+                    BkEmuFileDialog.FORMAT_FILTER_DISK_IMAGES)) {
+                this.intentDataDiskImagePath = intentDataString;
+            }
+        }
         initializeComputer(savedInstanceState);
+        // Mount intent disk image, if set
+        if (this.intentDataDiskImagePath != null) {
+            try {
+                computer.getFloppyController().mountDiskImage(intentDataDiskImagePath,
+                        FloppyDriveIdentifier.A, true);
+            } catch (Exception e) {
+                Log.e(TAG, "Can't mount bootstrap emulator disk image", e);
+                this.intentDataDiskImagePath = null;
+            }
+        }
         View keyboardView = mainView.findViewById(R.id.keyboard);
         KeyboardController keyboardController = this.computer.getKeyboardController();
         keyboardController.setOnScreenKeyboardView(keyboardView);
@@ -292,8 +320,13 @@ public class BkEmuActivity extends Activity {
         if (!isComputerInitialized) {
             // Computer state can't be restored, do startup initialization
             try {
-                this.computer.configure(getResources(), (intentDataProgramImagePath == null)
-                        ? getComputerConfiguration() : Computer.Configuration.BK_0010_MONITOR);
+                Configuration configuration = getComputerConfiguration();
+                if (intentDataProgramImagePath != null) {
+                    configuration = Configuration.BK_0010_MONITOR;
+                } else if (intentDataDiskImagePath != null) {
+                    configuration = Configuration.BK_0010_KNGMD;
+                }
+                this.computer.configure(getResources(), configuration);
                 this.computer.reset();
                 isComputerInitialized = true;
             } catch (Exception e) {
