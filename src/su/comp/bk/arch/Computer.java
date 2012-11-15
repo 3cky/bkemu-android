@@ -180,6 +180,7 @@ public class Computer implements Runnable {
                 break;
             default:
                 setClockFrequency(CLOCK_FREQUENCY_BK0010);
+                addReadOnlyMemory(resources, R.raw.monit10, 0100000);
                 break;
         }
         audioOutput = new AudioOutput(this);
