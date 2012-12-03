@@ -664,9 +664,9 @@ public class BkEmuActivity extends Activity {
     }
 
     protected void doFinishBinImageLoad(boolean isImageLoadedSuccessfully) {
-        synchronized (computer) {
-            // Set result in parameters block
-            if (isImageLoadedSuccessfully) {
+        // Set result in parameters block
+        if (isImageLoadedSuccessfully) {
+            synchronized (computer) {
                 // Set "OK" result code
                 computer.writeMemory(true, emtParamsBlockAddr + 1, 0);
                 // Write loaded image start address
@@ -674,12 +674,9 @@ public class BkEmuActivity extends Activity {
                 // Write loaded image length
                 computer.writeMemory(false, emtParamsBlockAddr + 24, lastBinImageLength);
                 // TODO Write loaded image name
-            } else {
-                // Set "Stop by button STOP" result code
-                computer.writeMemory(true, emtParamsBlockAddr + 1, 3);
+                // Return from EMT 36
+                computer.getCpu().returnFromTrap(false);
             }
-            // Return from EMT 36
-            computer.getCpu().returnFromTrap(false);
         }
     }
 
