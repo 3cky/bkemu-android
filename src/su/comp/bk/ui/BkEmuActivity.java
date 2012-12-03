@@ -208,25 +208,29 @@ public class BkEmuActivity extends Activity {
                     }
                     break;
                 case 036: // EMT 36 - tape I/O
-                    emtParamsBlockAddr = cpu.readRegister(false, Cpu.R1);
-                    Log.d(TAG, "EMT 36, R1=0" + Integer.toOctalString(emtParamsBlockAddr));
-                    // Read command code
-                    int tapeCmdCode = cpu.readMemory(true, emtParamsBlockAddr);
-                    switch (tapeCmdCode) {
-                        case 3: // Read from tape
-                            computer.pause();
-                            // Read file name
-                            byte[] tapeFileNameData = new byte[16];
-                            for (int idx = 0; idx < tapeFileNameData.length; idx++) {
-                                tapeFileNameData[idx] = (byte) cpu.readMemory(true,
-                                        emtParamsBlockAddr + idx + 6);
-                            }
-                            String tapeFileName = new String(tapeFileNameData).trim().toUpperCase();
-                            Log.d(TAG, "EMT 36 load file: '" + tapeFileName + "'");
-                            activityHandler.post(new TapeLoaderTask(tapeFileName));
-                            break;
-                        default:
-                            break;
+                    // Check EMT handler isn't hooked
+                    int emtHandlerAddress = cpu.readMemory(false, Cpu.TRAP_VECTOR_EMT);
+                    if (computer.isReadOnlyMemoryAddress(emtHandlerAddress)) {
+                        emtParamsBlockAddr = cpu.readRegister(false, Cpu.R1);
+                        Log.d(TAG, "EMT 36, R1=0" + Integer.toOctalString(emtParamsBlockAddr));
+                        // Read command code
+                        int tapeCmdCode = cpu.readMemory(true, emtParamsBlockAddr);
+                        switch (tapeCmdCode) {
+                            case 3: // Read from tape
+                                computer.pause();
+                                // Read file name
+                                byte[] tapeFileNameData = new byte[16];
+                                for (int idx = 0; idx < tapeFileNameData.length; idx++) {
+                                    tapeFileNameData[idx] = (byte) cpu.readMemory(true,
+                                            emtParamsBlockAddr + idx + 6);
+                                }
+                                String tapeFileName = new String(tapeFileNameData).trim().toUpperCase();
+                                Log.d(TAG, "EMT 36 load file: '" + tapeFileName + "'");
+                                activityHandler.post(new TapeLoaderTask(tapeFileName));
+                                break;
+                            default:
+                                break;
+                        }
                     }
                     break;
                 case Computer.BUS_ERROR:

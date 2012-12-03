@@ -412,6 +412,16 @@ public class Computer implements Runnable {
         }
     }
 
+    /**
+     * Check is given address is mapped to ROM area.
+     * @param address address to check
+     * @return <code>true</code> if given address is mapped to ROM area,
+     * <code>false</code> otherwise
+     */
+    public boolean isReadOnlyMemoryAddress(int address) {
+        return (address >= 0) && (getMemory(address) instanceof ReadOnlyMemory);
+    }
+
     private Memory getMemory(int address) {
         Memory memory = memoryTable[address >> 13];
         return (memory != null && memory.isRelatedAddress(address)) ? memory : null;
