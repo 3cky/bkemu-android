@@ -7,10 +7,11 @@
     <string name="menu_change_model">Выбрать модель</string>
     <string name="menu_select_model">Выберите модель</string>
     <string name="menu_open_image">Открыть файл</string>
-    <string name="menu_mount_disk_image">Монтировать образ диска</string>
+    <string name="menu_mount_disk_image">Подключить образ диска</string>
     <string name="menu_about">Об эмуляторе</string>
     <string name="menu_share">Поделиться!</string>
     <string name="menu_changelog">Список изменений</string>
+    <string name="dialog_disk_mount_error">Ошибка подключения образа диска!</string>
     <string name="ok">OK</string>
     <string name="cancel">Отмена</string>
     <string name="bk_0010_monitor">БК 0010&#8211;01 (Монитор)</string>

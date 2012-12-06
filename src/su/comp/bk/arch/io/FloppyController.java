@@ -693,14 +693,19 @@ public class FloppyController implements Device {
          * @param diskImageFileUri Disk image file URI to mount
          * @param isReadOnly <code>true</code> to mount disk image as read only,
          * <code>false</code> to mount disk image in read/write mode
-         * @throws IOException in case of mounting error
+         * @throws Exception in case of mounting error
          */
         void mountDiskImage(String diskImageFileUri, boolean isReadOnly) throws Exception {
+            File diskImageFile = new File(new URI(diskImageFileUri));
+            // Check disk image size
+            if (diskImageFile.length() != BYTES_PER_DISK) {
+                throw new IllegalArgumentException("Invalid disk image size: " +
+                            diskImageFile.length());
+            }
             if (isDiskImageMounted()) {
                 umountDiskImage();
             }
             isMountedDiskImageReadOnly = isReadOnly;
-            File diskImageFile = new File(new URI(diskImageFileUri));
             mountedDiskImageFile = new RandomAccessFile(diskImageFile, isReadOnly ? "r" : "rw");
             mountedDiskImageBuffer = mountedDiskImageFile.getChannel().map(isReadOnly
                     ? FileChannel.MapMode.READ_ONLY : FileChannel.MapMode.READ_WRITE,

@@ -80,6 +80,7 @@ public class BkEmuActivity extends Activity {
     // Dialog IDs
     private static final int DIALOG_COMPUTER_MODEL = 1;
     private static final int DIALOG_ABOUT = 2;
+    private static final int DIALOG_DISK_MOUNT_ERROR = 3;
 
     // Intent request IDs
     private static final int REQUEST_MENU_BIN_IMAGE_FILE_LOAD = 1;
@@ -568,6 +569,13 @@ public class BkEmuActivity extends Activity {
                         effectiveClockFrequency / 1000f, effectiveClockFrequency
                             / this.computer.getClockFrequency() * 100f));
                 return dialog;
+            case DIALOG_DISK_MOUNT_ERROR:
+                return new AlertDialog.Builder(this)
+                    .setIcon(android.R.drawable.ic_dialog_alert)
+                    .setTitle(R.string.err)
+                    .setMessage(R.string.dialog_disk_mount_error)
+                    .setPositiveButton(R.string.ok, null)
+                    .create();
         }
         return null;
     }
@@ -658,6 +666,7 @@ public class BkEmuActivity extends Activity {
                         floppyController.mountDiskImage(diskImageFileUri, FloppyDriveIdentifier.A, false);
                         lastDiskImageFileUri = diskImageFileUri;
                     } catch (Exception e) {
+                        showDialog(DIALOG_DISK_MOUNT_ERROR);
                         Log.e(TAG, "can't mount disk image '" + diskImageFileUri + "'", e);
                     }
                 }

@@ -12,6 +12,7 @@
     <string name="menu_about">About</string>
     <string name="menu_share">Share!</string>
     <string name="menu_changelog">Changelog</string>
+    <string name="dialog_disk_mount_error">Disk image mount error!</string>
     <string name="ok">OK</string>
     <string name="cancel">Cancel</string>
     <string name="bk_0010_monitor">BK 0010&#8211;01 (Monitor only)</string>
