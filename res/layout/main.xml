@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="fill_parent"
     android:layout_height="fill_parent"
     android:orientation="vertical" >
@@ -29,8 +30,27 @@
                 android:text="@string/fps_string"
                 android:visibility="invisible" />
         </RelativeLayout>
+
+        <RelativeLayout
+            android:id="@+id/floppy_indicator_layout"
+            android:layout_width="fill_parent"
+            android:layout_height="fill_parent"
+            android:gravity="bottom|right"
+            android:padding="3dp" >
+
+            <ImageView
+                android:id="@+id/floppy_indicator"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:alpha="0.5"
+                android:src="@drawable/floppy_disk"
+                android:visibility="invisible"
+                tools:ignore="ContentDescription" />
+        </RelativeLayout>
     </FrameLayout>
 
-    <include android:id="@+id/keyboard" layout="@layout/keyboard" />
+    <include
+        android:id="@+id/keyboard"
+        layout="@layout/keyboard" />
 
 </LinearLayout>

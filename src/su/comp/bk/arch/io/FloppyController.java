@@ -126,6 +126,9 @@ public class FloppyController implements Device {
     // State save/restore: Last data register read time
     private static final String STATE_LAST_DATA_REGISTER_READ_TIME = FloppyController.class.getName() +
             "#last_data_register_read_time";
+    // State save/restore: Last controller access time
+    private static final String STATE_LAST_ACCESS_TIME = FloppyController.class.getName() +
+            "#last_access_time";
     // State save/restore: Selected floppy drive
     private static final String STATE_SELECTED_FLOPPY_DRIVE = FloppyController.class.getName() +
             "#selected_floppy_drive";
@@ -171,6 +174,9 @@ public class FloppyController implements Device {
 
     // Last data register read CPU time
     private long lastDataRegisterReadCpuTime;
+
+    // Last controller access CPU time
+    private long lastAccessCpuTime;
 
     // Selected floppy drive identifier (or <code>null</code> if no floppy drive selected)
     private FloppyDriveIdentifier selectedFloppyDriveIdentifier;
@@ -762,6 +768,7 @@ public class FloppyController implements Device {
         outState.putInt(STATE_DATA_READY_READ_POSITION, getDataReadyReadPosition());
         outState.putBoolean(STATE_CRC_CORRECT, isCrcCorrect());
         outState.putLong(STATE_LAST_DATA_REGISTER_READ_TIME, getLastDataRegisterReadCpuTime());
+        outState.putLong(STATE_LAST_ACCESS_TIME, getLastAccessCpuTime());
         outState.putBoolean(STATE_MOTOR_STARTED, isMotorStarted());
         for (FloppyDriveIdentifier driveIdentifier : FloppyDriveIdentifier.values()) {
             FloppyDrive drive = getFloppyDrive(driveIdentifier);
@@ -785,6 +792,7 @@ public class FloppyController implements Device {
         setDataReadyReadPosition(inState.getInt(STATE_DATA_READY_READ_POSITION));
         setCrcCorrect(inState.getBoolean(STATE_CRC_CORRECT));
         setLastDataRegisterReadCpuTime(inState.getLong(STATE_LAST_DATA_REGISTER_READ_TIME));
+        setLastAccessCpuTime(inState.getLong(STATE_LAST_ACCESS_TIME));
         setMotorStarted(inState.getBoolean(STATE_MOTOR_STARTED));
         for (FloppyDriveIdentifier driveIdentifier : FloppyDriveIdentifier.values()) {
             FloppyDrive drive = getFloppyDrive(driveIdentifier);
@@ -817,6 +825,7 @@ public class FloppyController implements Device {
 
     @Override
     public synchronized int read(long cpuTime, int address) {
+        setLastAccessCpuTime(cpuTime);
         return (address == CONTROL_REGISTER_ADDRESS)
                 ? readControlRegister(cpuTime)
                 : readDataRegister(cpuTime);
@@ -828,6 +837,7 @@ public class FloppyController implements Device {
             d(TAG, "write: " + Integer.toOctalString(address) +
                     ", value: " + Integer.toOctalString(value) + ", isByteMode: " + isByteMode);
         }
+        setLastAccessCpuTime(cpuTime);
         if (!isByteMode) {
             if (address == CONTROL_REGISTER_ADDRESS) {
                 writeControlRegister(cpuTime, value);
@@ -998,6 +1008,14 @@ public class FloppyController implements Device {
         this.lastDataRegisterReadCpuTime = lastDataRegisterReadCpuTime;
     }
 
+    public synchronized long getLastAccessCpuTime() {
+        return lastAccessCpuTime;
+    }
+
+    public synchronized void setLastAccessCpuTime(long lastAccessCpuTime) {
+        this.lastAccessCpuTime = lastAccessCpuTime;
+    }
+
     private boolean isSynchronousReadState() {
         return isSynchronousReadState;
     }
@@ -1099,7 +1117,7 @@ public class FloppyController implements Device {
      * @return <code>true</code> if motor started in all drives,
      * <code>false</code> if stopped
      */
-    protected boolean isMotorStarted() {
+    public synchronized boolean isMotorStarted() {
         return isMotorStarted;
     }
 

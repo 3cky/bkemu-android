@@ -20,6 +20,7 @@ package su.comp.bk.ui;
 
 import su.comp.bk.R;
 import su.comp.bk.arch.Computer;
+import su.comp.bk.arch.io.FloppyController;
 import su.comp.bk.arch.io.VideoController;
 import android.content.Context;
 import android.graphics.Bitmap;
@@ -34,6 +35,7 @@ import android.view.MotionEvent;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.widget.FrameLayout;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 /**
@@ -76,6 +78,17 @@ public class BkEmuView extends SurfaceView implements SurfaceHolder.Callback {
     			new FpsIndicatorUpdateRunnable();
     protected TextView fpsIndicator;
     protected String fpsIndicatorString;
+
+    // Floppy controller activity indicator timeout (in milliseconds)
+    private static final int FLOPPY_ACTIVITY_INDICATOR_TIMEOUT = 250;
+    // Floppy controller activity indicator timeout (in CPU ticks)
+    protected long floppyActivityIndicatorTimeoutCpuTicks;
+    // Floppy controller activity indicator last update time (in milliseconds)
+    protected long lastFloppyActivityIndicatorUpdateTime;
+
+    private final FloppyActivityIndicatorUpdateRunnable floppyActivityIndicatorUpdateRunnable =
+            new FloppyActivityIndicatorUpdateRunnable();
+    protected ImageView floppyActivityIndicator;
 
     // UI update handler
     private final Handler uiUpdateHandler;
@@ -156,6 +169,7 @@ public class BkEmuView extends SurfaceView implements SurfaceHolder.Callback {
 	            }
 	            long currentTime = System.currentTimeMillis();
 	            updateFpsCounters(currentTime);
+	            updateFloppyActivityIndicator(currentTime);
 	            // Calculate time spent to canvas repaint
                 timeDelta = currentTime - timeStamp;
                 if (timeDelta < RENDERING_PERIOD) {
@@ -176,17 +190,39 @@ public class BkEmuView extends SurfaceView implements SurfaceHolder.Callback {
 	 * FPS indicator update task (scheduled via UI update handler)
 	 */
 	class FpsIndicatorUpdateRunnable implements Runnable {
+	    @Override
+	    public void run() {
+	        // Set indicator color based on FPS value
+	        fpsIndicator.setTextColor((fpsValue > FPS_LOW_VALUE) ?
+	                FPS_COLOR_NORMAL : FPS_COLOR_LOW);
+	        // Set indicator FPS value text
+	        fpsIndicator.setText(String.format(fpsIndicatorString, fpsValue));
+	        // Set FPS indicator visibility
+	        if (isFpsDrawingEnabled()) {
+	            fpsIndicator.setVisibility(VISIBLE);
+	        }
+	    }
+	}
+
+	/**
+	 * Floppy drive activity indicator update task (scheduled via UI update handler)
+	 */
+	class FloppyActivityIndicatorUpdateRunnable implements Runnable {
 		@Override
 		public void run() {
-            // Set indicator color based on FPS value
-			fpsIndicator.setTextColor((fpsValue > FPS_LOW_VALUE) ?
-					FPS_COLOR_NORMAL : FPS_COLOR_LOW);
-			// Set indicator FPS value text
-			fpsIndicator.setText(String.format(fpsIndicatorString, fpsValue));
-			// Set FPS indicator visibility
-			if (isFpsDrawingEnabled()) {
-			    fpsIndicator.setVisibility(VISIBLE);
-			}
+			// Set floppy drive activity indicator visibility
+		    boolean isFloppyActive = false;
+		    FloppyController floppyController = computer.getFloppyController();
+		    if (floppyController != null && floppyController.isMotorStarted()) {
+		        long lastFloppyAccessCpuTimeElapsed = computer.getCpu().getTime() -
+		                floppyController.getLastAccessCpuTime();
+		        isFloppyActive = (lastFloppyAccessCpuTimeElapsed <
+		                floppyActivityIndicatorTimeoutCpuTicks);
+		    }
+		    floppyActivityIndicator.setVisibility(isFloppyActive ? VISIBLE : INVISIBLE);
+		    if (isFloppyActive) {
+		        floppyActivityIndicator.requestLayout();
+		    }
 		}
 	}
 
@@ -205,6 +241,8 @@ public class BkEmuView extends SurfaceView implements SurfaceHolder.Callback {
 
     public void setComputer(Computer computer) {
         this.computer = computer;
+        this.floppyActivityIndicatorTimeoutCpuTicks = computer.nanosToCpuTime(
+                FLOPPY_ACTIVITY_INDICATOR_TIMEOUT * Computer.NANOSECS_IN_MSEC);
     }
 
     public synchronized void setFpsDrawingEnabled(boolean isEnabled) {
@@ -240,6 +278,14 @@ public class BkEmuView extends SurfaceView implements SurfaceHolder.Callback {
         }
         // Store new timestamp value
         fpsCountersUpdateTimestamp = currentTime;
+    }
+
+    protected void updateFloppyActivityIndicator(long currentTime) {
+        if (currentTime - lastFloppyActivityIndicatorUpdateTime >
+                FLOPPY_ACTIVITY_INDICATOR_TIMEOUT) {
+            uiUpdateHandler.post(floppyActivityIndicatorUpdateRunnable);
+            lastFloppyActivityIndicatorUpdateTime = currentTime;
+        }
     }
 
     private void updateVideoBufferBitmapTransformMatrix(int viewWidth, int viewHeight) {
@@ -290,6 +336,8 @@ public class BkEmuView extends SurfaceView implements SurfaceHolder.Callback {
         this.fpsIndicatorString = getContext().getString(R.string.fps_string);
         this.fpsIndicator = (TextView) ((FrameLayout) getParent())
         		.findViewById(R.id.fps_indicator);
+        this.floppyActivityIndicator = (ImageView) ((FrameLayout) getParent())
+                .findViewById(R.id.floppy_indicator);
 		this.renderingThread = new BkEmuViewRenderingThread(holder);
 		this.renderingThread.start();
 	}
