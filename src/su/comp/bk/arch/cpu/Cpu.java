@@ -1093,8 +1093,8 @@ public class Cpu {
                     clearDeferredTraceTrap();
                 }
             } else {
-                Log.d(TAG, "fetched unknown instruction: " + Integer.toOctalString(instruction)
-                        + ", PC: 0" + Integer.toOctalString(readRegister(false, PC)));
+//                Log.d(TAG, "fetched unknown instruction: " + Integer.toOctalString(instruction)
+//                        + ", PC: 0" + Integer.toOctalString(readRegister(false, PC)));
                 setReservedOpcodeFetched();
             }
         }

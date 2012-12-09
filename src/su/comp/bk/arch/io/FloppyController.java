@@ -20,7 +20,6 @@
 package su.comp.bk.arch.io;
 
 import java.io.File;
-import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.net.URI;
 import java.nio.ByteBuffer;
