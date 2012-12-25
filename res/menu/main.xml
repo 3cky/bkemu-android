@@ -10,10 +10,12 @@
           android:showAsAction="ifRoom" />
     <item android:id="@+id/menu_open_image"
           android:title="@string/menu_open_image" />
-    <item android:id="@+id/menu_mount_disk_image"
-          android:title="@string/menu_mount_disk_image"
+    <item android:id="@+id/menu_disk_manager"
+          android:icon="@drawable/floppy_icon"
+          android:title="@string/menu_disk_manager"
           android:visible="false"
-          android:enabled="false" />
+          android:enabled="false"
+          android:showAsAction="ifRoom" />
     <item android:id="@+id/menu_change_model"
           android:title="@string/menu_change_model" />
     <item android:id="@+id/menu_reset"

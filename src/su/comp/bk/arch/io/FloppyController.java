@@ -702,7 +702,7 @@ public class FloppyController implements Device {
                             diskImageFile.length());
             }
             if (isDiskImageMounted()) {
-                umountDiskImage();
+                unmountDiskImage();
             }
             isMountedDiskImageReadOnly = isReadOnly;
             mountedDiskImageFile = new RandomAccessFile(diskImageFile, isReadOnly ? "r" : "rw");
@@ -718,7 +718,7 @@ public class FloppyController implements Device {
          * Unmount current mounted disk image.
          * @throws Exception in case of unmounting error
          */
-        void umountDiskImage() throws Exception {
+        void unmountDiskImage() throws Exception {
             mountedDiskImageFileUri = null;
             if (!isMountedDiskImageReadOnly) {
                 mountedDiskImageBuffer.force();
@@ -814,7 +814,7 @@ public class FloppyController implements Device {
                 } catch (Exception e) {
                     Log.e(TAG, "can't remount disk file image: " + diskImageFileUri, e);
                     try {
-                        drive.umountDiskImage();
+                        drive.unmountDiskImage();
                     } catch (Exception e1) {
                     }
                 }
@@ -1083,6 +1083,15 @@ public class FloppyController implements Device {
     }
 
     /**
+     * Unmount floppy drive disk image from given drive.
+     * @param drive {@link FloppyDriveIdentifier} of drive to unmount disk image
+     * @throws Exception in case of disk image unmounting error
+     */
+    public synchronized void unmountDiskImage(FloppyDriveIdentifier drive) throws Exception {
+        getFloppyDrive(drive).unmountDiskImage();
+    }
+
+    /**
      * Get selected floppy drive.
      * @return selected floppy drive or <code>null</code> if no floppy drive
      * currently selected
@@ -1135,5 +1144,23 @@ public class FloppyController implements Device {
             d(TAG, "set floppy drives motor state: " + (isStarted ? "STARTED" : "STOPPED"));
         }
         this.isMotorStarted = isStarted;
+    }
+
+    /**
+     * Check given floppy drive is mounted.
+     * @param driveIdentifier {@link FloppyDriveIdentifier} of drive to check
+     * @return <code>true</code> if floppy drive is mounted, <code>false</code> if not
+     */
+    public synchronized boolean isFloppyDriveMounted(FloppyDriveIdentifier driveIdentifier) {
+        return getFloppyDrive(driveIdentifier).isDiskImageMounted();
+    }
+
+    /**
+     * Get mounted floppy drive image URI.
+     * @param driveIdentifier {@link FloppyDriveIdentifier} of drive to get mounted disk image URI
+     * @return mounted floppy drive image URI or <code>null</code> if no floppy drive image mounted
+     */
+    public synchronized String getFloppyDriveImageUri(FloppyDriveIdentifier driveIdentifier) {
+        return getFloppyDrive(driveIdentifier).getMountedDiskImageFileUri();
     }
 }

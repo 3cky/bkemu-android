@@ -35,9 +35,9 @@ import su.comp.bk.arch.Computer.Configuration;
 import su.comp.bk.arch.cpu.Cpu;
 import su.comp.bk.arch.cpu.opcode.EmtOpcode;
 import su.comp.bk.arch.io.FloppyController;
+import su.comp.bk.arch.io.FloppyController.FloppyDriveIdentifier;
 import su.comp.bk.arch.io.KeyboardController;
 import su.comp.bk.arch.io.VideoController;
-import su.comp.bk.arch.io.FloppyController.FloppyDriveIdentifier;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
@@ -58,6 +58,7 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.Window;
+import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.TextView;
 
@@ -81,6 +82,7 @@ public class BkEmuActivity extends Activity {
     private static final int DIALOG_COMPUTER_MODEL = 1;
     private static final int DIALOG_ABOUT = 2;
     private static final int DIALOG_DISK_MOUNT_ERROR = 3;
+    private static final int DIALOG_DISK_MANAGER = 4;
 
     // Intent request IDs
     private static final int REQUEST_MENU_BIN_IMAGE_FILE_LOAD = 1;
@@ -90,6 +92,9 @@ public class BkEmuActivity extends Activity {
     // Google Play application URL to share
     private static final String APPLICATION_SHARE_URL = "https://play.google.com" +
     		"/store/apps/details?id=su.comp.bk";
+
+    private static final int MAX_FILE_NAME_DISPLAY_LENGTH = 15;
+    private static final int FILE_NAME_DISPLAY_SUFFIX_LENGTH = 3;
 
     // Last loaded emulator binary image address
     protected int lastBinImageAddress;
@@ -467,8 +472,8 @@ public class BkEmuActivity extends Activity {
     @Override
     public boolean onPrepareOptionsMenu(Menu menu) {
         boolean isFloppyControllerAttached = (computer.getFloppyController() != null);
-        menu.findItem(R.id.menu_mount_disk_image).setEnabled(isFloppyControllerAttached);
-        menu.findItem(R.id.menu_mount_disk_image).setVisible(isFloppyControllerAttached);
+        menu.findItem(R.id.menu_disk_manager).setEnabled(isFloppyControllerAttached);
+        menu.findItem(R.id.menu_disk_manager).setVisible(isFloppyControllerAttached);
         return true;
     }
 
@@ -490,8 +495,8 @@ public class BkEmuActivity extends Activity {
             case R.id.menu_open_image:
                 showBinImageFileLoadDialog(REQUEST_MENU_BIN_IMAGE_FILE_LOAD, null);
                 return true;
-            case R.id.menu_mount_disk_image:
-                showMountDiskImageFileDialog();
+            case R.id.menu_disk_manager:
+                showDialog(DIALOG_DISK_MANAGER);
                 return true;
             case R.id.menu_about:
                 showDialog(DIALOG_ABOUT);
@@ -551,24 +556,29 @@ public class BkEmuActivity extends Activity {
                     })
                    .create();
             case DIALOG_ABOUT:
-                Dialog dialog = new Dialog(this);
-                dialog.setTitle(R.string.menu_about);
-                dialog.requestWindowFeature(Window.FEATURE_LEFT_ICON);
-                dialog.setContentView(R.layout.about_dialog);
-                dialog.getWindow().setFeatureDrawableResource(Window.FEATURE_LEFT_ICON,
+                Dialog aboutDialog = new Dialog(this);
+                aboutDialog.setTitle(R.string.menu_about);
+                aboutDialog.requestWindowFeature(Window.FEATURE_LEFT_ICON);
+                aboutDialog.setContentView(R.layout.about_dialog);
+                aboutDialog.getWindow().setFeatureDrawableResource(Window.FEATURE_LEFT_ICON,
                         android.R.drawable.ic_dialog_info);
-                TextView versionTextView = (TextView) dialog.findViewById(R.id.about_version);
+                TextView versionTextView = (TextView) aboutDialog.findViewById(R.id.about_version);
                 try {
                     versionTextView.setText(getResources().getString(R.string.about_version,
                             getPackageManager().getPackageInfo(getPackageName(), 0).versionName));
                 } catch (NameNotFoundException e) {
                 }
-                TextView perfTextView = (TextView) dialog.findViewById(R.id.about_perf);
+                TextView perfTextView = (TextView) aboutDialog.findViewById(R.id.about_perf);
                 float effectiveClockFrequency = this.computer.getEffectiveClockFrequency();
                 perfTextView.setText(getResources().getString(R.string.about_perf,
                         effectiveClockFrequency / 1000f, effectiveClockFrequency
-                            / this.computer.getClockFrequency() * 100f));
-                return dialog;
+                        / this.computer.getClockFrequency() * 100f));
+                return aboutDialog;
+            case DIALOG_DISK_MANAGER:
+                Dialog fddManagerDialog = new Dialog(this);
+                fddManagerDialog.setTitle(R.string.menu_disk_manager);
+                fddManagerDialog.setContentView(R.layout.fdd_mgr_dialog);
+                return fddManagerDialog;
             case DIALOG_DISK_MOUNT_ERROR:
                 return new AlertDialog.Builder(this)
                     .setIcon(android.R.drawable.ic_dialog_alert)
@@ -578,6 +588,88 @@ public class BkEmuActivity extends Activity {
                     .create();
         }
         return null;
+    }
+
+    @Override
+    protected void onPrepareDialog(int id, Dialog dialog) {
+        switch (id) {
+            case DIALOG_DISK_MANAGER:
+                prepareFloppyDriveView(dialog.findViewById(R.id.fdd_layout_a),
+                    FloppyDriveIdentifier.A);
+                prepareFloppyDriveView(dialog.findViewById(R.id.fdd_layout_b),
+                    FloppyDriveIdentifier.B);
+                prepareFloppyDriveView(dialog.findViewById(R.id.fdd_layout_c),
+                    FloppyDriveIdentifier.C);
+                prepareFloppyDriveView(dialog.findViewById(R.id.fdd_layout_d),
+                    FloppyDriveIdentifier.D);
+                break;
+        }
+        super.onPrepareDialog(id, dialog);
+    }
+
+    protected void prepareFloppyDriveView(final View fddView,
+            final FloppyDriveIdentifier fddIdentifier) {
+        updateFloppyDriveVIew(fddView, fddIdentifier);
+        fddView.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                showMountDiskImageFileDialog(fddIdentifier);
+            }
+        });
+        fddView.setOnLongClickListener(new View.OnLongClickListener() {
+            @Override
+            public boolean onLongClick(View v) {
+                unmountDiskImage(fddIdentifier);
+                updateFloppyDriveVIew(v, fddIdentifier);
+                return true;
+            }
+        });
+    }
+
+    protected void updateFloppyDriveVIew(final View fddView,
+            final FloppyDriveIdentifier fddIdentifier) {
+        FloppyController fddController = computer.getFloppyController();
+        boolean isFddMounted = fddController.isFloppyDriveMounted(fddIdentifier);
+        ImageView fddImageView = (ImageView) fddView.findViewWithTag("fdd_image");
+        fddImageView.setImageResource(isFddMounted ? R.drawable.floppy_drive_loaded
+                : R.drawable.floppy_drive);
+        TextView fddFileTextView = (TextView) fddView.findViewWithTag("fdd_file");
+        if (isFddMounted) {
+            fddFileTextView.setTextColor(getResources().getColor(R.color.fdd_loaded));
+            String fddImageFileName = Uri.parse(fddController.getFloppyDriveImageUri(
+                    fddIdentifier)).getLastPathSegment();
+            if (fddImageFileName.length() > MAX_FILE_NAME_DISPLAY_LENGTH) {
+                // Trim file name to display
+                int nameDotIndex = fddImageFileName.lastIndexOf('.');
+                if (nameDotIndex < 0) {
+                    nameDotIndex = fddImageFileName.length();
+                }
+                int nameSuffixIndex = nameDotIndex - FILE_NAME_DISPLAY_SUFFIX_LENGTH;
+                int namePrefixIndex = MAX_FILE_NAME_DISPLAY_LENGTH - (fddImageFileName.length()
+                        - nameSuffixIndex);
+                fddImageFileName = fddImageFileName.substring(0, namePrefixIndex)
+                        .concat("...").concat(fddImageFileName.substring(nameSuffixIndex));
+            }
+            fddFileTextView.setText(fddImageFileName);
+        } else {
+            fddFileTextView.setTextColor(getResources().getColor(R.color.fdd_empty));
+            fddFileTextView.setText(R.string.fdd_empty);
+        }
+    }
+
+    /**
+     * Unmount disk image from given floppy drive.
+     * @param fddIdentifier floppy drive identifier to unmount image
+     */
+    protected void unmountDiskImage(FloppyDriveIdentifier fddIdentifier) {
+        try {
+            FloppyController fddController = computer.getFloppyController();
+            if (fddController != null && fddController.isFloppyDriveMounted(fddIdentifier)) {
+                fddController.unmountDiskImage(fddIdentifier);
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Floppy drive " + fddIdentifier + " unmounting error", e);
+        }
     }
 
     /**
@@ -622,13 +714,15 @@ public class BkEmuActivity extends Activity {
 
     /**
      * Show floppy disk image to mount selection dialog.
+     * @param fddIdentifier floppy drive identifier to mount image
      */
-    protected void showMountDiskImageFileDialog() {
+    protected void showMountDiskImageFileDialog(FloppyDriveIdentifier fddIdentifier) {
         Intent intent = new Intent(getBaseContext(), BkEmuFileDialog.class);
         String startPath = getFileDirectoryPath(lastDiskImageFileUri);
         intent.putExtra(BkEmuFileDialog.INTENT_START_PATH, startPath);
         intent.putExtra(BkEmuFileDialog.INTENT_FORMAT_FILTER,
                 BkEmuFileDialog.FORMAT_FILTER_DISK_IMAGES);
+        intent.putExtra(FloppyDriveIdentifier.class.getName(), fddIdentifier.name());
         startActivityForResult(intent, REQUEST_MENU_DISK_IMAGE_FILE_SELECT);
     }
 
@@ -663,8 +757,11 @@ public class BkEmuActivity extends Activity {
                     String diskImageFilePath = data.getStringExtra(BkEmuFileDialog.INTENT_RESULT_PATH);
                     String diskImageFileUri = "file:" + diskImageFilePath;
                     try {
-                        floppyController.mountDiskImage(diskImageFileUri, FloppyDriveIdentifier.A, false);
+                        FloppyDriveIdentifier driveIdentifier = FloppyDriveIdentifier
+                            .valueOf(data.getStringExtra(FloppyDriveIdentifier.class.getName()));
+                        floppyController.mountDiskImage(diskImageFileUri, driveIdentifier, false);
                         lastDiskImageFileUri = diskImageFileUri;
+                        showDialog(DIALOG_DISK_MANAGER);
                     } catch (Exception e) {
                         showDialog(DIALOG_DISK_MOUNT_ERROR);
                         Log.e(TAG, "can't mount disk image '" + diskImageFileUri + "'", e);

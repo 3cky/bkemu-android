@@ -7,7 +7,7 @@
     <string name="menu_change_model">Выбрать модель</string>
     <string name="menu_select_model">Выберите модель</string>
     <string name="menu_open_image">Открыть файл</string>
-    <string name="menu_mount_disk_image">Подключить образ диска</string>
+    <string name="menu_disk_manager">Диспетчер дисков</string>
     <string name="menu_about">Об эмуляторе</string>
     <string name="menu_share">Поделиться!</string>
     <string name="menu_changelog">Список изменений</string>
@@ -44,4 +44,9 @@
     <string name="changelog_title">Что нового?</string>
     <string name="changelog_title_full">Списк изменений</string>
     <string name="changelog_show_full">Полный список</string>
+    <string name="fdd_image_a">Дисковод A</string>
+    <string name="fdd_image_b">Дисковод B</string>
+    <string name="fdd_image_c">Дисковод C</string>
+    <string name="fdd_image_d">Дисковод D</string>
+    <string name="fdd_empty">(Пусто)</string>
 </resources>
