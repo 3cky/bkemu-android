@@ -1,5 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <releases>
+    <release version="0.2.0" date="2012-12-31">
+        <changes>
+            <change>Added BK-0010 configuration with floppy controller with 16 kB of SRAM and 4 floppy drives attached. Standard 800 kB disk images (.BKD, .IMG) mounting in write protected mode is supported.</change>
+            <change>Cancel of file image dialog doesn't break EMT interrupt now.</change>
+            <change>Fixed menu icon sizes.</change>
+        </changes>
+    </release>
     <release version="0.1.1" date="2012-10-02">
         <changes>
             <change>Added standard two-button joystick emulation. Use single tap to press left joystick button, double tap to press right joystick button, scroll to move joystick handle in given direction.</change>
