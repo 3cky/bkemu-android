@@ -19,6 +19,8 @@
  */
 package su.comp.bk.arch.io;
 
+import static su.comp.bk.arch.Computer.NANOSECS_IN_MSEC;
+
 import java.io.File;
 import java.io.RandomAccessFile;
 import java.net.URI;
@@ -30,8 +32,6 @@ import su.comp.bk.arch.Computer;
 import su.comp.bk.util.Crc16;
 import android.os.Bundle;
 import android.util.Log;
-
-import static su.comp.bk.arch.Computer.*;
 
 /**
  * Floppy drive controller (К1801ВП1-128).
@@ -250,6 +250,15 @@ public class FloppyController implements Device {
             }
 
             /**
+             * Get floppy drive track area index for given track position.
+             * @param position floppy drive track area position from track start (in words)
+             * @return this floppy drive track area index
+             */
+            protected int getPositionIndex(int position) {
+                return (position - startPosition);
+            }
+
+            /**
              * Get floppy drive track area length.
              * @return floppy drive track area length (in words)
              */
@@ -257,11 +266,12 @@ public class FloppyController implements Device {
 
             /**
              * Check given position is marker start position.
+             * @param position floppy drive track area position from track start (in words)
              * @return <code>true</code> if given position is marker start position,
              * <code>false</code> otherwise
              */
             public boolean isMarkerPosition(int position) {
-                return isDiskImageMounted() && isMarkerPositionInternal(position - startPosition );
+                return isDiskImageMounted() && isMarkerPositionInternal(getPositionIndex(position));
             }
 
             /**
@@ -273,11 +283,12 @@ public class FloppyController implements Device {
 
             /**
              * Check given position is CRC position.
+             * @param position floppy drive track area position from track start (in words)
              * @return <code>true</code> if given position is CRC position,
              * <code>false</code> otherwise
              */
             public boolean isCrcPosition(int position) {
-                return isDiskImageMounted() && isCrcPositionInternal(position - startPosition );
+                return isDiskImageMounted() && isCrcPositionInternal(getPositionIndex(position));
             }
 
             /**
@@ -293,7 +304,7 @@ public class FloppyController implements Device {
              * @return read floppy drive track area word
              */
             public int read(int position) {
-                return isDiskImageMounted() ? readInternal(position - startPosition ) : 0;
+                return isDiskImageMounted() ? readInternal(getPositionIndex(position)) : 0;
             }
 
             /**
@@ -310,7 +321,7 @@ public class FloppyController implements Device {
              */
             public void write(int position, int value) {
                 if (isDiskImageMounted()) {
-                    writeInternal(position - startPosition, value);
+                    writeInternal(getPositionIndex(position), value);
                 }
             }
 
@@ -745,7 +756,7 @@ public class FloppyController implements Device {
         isDebugEnabled = state;
     }
 
-    protected void d(String tag, String message) {
+    protected static void d(String tag, String message) {
         System.out.println("FDD: " + message);
     }
 
@@ -1089,6 +1100,21 @@ public class FloppyController implements Device {
      */
     public synchronized void unmountDiskImage(FloppyDriveIdentifier drive) throws Exception {
         getFloppyDrive(drive).unmountDiskImage();
+    }
+
+    /**
+     * Unmount floppy drive disk image from all drives.
+     */
+    public synchronized void unmountDiskImages() {
+        for (FloppyDriveIdentifier drive : FloppyDriveIdentifier.values()) {
+            try {
+                if (isFloppyDriveMounted(drive)) {
+                    unmountDiskImage(drive);
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "Error while unmounting disk image from drive " + drive, e);
+            }
+        }
     }
 
     /**

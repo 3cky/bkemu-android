@@ -603,6 +603,9 @@ public class Computer implements Runnable {
     public void release() {
         Log.d(TAG, "releasing computer");
         audioOutput.release();
+        if (floppyController != null) {
+            floppyController.unmountDiskImages();
+        }
     }
 
     /**
