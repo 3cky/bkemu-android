@@ -114,7 +114,7 @@ public class BkEmuChangeLog {
     }
 
     public boolean isFirstRun() {
-        return getLastVersionName().isEmpty();
+        return getLastVersionName().length() == 0;
     }
 
     public boolean isCurrentVersionGreaterThanLast() {
