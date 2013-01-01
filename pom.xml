@@ -114,7 +114,6 @@
 	                <version>3.3.0</version>
 	                <configuration>
 	                    <sdk>
-	                        <path>${env.ANDROID_HOME}</path>
 	                        <platform>15</platform>
 	                    </sdk>
 	                </configuration>
