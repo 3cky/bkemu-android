@@ -526,8 +526,7 @@ public class Computer implements Runnable {
             // Check for memory at given address
             Memory memory = getMemory(address);
             if (memory != null) {
-                memory.write(isByteMode, address, value);
-                isWritten = true;
+                isWritten = memory.write(isByteMode, address, value);
             }
         }
         return isWritten;

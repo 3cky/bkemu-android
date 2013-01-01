@@ -148,12 +148,13 @@ public class RandomAccessMemory implements Memory {
     }
 
     @Override
-    public void write(boolean isByteMode, int address, int value) {
+    public boolean write(boolean isByteMode, int address, int value) {
         if (isByteMode) {
             writeByte(address, value);
         } else {
             writeWord(address, value);
         }
+        return true;
     }
 
     @Override

@@ -55,8 +55,10 @@ public interface Memory {
      * word value
      * @param address absolute address to write (0000000-0177777)
      * @param value value to write to memory
+     * @return <code>true</code> if value successfully written to memory,
+     * <code>false</code> otherwise
      */
-    void write(boolean isByteMode, int address, int value);
+    boolean write(boolean isByteMode, int address, int value);
 
     /**
      * Check is given address related to this memory.

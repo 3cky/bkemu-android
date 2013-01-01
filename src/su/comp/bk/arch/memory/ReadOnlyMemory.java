@@ -42,7 +42,7 @@ public class ReadOnlyMemory extends RandomAccessMemory {
     }
 
     @Override
-    public void write(boolean isByteMode, int address, int value) {
-        // Do nothing
+    public boolean write(boolean isByteMode, int address, int value) {
+        return false;
     }
 }
