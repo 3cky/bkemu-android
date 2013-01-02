@@ -568,11 +568,6 @@ public class BkEmuActivity extends Activity {
                             getPackageManager().getPackageInfo(getPackageName(), 0).versionName));
                 } catch (NameNotFoundException e) {
                 }
-                TextView perfTextView = (TextView) aboutDialog.findViewById(R.id.about_perf);
-                float effectiveClockFrequency = this.computer.getEffectiveClockFrequency();
-                perfTextView.setText(getResources().getString(R.string.about_perf,
-                        effectiveClockFrequency / 1000f, effectiveClockFrequency
-                        / this.computer.getClockFrequency() * 100f));
                 return aboutDialog;
             case DIALOG_DISK_MANAGER:
                 Dialog fddManagerDialog = new Dialog(this);
@@ -594,22 +589,29 @@ public class BkEmuActivity extends Activity {
     protected void onPrepareDialog(int id, Dialog dialog) {
         switch (id) {
             case DIALOG_DISK_MANAGER:
-                prepareFloppyDriveView(dialog.findViewById(R.id.fdd_layout_a),
-                    FloppyDriveIdentifier.A);
-                prepareFloppyDriveView(dialog.findViewById(R.id.fdd_layout_b),
-                    FloppyDriveIdentifier.B);
-                prepareFloppyDriveView(dialog.findViewById(R.id.fdd_layout_c),
-                    FloppyDriveIdentifier.C);
-                prepareFloppyDriveView(dialog.findViewById(R.id.fdd_layout_d),
-                    FloppyDriveIdentifier.D);
+                prepareDiskManagerDialog(dialog);
+                break;
+            case DIALOG_ABOUT:
+                prepareAboutDialog(dialog);
                 break;
         }
         super.onPrepareDialog(id, dialog);
     }
 
+    protected void prepareDiskManagerDialog(Dialog dialog) {
+        prepareFloppyDriveView(dialog.findViewById(R.id.fdd_layout_a),
+                FloppyDriveIdentifier.A);
+            prepareFloppyDriveView(dialog.findViewById(R.id.fdd_layout_b),
+                FloppyDriveIdentifier.B);
+            prepareFloppyDriveView(dialog.findViewById(R.id.fdd_layout_c),
+                FloppyDriveIdentifier.C);
+            prepareFloppyDriveView(dialog.findViewById(R.id.fdd_layout_d),
+                FloppyDriveIdentifier.D);
+    }
+
     protected void prepareFloppyDriveView(final View fddView,
             final FloppyDriveIdentifier fddIdentifier) {
-        updateFloppyDriveVIew(fddView, fddIdentifier);
+        updateFloppyDriveView(fddView, fddIdentifier);
         fddView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -620,13 +622,13 @@ public class BkEmuActivity extends Activity {
             @Override
             public boolean onLongClick(View v) {
                 unmountDiskImage(fddIdentifier);
-                updateFloppyDriveVIew(v, fddIdentifier);
+                updateFloppyDriveView(v, fddIdentifier);
                 return true;
             }
         });
     }
 
-    protected void updateFloppyDriveVIew(final View fddView,
+    protected void updateFloppyDriveView(final View fddView,
             final FloppyDriveIdentifier fddIdentifier) {
         FloppyController fddController = computer.getFloppyController();
         boolean isFddMounted = fddController.isFloppyDriveMounted(fddIdentifier);
@@ -655,6 +657,14 @@ public class BkEmuActivity extends Activity {
             fddFileTextView.setTextColor(getResources().getColor(R.color.fdd_empty));
             fddFileTextView.setText(R.string.fdd_empty);
         }
+    }
+
+    protected void prepareAboutDialog(Dialog aboutDialog) {
+        TextView perfTextView = (TextView) aboutDialog.findViewById(R.id.about_perf);
+        float effectiveClockFrequency = this.computer.getEffectiveClockFrequency();
+        perfTextView.setText(getResources().getString(R.string.about_perf,
+                effectiveClockFrequency / 1000f, effectiveClockFrequency
+                / this.computer.getClockFrequency() * 100f));
     }
 
     /**
