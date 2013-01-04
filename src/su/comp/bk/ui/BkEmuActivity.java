@@ -25,6 +25,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
@@ -230,7 +231,7 @@ public class BkEmuActivity extends Activity {
                                     tapeFileNameData[idx] = (byte) cpu.readMemory(true,
                                             emtParamsBlockAddr + idx + 6);
                                 }
-                                String tapeFileName = new String(tapeFileNameData).trim().toUpperCase();
+                                String tapeFileName = getFileName(tapeFileNameData);
                                 Log.d(TAG, "EMT 36 load file: '" + tapeFileName + "'");
                                 activityHandler.post(new TapeLoaderTask(tapeFileName));
                                 break;
@@ -245,6 +246,28 @@ public class BkEmuActivity extends Activity {
                 default:
                     break;
             }
+        }
+
+        /**
+         * Get string file name from its 16 bytes array presentation.
+         * @param fileNameData internal file name array data
+         * @return string file name presentation
+         */
+        private String getFileName(byte[] fileNameData) {
+            String fileName;
+            try {
+                fileName = new String(fileNameData, "koi8-r");
+            } catch (UnsupportedEncodingException e) {
+                fileName = new String(fileNameData);
+            }
+            fileName = fileName.trim().toUpperCase();
+            // Strip spaces before extension (like in "NAME  .COD" in Basic)
+            int dotIndex = fileName.lastIndexOf('.');
+            if (dotIndex > 0) {
+                fileName = fileName.substring(0, dotIndex).trim().concat(
+                        fileName.substring(dotIndex));
+            }
+            return fileName;
         }
 
         /**
@@ -601,11 +624,11 @@ public class BkEmuActivity extends Activity {
     protected void prepareDiskManagerDialog(Dialog dialog) {
         prepareFloppyDriveView(dialog.findViewById(R.id.fdd_layout_a),
                 FloppyDriveIdentifier.A);
-            prepareFloppyDriveView(dialog.findViewById(R.id.fdd_layout_b),
+        prepareFloppyDriveView(dialog.findViewById(R.id.fdd_layout_b),
                 FloppyDriveIdentifier.B);
-            prepareFloppyDriveView(dialog.findViewById(R.id.fdd_layout_c),
+        prepareFloppyDriveView(dialog.findViewById(R.id.fdd_layout_c),
                 FloppyDriveIdentifier.C);
-            prepareFloppyDriveView(dialog.findViewById(R.id.fdd_layout_d),
+        prepareFloppyDriveView(dialog.findViewById(R.id.fdd_layout_d),
                 FloppyDriveIdentifier.D);
     }
 
