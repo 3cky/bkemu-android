@@ -1,5 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <releases>
+    <release version="0.2.1" date="2013-01-13">
+        <changes>
+            <change>Fixed loading of files with Cyrillic characters in name. Fixed Basic files loading with name shorter than 6 characters.</change>
+            <change>Fixed NPE while startup on Android &lt; 2.3.</change>
+            <change>ROM write access now generates bus error.</change>
+            <change>Fixed refreshing of effective CPU frequency in About dialog.</change>
+        </changes>
+    </release>
     <release version="0.2.0" date="2012-12-31">
         <changes>
             <change>Added BK-0010 configuration with floppy controller with 16 kB of SRAM and 4 floppy drives attached. Standard 800 kB disk images (.BKD, .IMG) mounting in write protected mode is supported.</change>
