@@ -18,6 +18,7 @@
  */
 package su.comp.bk.arch.io;
 
+import su.comp.bk.arch.memory.Memory;
 import su.comp.bk.arch.memory.RandomAccessMemory;
 import android.graphics.Bitmap;
 import android.graphics.Color;
@@ -87,8 +88,8 @@ public class VideoController implements Device {
     // Scroll register value
     private int scrollRegister;
 
-    // VideoRAM reference
-    private final RandomAccessMemory videoMemory;
+    // Video memory reference
+    private final Memory videoMemory;
 
     // Video buffer width (in pixels)
     private final static int VIDEO_BUFFER_WIDTH = 512;
@@ -99,7 +100,7 @@ public class VideoController implements Device {
     // Video buffer bitmap object
     private final Bitmap videoBuffer;
 
-    public VideoController(RandomAccessMemory videoMemory) {
+    public VideoController(Memory videoMemory) {
         this.videoMemory = videoMemory;
         this.videoBuffer = Bitmap.createBitmap(VIDEO_BUFFER_WIDTH, VIDEO_BUFFER_HEIGHT,
                 Bitmap.Config.ARGB_8888);

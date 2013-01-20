@@ -37,7 +37,7 @@ public class ReadOnlyMemory extends RandomAccessMemory {
     }
 
     @Override
-    protected void initMemoryData() {
+    protected void initMemoryData(Type type) {
         // Do nothing
     }
 

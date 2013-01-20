@@ -34,6 +34,7 @@ public class RandomAccessMemory implements Memory {
      */
     public enum Type {
         K565RU6, // Dynamic RAM (clone of 4116)
+        K565RU5, // Dynamic RAM (clone of 4164)
         K537RU10 // Static RAM (clone of I6264)
     }
 
@@ -48,9 +49,7 @@ public class RandomAccessMemory implements Memory {
         this.endAddress = startAddress + (size << 1) - 1;
         this.size = size;
         this.data = new short[getSize()];
-        if (type == Type.K565RU6) {
-            initMemoryData();
-        }
+        initMemoryData(type);
     }
 
     /**
@@ -84,10 +83,22 @@ public class RandomAccessMemory implements Memory {
         }
     }
 
-    protected void initMemoryData() {
-        // K565RU6 power-on pattern: 0177777/0000000 sequence, order switched every 0100 words
-        for (int idx = 0; idx < getSize(); idx++) {
-            data[idx] = (short) (((idx & 1) == ((idx >> 6) & 1) ? 0177777 : 0));
+    protected void initMemoryData(Type type) {
+        switch (type) {
+            case K565RU6:
+                // K565RU6 power-on pattern: 0177777/0000000 sequence, order switched every 0100 words
+                for (int idx = 0; idx < getSize(); idx++) {
+                    data[idx] = (short) (((idx & 1) == ((idx >> 6) & 1) ? 0177777 : 0));
+                }
+                break;
+            case K565RU5:
+                // FIXME K565RU5 power-on pattern
+                for (int idx = 0; idx < getSize(); idx++) {
+                    data[idx] = (short) (((idx & 4) == ((idx >> 6) & 1) ? 0177777 : 0));
+                }
+                break;
+            default:
+                break;
         }
     }
 

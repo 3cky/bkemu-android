@@ -23,6 +23,8 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.commons.lang.ArrayUtils;
+
 import android.content.res.Resources;
 import android.os.Bundle;
 import android.util.Log;
@@ -33,11 +35,13 @@ import su.comp.bk.arch.io.AudioOutput;
 import su.comp.bk.arch.io.Device;
 import su.comp.bk.arch.io.FloppyController;
 import su.comp.bk.arch.io.KeyboardController;
+import su.comp.bk.arch.io.MemoryManager;
 import su.comp.bk.arch.io.PeripheralPort;
 import su.comp.bk.arch.io.Sel1RegisterSystemBits;
 import su.comp.bk.arch.io.Timer;
 import su.comp.bk.arch.io.VideoController;
 import su.comp.bk.arch.memory.Memory;
+import su.comp.bk.arch.memory.PagedMemory;
 import su.comp.bk.arch.memory.RandomAccessMemory;
 import su.comp.bk.arch.memory.RandomAccessMemory.Type;
 import su.comp.bk.arch.memory.ReadOnlyMemory;
@@ -86,6 +90,8 @@ public class Computer implements Runnable {
 
     /** I/O registers space min start address */
     public final static int IO_REGISTERS_MIN_ADDRESS = 0170000;
+    /** I/O registers space max start address */
+    public final static int IO_REGISTERS_MAX_ADDRESS = 0177600;
     // I/O devices list
     private final List<Device> deviceList = new ArrayList<Device>();
     // I/O registers space addresses mapped to devices
@@ -104,6 +110,8 @@ public class Computer implements Runnable {
 
     /** BK0010 clock frequency (in kHz) */
     public final static int CLOCK_FREQUENCY_BK0010 = 3000;
+    /** BK0011 clock frequency (in kHz) */
+    public final static int CLOCK_FREQUENCY_BK0011 = 4000;
 
     // Computer clock frequency (in kHz)
     private int clockFrequency;
@@ -129,7 +137,41 @@ public class Computer implements Runnable {
         /** BK0010 - monitor, Focal and tests */
         BK_0010_MSTD,
         /** BK0010 with connected floppy drive controller (КНГМД) */
-        BK_0010_KNGMD
+        BK_0010_KNGMD(true),
+        /** BK0011M - MSTD block attached */
+        BK_0011M_MSTD(false, true);
+
+        private final boolean isFloppyControllerPresent;
+        private final boolean isMemoryManagerPresent;
+
+        private Configuration() {
+            this(false, false);
+        }
+
+        private Configuration(boolean isFloppyControllerPresent) {
+            this(isFloppyControllerPresent, false);
+        }
+
+        private Configuration(boolean isFloppyControllerPresent, boolean isMemoryManagerPresent) {
+            this.isFloppyControllerPresent = isFloppyControllerPresent;
+            this.isMemoryManagerPresent = isMemoryManagerPresent;
+        }
+
+        /**
+         * Check is {@link FloppyController} present in this configuration.
+         * @return <code>true</code> if floppy controller present, <code>false</code> otherwise
+         */
+        public boolean isFloppyControllerPresent() {
+            return isFloppyControllerPresent;
+        }
+
+        /**
+         * Check is BK-0011 {@link MemoryManager} present in configuration.
+         * @return <code>true</code> if memory manager present, <code>false</code> otherwise
+         */
+        public boolean isMemoryManagerPresent() {
+            return isMemoryManagerPresent;
+        }
     }
 
     public Computer() {
@@ -144,46 +186,83 @@ public class Computer implements Runnable {
      */
     public void configure(Resources resources, Configuration config) throws Exception {
         setConfiguration(config);
-        RandomAccessMemory workMemory = new RandomAccessMemory(0, 020000);
-        addMemory(workMemory);
-        RandomAccessMemory videoMemory = new RandomAccessMemory(040000, 020000);
-        addMemory(videoMemory);
-        videoController = new VideoController(videoMemory);
-        addDevice(videoController);
-        addDevice(new Sel1RegisterSystemBits(0100000));
+        // Apply shared configuration
+        addDevice(new Sel1RegisterSystemBits(!config.isMemoryManagerPresent() ? 0100000 : 0140000));
         keyboardController = new KeyboardController(this);
         addDevice(keyboardController);
         periferalPort = new PeripheralPort(this);
         addDevice(periferalPort);
         addDevice(new Timer());
-        switch (config) {
-            case BK_0010_BASIC:
-                setClockFrequency(CLOCK_FREQUENCY_BK0010);
-                addReadOnlyMemory(resources, R.raw.monit10, 0100000);
-                addReadOnlyMemory(resources, R.raw.basic10_1, 0120000);
-                addReadOnlyMemory(resources, R.raw.basic10_2, 0140000);
-                addReadOnlyMemory(resources, R.raw.basic10_3, 0160000);
-                break;
-            case BK_0010_MSTD:
-                setClockFrequency(CLOCK_FREQUENCY_BK0010);
-                addReadOnlyMemory(resources, R.raw.monit10, 0100000);
-                addReadOnlyMemory(resources, R.raw.focal, 0120000);
-                addReadOnlyMemory(resources, R.raw.tests, 0160000);
-                break;
-            case BK_0010_KNGMD:
-                setClockFrequency(CLOCK_FREQUENCY_BK0010);
-                addReadOnlyMemory(resources, R.raw.monit10, 0100000);
-                addMemory(new RandomAccessMemory(0120000, 020000, Type.K537RU10));
-                addReadOnlyMemory(resources, R.raw.disk_327, 0160000);
-                floppyController = new FloppyController(this);
-                addDevice(floppyController);
-                break;
-            default:
-                setClockFrequency(CLOCK_FREQUENCY_BK0010);
-                addReadOnlyMemory(resources, R.raw.monit10, 0100000);
-                break;
+        // Apply computer specific configuration
+        Memory videoMemory = null;
+        if (!config.isMemoryManagerPresent()) {
+            // BK-0010 configurations
+            setClockFrequency(CLOCK_FREQUENCY_BK0010);
+            // Set RAM configuration
+            RandomAccessMemory workMemory = new RandomAccessMemory(0, 020000);
+            addMemory(workMemory);
+            videoMemory = new RandomAccessMemory(040000, 020000);
+            addMemory(videoMemory);
+            // Set ROM configuration
+            addReadOnlyMemory(resources, R.raw.monit10, 0100000);
+            switch (config) {
+                case BK_0010_BASIC:
+                    addReadOnlyMemory(resources, R.raw.basic10_1, 0120000);
+                    addReadOnlyMemory(resources, R.raw.basic10_2, 0140000);
+                    addReadOnlyMemory(resources, R.raw.basic10_3, 0160000);
+                    break;
+                case BK_0010_MSTD:
+                    addReadOnlyMemory(resources, R.raw.focal, 0120000);
+                    addReadOnlyMemory(resources, R.raw.tests, 0160000);
+                    break;
+                case BK_0010_KNGMD:
+                    addMemory(new RandomAccessMemory(0120000, 020000, Type.K537RU10));
+                    addReadOnlyMemory(resources, R.raw.disk_327, 0160000);
+                    floppyController = new FloppyController(this);
+                    addDevice(floppyController);
+                    break;
+                default:
+                    break;
+            }
+        } else {
+            // BK-0011 configurations
+            setClockFrequency(CLOCK_FREQUENCY_BK0011);
+            // Set RAM configuration
+            PagedMemory firstPagedMemory = new PagedMemory(040000, 020000,
+                    MemoryManager.NUM_RAM_PAGES);
+            PagedMemory secondPagedMemory = new PagedMemory(0100000, 020000,
+                    MemoryManager.NUM_RAM_PAGES + MemoryManager.NUM_ROM_PAGES);
+            for (int memoryPageIndex = 0; memoryPageIndex < MemoryManager.NUM_RAM_PAGES;
+                    memoryPageIndex++) {
+                Memory memoryPage = new RandomAccessMemory(0, 020000);
+                firstPagedMemory.setPage(memoryPageIndex, memoryPage);
+                secondPagedMemory.setPage(memoryPageIndex, memoryPage);
+            }
+            videoMemory = firstPagedMemory.getPage(1);
+            addMemory(firstPagedMemory.getPage(6)); // Static RAM page at address 0
+            addMemory(firstPagedMemory); // First paged memory space at address 040000
+            addMemory(secondPagedMemory); // Second paged memory space at address 0100000
+            // Set ROM configuration
+            secondPagedMemory.setPage(MemoryManager.NUM_RAM_PAGES, new ReadOnlyMemory(0,
+                    loadReadOnlyMemoryData(resources, R.raw.basic11m_0)));
+            secondPagedMemory.setPage(MemoryManager.NUM_RAM_PAGES + 1, new ReadOnlyMemory(0,
+                    loadReadOnlyMemoryData(resources, R.raw.basic11m_1, R.raw.ext11m)));
+            addReadOnlyMemory(resources, R.raw.bos11m, 0140000);
+            switch (config) {
+                case BK_0011M_MSTD:
+                    addReadOnlyMemory(resources, R.raw.mstd11m, 0160000);
+                    break;
+                default:
+                    break;
+            }
+            // Configure memory manager
+            addDevice(new MemoryManager(firstPagedMemory, secondPagedMemory));
         }
-        audioOutput = new AudioOutput(this);
+        // Add video controller
+        videoController = new VideoController(videoMemory);
+        addDevice(videoController);
+        // Add audio output
+        audioOutput = new AudioOutput(this, config.isMemoryManagerPresent());
         addDevice(audioOutput);
     }
 
@@ -295,15 +374,19 @@ public class Computer implements Runnable {
     }
 
     /**
-     * Load ROM data from raw resource.
+     * Load ROM data from raw resources.
      * @param resources {@link Resources} reference
-     * @param romDataResId ROM raw resource ID
+     * @param romDataResIds ROM raw resource IDs
      * @return loaded ROM data
-     * @throws IOException in case of ROM loading error
+     * @throws IOException in case of ROM data loading error
      */
-    private byte[] loadReadOnlyMemoryData(Resources resources, int romDataResId)
+    private byte[] loadReadOnlyMemoryData(Resources resources, int... romDataResIds)
             throws IOException {
-        return loadRawResourceData(resources, romDataResId);
+        byte[] romData = null;
+        for (int romDataResId : romDataResIds) {
+            romData = ArrayUtils.addAll(romData, loadRawResourceData(resources, romDataResId));
+        }
+        return romData;
     }
 
     /**
@@ -382,14 +465,17 @@ public class Computer implements Runnable {
      */
     public void addMemory(Memory memory) {
         int memoryStartBlock = memory.getStartAddress() >> 13;
-        int memoryBlocksCount = (memory.getSize() >> 12) + 1; // ((size << 1) >> 13) + 1
+        int memoryBlocksCount = memory.getSize() >> 12; // ((size << 1) >> 13)
+        if ((memory.getSize() & 07777) != 0) {
+            memoryBlocksCount++;
+        }
         for (int memoryBlockIdx = 0; memoryBlockIdx < memoryBlocksCount; memoryBlockIdx++) {
             memoryTable[memoryStartBlock + memoryBlockIdx] = memory;
         }
         // Correct devices start address, if needed
         int memoryEndAddress = memory.getStartAddress() + (memory.getSize() << 1);
         if (getDevicesStartAddress() < memoryEndAddress) {
-            setDevicesStartAddress(memoryEndAddress);
+            setDevicesStartAddress(Math.min(memoryEndAddress, IO_REGISTERS_MAX_ADDRESS));
         }
     }
 

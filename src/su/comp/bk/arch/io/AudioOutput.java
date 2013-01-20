@@ -19,6 +19,7 @@
 package su.comp.bk.arch.io;
 
 import su.comp.bk.arch.Computer;
+import su.comp.bk.arch.Computer.Configuration;
 import su.comp.bk.arch.cpu.Cpu;
 import su.comp.bk.arch.cpu.opcode.BaseOpcode;
 import android.media.AudioFormat;
@@ -36,6 +37,9 @@ public class AudioOutput implements Device, Runnable {
 
     // Audio output bit
     public final static int OUTPUT_BIT = (1 << 6);
+
+    // BK-0011M enable bit (0 enables audio output)
+    public final static int BK0011M_ENABLE_BIT = (1 << 11);
 
     private final static int[] ADDRESSES = { Cpu.REG_SEL1 };
 
@@ -70,8 +74,11 @@ public class AudioOutput implements Device, Runnable {
 
     private int lastOutputState;
 
-    public AudioOutput(Computer computer) {
+    private final boolean isBk0011mMode;
+
+    public AudioOutput(Computer computer, boolean isBk0011m) {
         this.computer = computer;
+        this.isBk0011mMode = isBk0011m;
         int minBufferSize = AudioTrack.getMinBufferSize(OUTPUT_SAMPLE_RATE,
                 AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT);
         if (minBufferSize <= 0) {
@@ -149,12 +156,15 @@ public class AudioOutput implements Device, Runnable {
 
     @Override
     public boolean write(long cpuTime, boolean isByteMode, int address, int value) {
-        int outputState = value & OUTPUT_BIT;
-        if ((outputState ^ lastOutputState) != 0) {
-            putPcmTimestamp(cpuTime);
+        if (isBk0011mMode && (value & BK0011M_ENABLE_BIT) == 0) {
+            int outputState = value & OUTPUT_BIT;
+            if ((outputState ^ lastOutputState) != 0) {
+                putPcmTimestamp(cpuTime);
+            }
+            lastOutputState = outputState;
+            return true;
         }
-        lastOutputState = outputState;
-        return true;
+        return false;
     }
 
     private synchronized void putPcmTimestamp(long pcmTimestamp) {
