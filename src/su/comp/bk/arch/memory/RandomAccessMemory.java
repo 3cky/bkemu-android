@@ -18,11 +18,14 @@
  */
 package su.comp.bk.arch.memory;
 
+import android.os.Bundle;
+
 /**
  * RAM (read/write) class.
  */
 public class RandomAccessMemory implements Memory {
 
+    private final String id;
     private final int startAddress;
     private final int size;
     private final short[] data;
@@ -40,11 +43,13 @@ public class RandomAccessMemory implements Memory {
 
     /**
      * Create new RAM page of given type (dynamic/static).
+     * @param id RAM page ID
      * @param startAddress RAM page starting address
      * @param size RAM page size (in words)
      * @param type RAM {@link Type}
      */
-    public RandomAccessMemory(int startAddress, int size, Type type) {
+    public RandomAccessMemory(String id, int startAddress, int size, Type type) {
+        this.id = id;
         this.startAddress = startAddress;
         this.endAddress = startAddress + (size << 1) - 1;
         this.size = size;
@@ -54,30 +59,33 @@ public class RandomAccessMemory implements Memory {
 
     /**
      * Create new dynamic RAM page.
+     * @param id RAM page ID
      * @param startAddress RAM page starting address
      * @param size RAM page size (in words)
      */
-    public RandomAccessMemory(int startAddress, int size) {
-        this(startAddress, size, Type.K565RU6);
+    public RandomAccessMemory(String id, int startAddress, int size) {
+        this(id, startAddress, size, Type.K565RU6);
     }
 
     /**
      * Create new RAM page initialized from given data.
+     * @param id RAM page ID
      * @param startAddress RAM page starting address
      * @param data data to copy into created RAM page
      */
-    public RandomAccessMemory(int startAddress, short[] data) {
-        this(startAddress, data.length);
+    public RandomAccessMemory(String id, int startAddress, short[] data) {
+        this(id, startAddress, data.length);
         System.arraycopy(data, 0, this.data, 0, getSize());
     }
 
     /**
      * Create new RAM page initialized from given data.
+     * @param id RAM page ID
      * @param startAddress RAM page starting address
      * @param data data to copy into created RAM page
      */
-    public RandomAccessMemory(int startAddress, byte[] data) {
-        this(startAddress, data.length >> 1);
+    public RandomAccessMemory(String id, int startAddress, byte[] data) {
+        this(id, startAddress, data.length >> 1);
         for (int idx = 0; idx < (getSize() << 1); idx++) {
             writeByte(getStartAddress() + idx, data[idx]);
         }
@@ -100,6 +108,11 @@ public class RandomAccessMemory implements Memory {
             default:
                 break;
         }
+    }
+
+    @Override
+    public String getId() {
+        return id;
     }
 
     @Override
@@ -171,6 +184,32 @@ public class RandomAccessMemory implements Memory {
     @Override
     public boolean isRelatedAddress(int address) {
         return (address >= startAddress) && (address <= endAddress);
+    }
+
+    @Override
+    public void saveState(Bundle outState) {
+        outState.putShortArray(toString(), getData());
+    }
+
+    @Override
+    public void restoreState(Bundle inState) {
+        putData(inState.getShortArray(toString()));
+    }
+
+    @Override
+    public int hashCode() {
+        return id.hashCode();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        return super.equals(o) || (o instanceof RandomAccessMemory
+                && ((RandomAccessMemory) o).getId().equals(id));
+    }
+
+    @Override
+    public String toString() {
+        return getClass().getName() + "#" + id;
     }
 
 }

@@ -25,15 +25,16 @@ public class ReadOnlyMemory extends RandomAccessMemory {
 
     /**
      * Create new ROM page initialized from given data.
+     * @param id ROM page ID
      * @param startAddress ROM page starting address
      * @param data data to copy into created ROM page
      */
-    public ReadOnlyMemory(int startAddress, short[] data) {
-        super(startAddress, data);
+    public ReadOnlyMemory(String id, int startAddress, short[] data) {
+        super(id, startAddress, data);
     }
 
-    public ReadOnlyMemory(int startAddress, byte[] data) {
-        super(startAddress, data);
+    public ReadOnlyMemory(String id, int startAddress, byte[] data) {
+        super(id, startAddress, data);
     }
 
     @Override

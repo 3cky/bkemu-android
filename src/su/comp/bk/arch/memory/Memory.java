@@ -18,10 +18,18 @@
  */
 package su.comp.bk.arch.memory;
 
+import android.os.Bundle;
+
 /**
  * Memory (RAM/ROM) interface.
  */
 public interface Memory {
+    /**
+     * Get this memory ID string.
+     * @return memory ID
+     */
+    String getId();
+
     /**
      * Get memory address.
      * @return memory absolute address (0000000-0177777)
@@ -67,4 +75,17 @@ public interface Memory {
      * <code>false</code> otherwise
      */
     boolean isRelatedAddress(int address);
+
+
+    /**
+     * Save memory state.
+     * @param outState {@link Bundle} to save memory state
+     */
+    void saveState(Bundle outState);
+
+    /**
+     * Read memory state.
+     * @param inState {@link Bundle} to restore memory state
+     */
+    void restoreState(Bundle inState);
 }

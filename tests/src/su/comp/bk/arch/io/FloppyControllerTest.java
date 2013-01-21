@@ -60,13 +60,13 @@ public class FloppyControllerTest {
         // Set test computer configuration
         computer = new Computer();
         computer.setClockFrequency(Computer.CLOCK_FREQUENCY_BK0010);
-        RandomAccessMemory workMemory = new RandomAccessMemory(0, 020000);
+        RandomAccessMemory workMemory = new RandomAccessMemory("TestWorkMemory", 0, 020000);
         computer.addMemory(workMemory);
-        RandomAccessMemory videoMemory = new RandomAccessMemory(040000, 020000);
+        RandomAccessMemory videoMemory = new RandomAccessMemory("TestVideoMemory", 040000, 020000);
         computer.addMemory(videoMemory);
-        computer.addMemory(new ReadOnlyMemory(0100000,
+        computer.addMemory(new ReadOnlyMemory("TestMonitorRom", 0100000,
                 FileUtils.readFileToByteArray(new File(MONITOR_ROM_FILE_NAME))));
-        computer.addMemory(new ReadOnlyMemory(0160000,
+        computer.addMemory(new ReadOnlyMemory("TestFloppyRom", 0160000,
                 FileUtils.readFileToByteArray(new File(FDD_ROM_FILE_NAME))));
         floppyController = new FloppyController(computer);
         computer.addDevice(floppyController);

@@ -56,7 +56,7 @@ public class TrapOpcodesTest {
         replay(Log.class);
         computer = new Computer();
         computer.addDevice(new Sel1RegisterSystemBits(0100000));
-        computer.addMemory(new RandomAccessMemory(0, 01000));
+        computer.addMemory(new RandomAccessMemory("TestRam", 0, 01000));
     }
 
     @After
@@ -66,7 +66,7 @@ public class TrapOpcodesTest {
 
     @Test
     public void testBptInstructionExecute() {
-        computer.addMemory(new ReadOnlyMemory(0100000, new short[] {
+        computer.addMemory(new ReadOnlyMemory("TestRom", 0100000, new short[] {
                 BptOpcode.OPCODE,                    // 0100000: BPT
                 ConditionCodeOpcodes.OPCODE_NOP,     // 0100002: NOP
                 RtiOpcode.OPCODE                     // 0100004: RTI
@@ -88,7 +88,7 @@ public class TrapOpcodesTest {
 
     @Test
     public void testIotInstructionExecute() {
-        computer.addMemory(new ReadOnlyMemory(0100000, new short[] {
+        computer.addMemory(new ReadOnlyMemory("TestRom", 0100000, new short[] {
                 IotOpcode.OPCODE,                    // 0100000: IOT
                 ConditionCodeOpcodes.OPCODE_NOP,     // 0100002: NOP
                 RtiOpcode.OPCODE                     // 0100004: RTI
@@ -110,7 +110,7 @@ public class TrapOpcodesTest {
 
     @Test
     public void testEmtInstructionExecute() {
-        computer.addMemory(new ReadOnlyMemory(0100000, new short[] {
+        computer.addMemory(new ReadOnlyMemory("TestRom", 0100000, new short[] {
                 (short) EmtOpcode.OPCODE,            // 0100000: EMT 0
                 ConditionCodeOpcodes.OPCODE_NOP,     // 0100002: NOP
                 ConditionCodeOpcodes.OPCODE_NOP,     // 0100004: NOP
@@ -134,7 +134,7 @@ public class TrapOpcodesTest {
 
     @Test
     public void testTrapInstructionExecute() {
-        computer.addMemory(new ReadOnlyMemory(0100000, new short[] {
+        computer.addMemory(new ReadOnlyMemory("TestRom", 0100000, new short[] {
                 (short) TrapOpcode.OPCODE,           // 0100000: TRAP 0
                 ConditionCodeOpcodes.OPCODE_NOP,     // 0100002: NOP
                 ConditionCodeOpcodes.OPCODE_NOP,     // 0100004: NOP

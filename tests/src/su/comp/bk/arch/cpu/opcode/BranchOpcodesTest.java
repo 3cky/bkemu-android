@@ -47,7 +47,7 @@ public class BranchOpcodesTest {
      */
     @Test
     public void testBrInstructionExecute() {
-        computer.addMemory(new ReadOnlyMemory(0100000, new short[] {
+        computer.addMemory(new ReadOnlyMemory("TestRom", 0100000, new short[] {
                 BrOpcode.OPCODE | 1,             // 0100000: BR 0100004
                 ConditionCodeOpcodes.OPCODE_NOP, // 0100002: NOP
                 BrOpcode.OPCODE | (-2 & 0377)    // 0100004: BR 0100002
@@ -66,7 +66,7 @@ public class BranchOpcodesTest {
      */
     @Test
     public void testBneInstructionExecute() {
-        computer.addMemory(new ReadOnlyMemory(0100000, new short[] {
+        computer.addMemory(new ReadOnlyMemory("TestRom", 0100000, new short[] {
                 BneOpcode.OPCODE | (-2 & 0377),   // 0100000: BNE 077776
                 BneOpcode.OPCODE | (-2 & 0377)    // 0100002: BNE 0100000
         }));
@@ -86,7 +86,7 @@ public class BranchOpcodesTest {
      */
     @Test
     public void testBeqInstructionExecute() {
-        computer.addMemory(new ReadOnlyMemory(0100000, new short[] {
+        computer.addMemory(new ReadOnlyMemory("TestRom", 0100000, new short[] {
                 BeqOpcode.OPCODE | (-2 & 0377),   // 0100000: BEQ 077776
                 BeqOpcode.OPCODE | (-2 & 0377)    // 0100002: BEQ 0100000
         }));
@@ -106,7 +106,7 @@ public class BranchOpcodesTest {
      */
     @Test
     public void testBplInstructionExecute() {
-        computer.addMemory(new ReadOnlyMemory(0100000, new short[] {
+        computer.addMemory(new ReadOnlyMemory("TestRom", 0100000, new short[] {
                 (short) (BplOpcode.OPCODE | (-2 & 0377)),   // 0100000: BPL 077776
                 (short) (BplOpcode.OPCODE | (-2 & 0377))    // 0100002: BPL 0100000
         }));
@@ -126,7 +126,7 @@ public class BranchOpcodesTest {
      */
     @Test
     public void testBmiInstructionExecute() {
-        computer.addMemory(new ReadOnlyMemory(0100000, new short[] {
+        computer.addMemory(new ReadOnlyMemory("TestRom", 0100000, new short[] {
                 (short) (BmiOpcode.OPCODE | (-2 & 0377)),   // 0100000: BMI 077776
                 (short) (BmiOpcode.OPCODE | (-2 & 0377))    // 0100002: BMI 0100000
         }));
@@ -146,7 +146,7 @@ public class BranchOpcodesTest {
      */
     @Test
     public void testBvcInstructionExecute() {
-        computer.addMemory(new ReadOnlyMemory(0100000, new short[] {
+        computer.addMemory(new ReadOnlyMemory("TestRom", 0100000, new short[] {
                 (short) (BvcOpcode.OPCODE | (-2 & 0377)),   // 0100000: BVC 077776
                 (short) (BvcOpcode.OPCODE | (-2 & 0377))    // 0100002: BVC 0100000
         }));
@@ -166,7 +166,7 @@ public class BranchOpcodesTest {
      */
     @Test
     public void testBvsInstructionExecute() {
-        computer.addMemory(new ReadOnlyMemory(0100000, new short[] {
+        computer.addMemory(new ReadOnlyMemory("TestRom", 0100000, new short[] {
                 (short) (BvsOpcode.OPCODE | (-2 & 0377)),   // 0100000: BVS 077776
                 (short) (BvsOpcode.OPCODE | (-2 & 0377))    // 0100002: BVS 0100000
         }));
@@ -186,7 +186,7 @@ public class BranchOpcodesTest {
      */
     @Test
     public void testBccInstructionExecute() {
-        computer.addMemory(new ReadOnlyMemory(0100000, new short[] {
+        computer.addMemory(new ReadOnlyMemory("TestRom", 0100000, new short[] {
                 (short) (BccOpcode.OPCODE | (-2 & 0377)),   // 0100000: BCC 077776
                 (short) (BccOpcode.OPCODE | (-2 & 0377))    // 0100002: BCC 0100000
         }));
@@ -206,7 +206,7 @@ public class BranchOpcodesTest {
      */
     @Test
     public void testBcsInstructionExecute() {
-        computer.addMemory(new ReadOnlyMemory(0100000, new short[] {
+        computer.addMemory(new ReadOnlyMemory("TestRom", 0100000, new short[] {
                 (short) (BcsOpcode.OPCODE | (-2 & 0377)),   // 0100000: BCS 077776
                 (short) (BcsOpcode.OPCODE | (-2 & 0377))    // 0100002: BCS 0100000
         }));
@@ -226,7 +226,7 @@ public class BranchOpcodesTest {
      */
     @Test
     public void testBgeInstructionExecute() {
-        computer.addMemory(new ReadOnlyMemory(0100000, new short[] {
+        computer.addMemory(new ReadOnlyMemory("TestRom", 0100000, new short[] {
                 (short) (BgeOpcode.OPCODE | (-2 & 0377)),  // 0100000: BGE 077776
                 (short) (BgeOpcode.OPCODE | (-3 & 0377)),  // 0100002: BGE 077776
                 (short) (BgeOpcode.OPCODE | (-3 & 0377))   // 0100004: BGE 0100000
@@ -254,7 +254,7 @@ public class BranchOpcodesTest {
      */
     @Test
     public void testBgtInstructionExecute() {
-        computer.addMemory(new ReadOnlyMemory(0100000, new short[] {
+        computer.addMemory(new ReadOnlyMemory("TestRom", 0100000, new short[] {
                 (short) (BgtOpcode.OPCODE | (-2 & 0377)),  // 0100000: BGT 077776
                 (short) (BgtOpcode.OPCODE | (-3 & 0377)),  // 0100002: BGT 077776
                 (short) (BgtOpcode.OPCODE | (-3 & 0377)),  // 0100004: BGT 0100000
@@ -282,7 +282,7 @@ public class BranchOpcodesTest {
      */
     @Test
     public void testBleInstructionExecute() {
-        computer.addMemory(new ReadOnlyMemory(0100000, new short[] {
+        computer.addMemory(new ReadOnlyMemory("TestRom", 0100000, new short[] {
                 (short) (BleOpcode.OPCODE | (-2 & 0377)),  // 0100000: BLE 077776
                 (short) (BleOpcode.OPCODE | (-3 & 0377)),  // 0100002: BLE 077776
                 (short) (BleOpcode.OPCODE | (-3 & 0377))   // 0100004: BLE 0100000
@@ -310,7 +310,7 @@ public class BranchOpcodesTest {
      */
     @Test
     public void testBltInstructionExecute() {
-        computer.addMemory(new ReadOnlyMemory(0100000, new short[] {
+        computer.addMemory(new ReadOnlyMemory("TestRom", 0100000, new short[] {
                 (short) (BltOpcode.OPCODE | (-2 & 0377)),  // 0100000: BLT 077776
                 (short) (BltOpcode.OPCODE | (-3 & 0377)),  // 0100002: BLT 077776
                 (short) (BltOpcode.OPCODE | (-3 & 0377)),  // 0100004: BLT 0100000
@@ -338,7 +338,7 @@ public class BranchOpcodesTest {
      */
     @Test
     public void testBhiInstructionExecute() {
-        computer.addMemory(new ReadOnlyMemory(0100000, new short[] {
+        computer.addMemory(new ReadOnlyMemory("TestRom", 0100000, new short[] {
                 (short) (BhiOpcode.OPCODE | (-2 & 0377)),  // 0100000: BHI 077776
                 (short) (BhiOpcode.OPCODE | (-3 & 0377)),  // 0100002: BHI 077776
                 (short) (BhiOpcode.OPCODE | (-4 & 0377)),  // 0100004: BHI 077776
@@ -371,7 +371,7 @@ public class BranchOpcodesTest {
      */
     @Test
     public void testBlosInstructionExecute() {
-        computer.addMemory(new ReadOnlyMemory(0100000, new short[] {
+        computer.addMemory(new ReadOnlyMemory("TestRom", 0100000, new short[] {
                 (short) (BlosOpcode.OPCODE | (-2 & 0377)),  // 0100000: BLOS 077776
                 (short) (BlosOpcode.OPCODE | (-3 & 0377)),  // 0100002: BLOS 077776
                 (short) (BlosOpcode.OPCODE | (-4 & 0377)),  // 0100004: BLOS 077776
@@ -407,7 +407,7 @@ public class BranchOpcodesTest {
      */
     @Test
     public void testSobInstructionExecute() {
-        computer.addMemory(new ReadOnlyMemory(0100000, new short[] {
+        computer.addMemory(new ReadOnlyMemory("TestRom", 0100000, new short[] {
                 SobOpcode.OPCODE | 1             // 0100000: SOB R0, 0100000
         }));
         computer.reset();

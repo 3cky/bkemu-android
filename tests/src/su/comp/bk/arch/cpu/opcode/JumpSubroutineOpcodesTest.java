@@ -44,7 +44,7 @@ public class JumpSubroutineOpcodesTest {
 
     @Test
     public void testJmpInstructionExecute() {
-        computer.addMemory(new ReadOnlyMemory(0100000, new short[] {
+        computer.addMemory(new ReadOnlyMemory("TestRom", 0100000, new short[] {
                 JmpOpcode.OPCODE | 037,          // 0100000: JMP @#0100004
                 (short) 0100004,
                 ConditionCodeOpcodes.OPCODE_NOP, // 0100002: NOP
@@ -63,8 +63,8 @@ public class JumpSubroutineOpcodesTest {
 
     @Test
     public void testJsrRtsInstructionsExecute() {
-        computer.addMemory(new RandomAccessMemory(0776, 1));
-        computer.addMemory(new ReadOnlyMemory(0100000, new short[] {
+        computer.addMemory(new RandomAccessMemory("TestRam", 0776, 1));
+        computer.addMemory(new ReadOnlyMemory("TestRom", 0100000, new short[] {
                 JsrOpcode.OPCODE | 037,    // 0100000: JSR R0, @#0100010
                 (short) 0100010,
                 JsrOpcode.OPCODE | 0737,   // 0100004: JSR PC, @#0100012

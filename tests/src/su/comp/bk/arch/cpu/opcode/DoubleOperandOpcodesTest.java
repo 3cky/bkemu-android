@@ -51,7 +51,7 @@ public class DoubleOperandOpcodesTest {
      */
     @Test
     public void testMovInstructionExecute() {
-        computer.addMemory(new ReadOnlyMemory(0100000, new short[] {
+        computer.addMemory(new ReadOnlyMemory("TestRom", 0100000, new short[] {
                 MovOpcode.OPCODE + Cpu.R1, // MOV R0, R1
                 (short) ((MovOpcode.OPCODE + Cpu.R1) | Opcode.BYTE_OPERATION_FLAG), // MOVB R0, R1
         }));
@@ -77,7 +77,7 @@ public class DoubleOperandOpcodesTest {
      */
     @Test
     public void testCmpInstructionExecute() {
-        computer.addMemory(new ReadOnlyMemory(0100000, new short[] {
+        computer.addMemory(new ReadOnlyMemory("TestRom", 0100000, new short[] {
                 CmpOpcode.OPCODE + Cpu.R1, // CMP R0, R1
                 (short) ((CmpOpcode.OPCODE + Cpu.R1) | Opcode.BYTE_OPERATION_FLAG), // CMPB R0, R1
         }));
@@ -136,7 +136,7 @@ public class DoubleOperandOpcodesTest {
      */
     @Test
     public void testAddInstructionExecute() {
-        computer.addMemory(new ReadOnlyMemory(0100000, new short[] {
+        computer.addMemory(new ReadOnlyMemory("TestRom", 0100000, new short[] {
                 (short) (AddOpcode.OPCODE + Cpu.R1), // ADD R0, R1
         }));
         computer.reset();
@@ -177,7 +177,7 @@ public class DoubleOperandOpcodesTest {
      */
     @Test
     public void testSubInstructionExecute() {
-        computer.addMemory(new ReadOnlyMemory(0100000, new short[] {
+        computer.addMemory(new ReadOnlyMemory("TestRom", 0100000, new short[] {
                 (short) (SubOpcode.OPCODE + Cpu.R1), // SUB R0, R1
         }));
         computer.reset();
@@ -218,7 +218,7 @@ public class DoubleOperandOpcodesTest {
      */
     @Test
     public void testBitInstructionExecute() {
-        computer.addMemory(new ReadOnlyMemory(0100000, new short[] {
+        computer.addMemory(new ReadOnlyMemory("TestRom", 0100000, new short[] {
                 BitOpcode.OPCODE + Cpu.R1, // BIT R0, R1
                 (short) ((BitOpcode.OPCODE + Cpu.R1) | Opcode.BYTE_OPERATION_FLAG), // BITB R0, R1
         }));
@@ -257,7 +257,7 @@ public class DoubleOperandOpcodesTest {
      */
     @Test
     public void testBicInstructionExecute() {
-        computer.addMemory(new ReadOnlyMemory(0100000, new short[] {
+        computer.addMemory(new ReadOnlyMemory("TestRom", 0100000, new short[] {
                 BicOpcode.OPCODE + Cpu.R1, // BIC R0, R1
                 (short) ((BicOpcode.OPCODE + Cpu.R1) | Opcode.BYTE_OPERATION_FLAG), // BICB R0, R1
         }));
@@ -304,7 +304,7 @@ public class DoubleOperandOpcodesTest {
      */
     @Test
     public void testBisInstructionExecute() {
-        computer.addMemory(new ReadOnlyMemory(0100000, new short[] {
+        computer.addMemory(new ReadOnlyMemory("TestRom", 0100000, new short[] {
                 BisOpcode.OPCODE + Cpu.R1, // BIS R0, R1
                 (short) ((BisOpcode.OPCODE + Cpu.R1) | Opcode.BYTE_OPERATION_FLAG), // BISB R0, R1
         }));
@@ -351,7 +351,7 @@ public class DoubleOperandOpcodesTest {
      */
     @Test
     public void testXorInstructionExecute() {
-        computer.addMemory(new ReadOnlyMemory(0100000, new short[] {
+        computer.addMemory(new ReadOnlyMemory("TestRom", 0100000, new short[] {
                 XorOpcode.OPCODE + Cpu.R1 // XOR R0, R1
         }));
         computer.reset();

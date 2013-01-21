@@ -32,7 +32,7 @@ public class RandomAccessMemoryTest {
      */
     @Test
     public void testRandomAccessMemoryIntInt() {
-        RandomAccessMemory ram = new RandomAccessMemory(01000, 4);
+        RandomAccessMemory ram = new RandomAccessMemory("TestRam", 01000, 4);
         assertEquals(01000, ram.getStartAddress());
         assertEquals(4, ram.getSize());
     }
@@ -43,7 +43,7 @@ public class RandomAccessMemoryTest {
     @Test
     public void testRandomAccessMemoryIntShortArray() {
         short[] ramData = new short[] { 0, 1, 2, 3 };
-        RandomAccessMemory ram = new RandomAccessMemory(01000, ramData);
+        RandomAccessMemory ram = new RandomAccessMemory("TestRam", 01000, ramData);
         assertEquals(01000, ram.getStartAddress());
         assertEquals(4, ram.getSize());
         assertArrayEquals(ramData, ram.getData());
@@ -55,7 +55,7 @@ public class RandomAccessMemoryTest {
     @Test
     public void testRandomAccessMemoryIntByteArray() {
         byte[] ramData = new byte[] { 0, 1, 2, 3 };
-        RandomAccessMemory ram = new RandomAccessMemory(01000, ramData);
+        RandomAccessMemory ram = new RandomAccessMemory("TestRam", 01000, ramData);
         assertEquals(01000, ram.getStartAddress());
         assertEquals(2, ram.getSize());
         assertArrayEquals(new short[] { 1 << 8, (3 << 8) + 2 }, ram.getData());
@@ -64,7 +64,7 @@ public class RandomAccessMemoryTest {
     @Test
     public void testReadByte() {
         byte[] ramData = new byte[] { 0, 1, (byte) 0377, (byte) 0376 };
-        RandomAccessMemory ram = new RandomAccessMemory(01000, ramData);
+        RandomAccessMemory ram = new RandomAccessMemory("TestRam", 01000, ramData);
         assertEquals(0, ram.read(true, 01000));
         assertEquals(1, ram.read(true, 01001));
         assertEquals(0377, ram.read(true, 01002));
@@ -74,7 +74,7 @@ public class RandomAccessMemoryTest {
     @Test
     public void testReadWord() {
         short[] ramData = new short[] { 0, 1, (short) 0177777, (short) 0177776 };
-        RandomAccessMemory ram = new RandomAccessMemory(01000, ramData);
+        RandomAccessMemory ram = new RandomAccessMemory("TestRam", 01000, ramData);
         assertEquals(0, ram.read(false, 01000));
         assertEquals(0, ram.read(false, 01001));
         assertEquals(1, ram.read(false, 01002));
@@ -88,7 +88,7 @@ public class RandomAccessMemoryTest {
     @Test
     public void testWriteWord() {
         short[] ramData = new short[] { 0, 0 };
-        RandomAccessMemory ram = new RandomAccessMemory(01000, ramData);
+        RandomAccessMemory ram = new RandomAccessMemory("TestRam", 01000, ramData);
         ram.write(false, 01000, 0377);
         assertEquals(0377, ram.read(false, 01000));
         ram.write(false, 01001, 0377);
@@ -104,7 +104,7 @@ public class RandomAccessMemoryTest {
     @Test
     public void testWriteByte() {
         byte[] ramData = new byte[] { 0, 0 };
-        RandomAccessMemory ram = new RandomAccessMemory(01000, ramData);
+        RandomAccessMemory ram = new RandomAccessMemory("TestRam", 01000, ramData);
         ram.write(true, 01000, 1);
         assertEquals(1, ram.read(false, 01000));
         ram.write(true, 01001, 0377);

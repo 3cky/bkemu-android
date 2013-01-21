@@ -36,7 +36,7 @@ public class ConditionCodeOpcodesTest {
     public void testConditionInstructionsExecute() {
         Computer computer = new Computer();
         computer.addDevice(new Sel1RegisterSystemBits(0100000));
-        computer.addMemory(new ReadOnlyMemory(0100000, new short[] {
+        computer.addMemory(new ReadOnlyMemory("TestRom", 0100000, new short[] {
                 ConditionCodeOpcodes.OPCODE_NOP,
                 ConditionCodeOpcodes.OPCODE_SEC,
                 ConditionCodeOpcodes.OPCODE_CLC,

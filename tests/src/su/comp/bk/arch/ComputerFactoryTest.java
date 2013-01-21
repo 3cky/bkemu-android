@@ -124,11 +124,11 @@ public class ComputerFactoryTest {
     public void setUp() throws Exception {
         computer = new Computer();
         computer.setClockFrequency(Computer.CLOCK_FREQUENCY_BK0010);
-        workMemory = new RandomAccessMemory(0, 020000);
+        workMemory = new RandomAccessMemory("TestWorkMemory", 0, 020000);
         computer.addMemory(workMemory);
-        RandomAccessMemory videoMemory = new RandomAccessMemory(040000, 020000);
+        RandomAccessMemory videoMemory = new RandomAccessMemory("TestVideoMemory", 040000, 020000);
         computer.addMemory(videoMemory);
-        computer.addMemory(new ReadOnlyMemory(0100000, new byte[010000]));
+        computer.addMemory(new ReadOnlyMemory("TestReadOnlyMemory", 0100000, new byte[010000]));
         terminal = new Terminal();
         computer.addDevice(terminal);
         computer.getCpu().setPswState(0);

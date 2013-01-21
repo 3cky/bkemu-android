@@ -19,6 +19,7 @@
  */
 package su.comp.bk.arch.memory;
 
+import android.os.Bundle;
 import su.comp.bk.arch.Computer;
 
 /**
@@ -26,6 +27,7 @@ import su.comp.bk.arch.Computer;
  */
 public class PagedMemory implements Memory {
 
+    private final String id;
     private final int startAddress;
     private final int endAddress;
     private final int size;
@@ -37,10 +39,12 @@ public class PagedMemory implements Memory {
 
     /**
      * Create new paged memory with given start address, page size and number of pages.
+     * @param id paged memory ID
      * @param startAddress Memory page starting address
      * @param size Memory page size (in words)
      */
-    public PagedMemory(int startAddress, int size, int numPages) {
+    public PagedMemory(String id, int startAddress, int size, int numPages) {
+        this.id = id;
         this.startAddress = startAddress;
         this.endAddress = startAddress + (size << 1) - 1;
         this.size = size;
@@ -93,11 +97,16 @@ public class PagedMemory implements Memory {
 
     /**
      * Get active memory page.
-     * @return active memory page or <code>null</code> if active memory page is unset
+     * @return active memory page or <code>null</code> if active memory page is not set
      * or no memory page set for active page index
      */
     public Memory getActivePage() {
         return activePage;
+    }
+
+    @Override
+    public String getId() {
+        return id;
     }
 
     @Override
@@ -130,6 +139,32 @@ public class PagedMemory implements Memory {
     public boolean write(boolean isByteMode, int address, int value) {
         return (activePage != null) ? activePage.write(isByteMode,
                 address - startAddress, value) : false;
+    }
+
+    @Override
+    public void saveState(Bundle outState) {
+        outState.putInt(toString(), getActivePageIndex());
+    }
+
+    @Override
+    public void restoreState(Bundle inState) {
+        setActivePageIndex(inState.getInt(toString()));
+    }
+
+    @Override
+    public int hashCode() {
+        return id.hashCode();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        return super.equals(o) || (o instanceof PagedMemory
+                && ((PagedMemory) o).getId().equals(id));
+    }
+
+    @Override
+    public String toString() {
+        return getClass().getName() + "#" + id;
     }
 
 }

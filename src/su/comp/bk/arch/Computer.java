@@ -55,11 +55,6 @@ public class Computer implements Runnable {
 
     // State save/restore: Computer uptime (in nanoseconds)
     private static final String STATE_UPTIME = Computer.class.getName() + "#uptime";
-    // State save/restore: RandomAccessMemory pages addresses
-    private static final String STATE_RAM_ADDRESSES =
-            RandomAccessMemory.class.getName() + "#addresses";
-    // State save/restore: RandomAccessMemory page data
-    private static final String STATE_RAM_DATA = RandomAccessMemory.class.getName() + "@";
 
     /** Bus error constant */
     public final static int BUS_ERROR = -1;
@@ -199,25 +194,25 @@ public class Computer implements Runnable {
             // BK-0010 configurations
             setClockFrequency(CLOCK_FREQUENCY_BK0010);
             // Set RAM configuration
-            RandomAccessMemory workMemory = new RandomAccessMemory(0, 020000);
+            RandomAccessMemory workMemory = new RandomAccessMemory("WorkMemory", 0, 020000);
             addMemory(workMemory);
-            videoMemory = new RandomAccessMemory(040000, 020000);
+            videoMemory = new RandomAccessMemory("VideoMemory", 040000, 020000);
             addMemory(videoMemory);
             // Set ROM configuration
-            addReadOnlyMemory(resources, R.raw.monit10, 0100000);
+            addReadOnlyMemory(resources, R.raw.monit10, "Monitor10", 0100000);
             switch (config) {
                 case BK_0010_BASIC:
-                    addReadOnlyMemory(resources, R.raw.basic10_1, 0120000);
-                    addReadOnlyMemory(resources, R.raw.basic10_2, 0140000);
-                    addReadOnlyMemory(resources, R.raw.basic10_3, 0160000);
+                    addReadOnlyMemory(resources, R.raw.basic10_1, "Basic10:1", 0120000);
+                    addReadOnlyMemory(resources, R.raw.basic10_2, "Basic10:2", 0140000);
+                    addReadOnlyMemory(resources, R.raw.basic10_3, "Basic10:3", 0160000);
                     break;
                 case BK_0010_MSTD:
-                    addReadOnlyMemory(resources, R.raw.focal, 0120000);
-                    addReadOnlyMemory(resources, R.raw.tests, 0160000);
+                    addReadOnlyMemory(resources, R.raw.focal, "Focal", 0120000);
+                    addReadOnlyMemory(resources, R.raw.tests, "MSTD10", 0160000);
                     break;
                 case BK_0010_KNGMD:
-                    addMemory(new RandomAccessMemory(0120000, 020000, Type.K537RU10));
-                    addReadOnlyMemory(resources, R.raw.disk_327, 0160000);
+                    addMemory(new RandomAccessMemory("ExtMemory", 0120000, 020000, Type.K537RU10));
+                    addReadOnlyMemory(resources, R.raw.disk_327, "FloppyBios", 0160000);
                     floppyController = new FloppyController(this);
                     addDevice(floppyController);
                     break;
@@ -228,13 +223,14 @@ public class Computer implements Runnable {
             // BK-0011 configurations
             setClockFrequency(CLOCK_FREQUENCY_BK0011);
             // Set RAM configuration
-            PagedMemory firstPagedMemory = new PagedMemory(040000, 020000,
+            PagedMemory firstPagedMemory = new PagedMemory("PagedMemory0", 040000, 020000,
                     MemoryManager.NUM_RAM_PAGES);
-            PagedMemory secondPagedMemory = new PagedMemory(0100000, 020000,
+            PagedMemory secondPagedMemory = new PagedMemory("PagedMemory1", 0100000, 020000,
                     MemoryManager.NUM_RAM_PAGES + MemoryManager.NUM_ROM_PAGES);
             for (int memoryPageIndex = 0; memoryPageIndex < MemoryManager.NUM_RAM_PAGES;
                     memoryPageIndex++) {
-                Memory memoryPage = new RandomAccessMemory(0, 020000);
+                Memory memoryPage = new RandomAccessMemory("MemoryPage" + memoryPageIndex,
+                        0, 020000);
                 firstPagedMemory.setPage(memoryPageIndex, memoryPage);
                 secondPagedMemory.setPage(memoryPageIndex, memoryPage);
             }
@@ -243,14 +239,15 @@ public class Computer implements Runnable {
             addMemory(firstPagedMemory); // First paged memory space at address 040000
             addMemory(secondPagedMemory); // Second paged memory space at address 0100000
             // Set ROM configuration
-            secondPagedMemory.setPage(MemoryManager.NUM_RAM_PAGES, new ReadOnlyMemory(0,
-                    loadReadOnlyMemoryData(resources, R.raw.basic11m_0)));
-            secondPagedMemory.setPage(MemoryManager.NUM_RAM_PAGES + 1, new ReadOnlyMemory(0,
-                    loadReadOnlyMemoryData(resources, R.raw.basic11m_1, R.raw.ext11m)));
-            addReadOnlyMemory(resources, R.raw.bos11m, 0140000);
+            secondPagedMemory.setPage(MemoryManager.NUM_RAM_PAGES, new ReadOnlyMemory(
+                    "Basic11M:0", 0, loadReadOnlyMemoryData(resources, R.raw.basic11m_0)));
+            secondPagedMemory.setPage(MemoryManager.NUM_RAM_PAGES + 1, new ReadOnlyMemory(
+                    "Basic11M:1/ExtBOS11M", 0, loadReadOnlyMemoryData(resources,
+                            R.raw.basic11m_1, R.raw.ext11m)));
+            addReadOnlyMemory(resources, R.raw.bos11m, "BOS11M", 0140000);
             switch (config) {
                 case BK_0011M_MSTD:
-                    addReadOnlyMemory(resources, R.raw.mstd11m, 0160000);
+                    addReadOnlyMemory(resources, R.raw.mstd11m, "MSTD11M", 0160000);
                     break;
                 default:
                     break;
@@ -282,6 +279,30 @@ public class Computer implements Runnable {
         return this.configuration;
     }
 
+    private List<Memory> getStatefulMemoryList() {
+        List<Memory> statefulMemoryList = new ArrayList<Memory>();
+        for (int memoryBlockIdx = 0; memoryBlockIdx < memoryTable.length; memoryBlockIdx++) {
+            Memory memoryBlock = memoryTable[memoryBlockIdx];
+            if (!(memoryBlock instanceof ReadOnlyMemory)) {
+                if (memoryBlock instanceof RandomAccessMemory) {
+                    if (!statefulMemoryList.contains(memoryBlock)) {
+                        statefulMemoryList.add(memoryBlock);
+                    }
+                } else if (memoryBlock instanceof PagedMemory) {
+                    PagedMemory pagedMemory = (PagedMemory) memoryBlock;
+                    for (Memory memoryPage : pagedMemory.getPages()) {
+                        if (memoryPage != null && !(memoryPage instanceof ReadOnlyMemory)
+                                && !statefulMemoryList.contains(memoryPage)) {
+                            statefulMemoryList.add(memoryPage);
+                        }
+                    }
+                    statefulMemoryList.add(pagedMemory);
+                }
+            }
+        }
+        return statefulMemoryList;
+    }
+
     /**
      * Save computer state.
      * @param resources Android {@link Resources} object reference
@@ -293,22 +314,8 @@ public class Computer implements Runnable {
         // Save computer uptime
         outState.putLong(STATE_UPTIME, getUptime());
         // Save RAM data
-        ArrayList<Integer> ramAddresses = new ArrayList<Integer>();
-        for (int memoryBlockIdx = 0; memoryBlockIdx < memoryTable.length; memoryBlockIdx++) {
-            if (memoryTable[memoryBlockIdx] instanceof RandomAccessMemory) {
-                RandomAccessMemory ram = (RandomAccessMemory) memoryTable[memoryBlockIdx];
-                Integer ramAddress = ram.getStartAddress();
-                if (!ramAddresses.contains(ramAddress)) {
-                    ramAddresses.add(ramAddress);
-                }
-            }
-        }
-        if (ramAddresses.size() > 0) {
-            outState.putIntegerArrayList(STATE_RAM_ADDRESSES, ramAddresses);
-            for (Integer ramAddress: ramAddresses) {
-                outState.putShortArray(STATE_RAM_DATA + Integer.toOctalString(ramAddress),
-                        ((RandomAccessMemory) getMemory(ramAddress)).getData());
-            }
+        for (Memory memory: getStatefulMemoryList()) {
+            memory.saveState(outState);
         }
         // Save CPU state
         getCpu().saveState(outState);
@@ -334,13 +341,8 @@ public class Computer implements Runnable {
         // Initialize CPU and devices
         cpu.initDevices();
         // Restore RAM data
-        ArrayList<Integer> ramAddresses = inState.getIntegerArrayList(STATE_RAM_ADDRESSES);
-        if (ramAddresses != null && ramAddresses.size() > 0) {
-            for (Integer ramAddress: ramAddresses) {
-                short[] ramData = inState.getShortArray(STATE_RAM_DATA +
-                        Integer.toOctalString(ramAddress));
-                ((RandomAccessMemory) getMemory(ramAddress)).putData(ramData);
-            }
+        for (Memory memory: getStatefulMemoryList()) {
+            memory.restoreState(inState);
         }
         // Restore CPU state
         getCpu().restoreState(inState);
@@ -367,10 +369,10 @@ public class Computer implements Runnable {
         this.syncUptimeThresholdCpuTicks = nanosToCpuTime(SYNC_UPTIME_THRESHOLD);
     }
 
-    private void addReadOnlyMemory(Resources resources, int romDataResId, int address)
+    private void addReadOnlyMemory(Resources resources, int romDataResId, String romId, int address)
             throws IOException {
         byte[] romData = loadReadOnlyMemoryData(resources, romDataResId);
-        addMemory(new ReadOnlyMemory(address, romData));
+        addMemory(new ReadOnlyMemory(romId, address, romData));
     }
 
     /**
