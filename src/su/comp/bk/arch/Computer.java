@@ -40,6 +40,7 @@ import su.comp.bk.arch.io.PeripheralPort;
 import su.comp.bk.arch.io.Sel1RegisterSystemBits;
 import su.comp.bk.arch.io.Timer;
 import su.comp.bk.arch.io.VideoController;
+import su.comp.bk.arch.io.VideoControllerManager;
 import su.comp.bk.arch.memory.Memory;
 import su.comp.bk.arch.memory.PagedMemory;
 import su.comp.bk.arch.memory.RandomAccessMemory;
@@ -189,15 +190,17 @@ public class Computer implements Runnable {
         addDevice(periferalPort);
         addDevice(new Timer());
         // Apply computer specific configuration
-        Memory videoMemory = null;
         if (!config.isMemoryManagerPresent()) {
             // BK-0010 configurations
             setClockFrequency(CLOCK_FREQUENCY_BK0010);
             // Set RAM configuration
             RandomAccessMemory workMemory = new RandomAccessMemory("WorkMemory", 0, 020000);
             addMemory(workMemory);
-            videoMemory = new RandomAccessMemory("VideoMemory", 040000, 020000);
+            RandomAccessMemory videoMemory = new RandomAccessMemory("VideoMemory", 040000, 020000);
             addMemory(videoMemory);
+            // Add video controller
+            videoController = new VideoController(videoMemory);
+            addDevice(videoController);
             // Set ROM configuration
             addReadOnlyMemory(resources, R.raw.monit10, "Monitor10", 0100000);
             switch (config) {
@@ -234,7 +237,6 @@ public class Computer implements Runnable {
                 firstPagedMemory.setPage(memoryPageIndex, memoryPage);
                 secondPagedMemory.setPage(memoryPageIndex, memoryPage);
             }
-            videoMemory = firstPagedMemory.getPage(1);
             addMemory(firstPagedMemory.getPage(6)); // Static RAM page at address 0
             addMemory(firstPagedMemory); // First paged memory space at address 040000
             addMemory(secondPagedMemory); // Second paged memory space at address 0100000
@@ -254,10 +256,14 @@ public class Computer implements Runnable {
             }
             // Configure memory manager
             addDevice(new MemoryManager(firstPagedMemory, secondPagedMemory));
+            // Add video controller with palette/screen manager
+            PagedMemory pagedVideoMemory = new PagedMemory("PagedVideoMemory", 0, 020000, 2);
+            pagedVideoMemory.setPage(0, firstPagedMemory.getPage(1));
+            pagedVideoMemory.setPage(1, firstPagedMemory.getPage(7));
+            videoController = new VideoController(pagedVideoMemory);
+            addDevice(videoController);
+            addDevice(new VideoControllerManager(videoController, pagedVideoMemory));
         }
-        // Add video controller
-        videoController = new VideoController(videoMemory);
-        addDevice(videoController);
         // Add audio output
         audioOutput = new AudioOutput(this, config.isMemoryManagerPresent());
         addDevice(audioOutput);

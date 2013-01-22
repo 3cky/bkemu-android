@@ -19,7 +19,6 @@
 package su.comp.bk.arch.io;
 
 import su.comp.bk.arch.memory.Memory;
-import su.comp.bk.arch.memory.RandomAccessMemory;
 import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.os.Bundle;
@@ -67,9 +66,31 @@ public class VideoController implements Device {
 
     // Pixel palette in black and white mode
     private final static int[] PIXEL_PALETTE_BW = { Color.BLACK, Color.WHITE };
-    // Pixel palette in color mode
-    private final static int[] PIXEL_PALETTE_COLOR = { Color.BLACK, Color.BLUE,
-        Color.GREEN, Color.RED };
+
+    // Pixel palettes in color mode
+    private final static int[][] PIXEL_PALETTES_COLOR = {
+        { Color.BLACK, Color.BLUE, Color.GREEN, Color.RED },
+        { Color.BLACK, Color.YELLOW, Color.MAGENTA, Color.RED },
+        { Color.BLACK, Color.CYAN, Color.BLUE, Color.MAGENTA },
+        { Color.BLACK, Color.GREEN, Color.CYAN, Color.YELLOW },
+        { Color.BLACK, Color.MAGENTA, Color.CYAN, Color.WHITE },
+        { Color.BLACK, Color.WHITE, Color.WHITE, Color.WHITE },
+        { Color.BLACK, 0xffbf0000, 0xff7f0000, Color.RED },
+        { Color.BLACK, Color.GREEN, Color.CYAN, Color.YELLOW },
+        { Color.BLACK, 0xffbf00bf, 0xff7f00ff, Color.MAGENTA },
+        { Color.BLACK, Color.YELLOW, 0xffff00ff, 0xffbf0000 },
+        { Color.BLACK, Color.YELLOW, 0xffbf00bf, Color.RED },
+        { Color.BLACK, Color.CYAN, Color.YELLOW, Color.RED },
+        { Color.BLACK, Color.RED, Color.GREEN, Color.CYAN },
+        { Color.BLACK, Color.CYAN, Color.YELLOW, Color.WHITE },
+        { Color.BLACK, Color.YELLOW, Color.GREEN, Color.WHITE },
+        { Color.BLACK, Color.CYAN, Color.GREEN, Color.WHITE }
+    };
+
+    // Current color palette index
+    private int colorPaletteIndex = 0;
+    // Active color palette index
+    private int activeColorPaletteIndex = 0;
 
     // VideoRAM data byte to corresponding pixels lookup table
     private final int[] videoDataToPixelsTable = new int[8 * 256];
@@ -81,6 +102,10 @@ public class VideoController implements Device {
     // State save/restore: scroll register value
     private static final String STATE_SCROLL_REGISTER =
             VideoController.class.getName() + "#scroll_reg";
+
+    // State save/restore: palette index value
+    private static final String STATE_PALETTE_INDEX =
+            VideoController.class.getName() + "#palette_index";
 
     // Screen mode flag: true for color mode, false for black and white mode
     private boolean isColorMode;
@@ -108,20 +133,34 @@ public class VideoController implements Device {
         setColorMode(true);
     }
 
+    public int getColorPaletteIndex() {
+        return colorPaletteIndex;
+    }
+
+    void setColorPaletteIndex(int paletteIndex) {
+        this.colorPaletteIndex = paletteIndex;
+    }
+
     public boolean isColorMode() {
         return isColorMode;
     }
 
-    public void setColorMode(boolean isColorMode) {
+    public synchronized void setColorMode(boolean isColorMode) {
         this.isColorMode = isColorMode;
-        int pixelTabIdx = 0;
-        int bitsPerPixel = isColorMode ? SCREEN_BPP_COLOR : SCREEN_BPP_BW;
-        int[] pixelPalette = isColorMode ? PIXEL_PALETTE_COLOR : PIXEL_PALETTE_BW;
-        int pixelMask = isColorMode ? PIXEL_MASK_COLOR : PIXEL_MASK_BW;
-        int pixelsPerByte = (isColorMode ? SCREEN_PPW_COLOR : SCREEN_PPW_BW) / 2;
-        int pixelsPerScreenPixel = isColorMode ? PIXELS_PER_SCREEN_PIXEL_COLOR
-                : PIXELS_PER_SCREEN_PIXEL_BW;
+        activeColorPaletteIndex = colorPaletteIndex;
+        updateVideoDataToPixelsTable();
+    }
+
+    private void updateVideoDataToPixelsTable() {
         synchronized (videoDataToPixelsTable) {
+            int pixelTabIdx = 0;
+            int bitsPerPixel = isColorMode ? SCREEN_BPP_COLOR : SCREEN_BPP_BW;
+            int[] pixelPalette = isColorMode ? PIXEL_PALETTES_COLOR[activeColorPaletteIndex]
+                    : PIXEL_PALETTE_BW;
+            int pixelMask = isColorMode ? PIXEL_MASK_COLOR : PIXEL_MASK_BW;
+            int pixelsPerByte = (isColorMode ? SCREEN_PPW_COLOR : SCREEN_PPW_BW) / 2;
+            int pixelsPerScreenPixel = isColorMode ? PIXELS_PER_SCREEN_PIXEL_COLOR
+                    : PIXELS_PER_SCREEN_PIXEL_BW;
             for (int videoDataByte = 0; videoDataByte < 256; videoDataByte++) {
                 for (int videoDataBytePixelIndex = 0; videoDataBytePixelIndex < pixelsPerByte;
                         videoDataBytePixelIndex++) {
@@ -141,7 +180,16 @@ public class VideoController implements Device {
     }
 
     public Bitmap renderVideoBuffer() {
-        short[] videoData = videoMemory.getData();
+        short[] videoData;
+        synchronized (this) {
+            videoData = videoMemory.getData();
+            if (activeColorPaletteIndex != colorPaletteIndex) {
+                if (isColorMode) {
+                    activeColorPaletteIndex = colorPaletteIndex;
+                    updateVideoDataToPixelsTable();
+                }
+            }
+        }
         videoBuffer.eraseColor(Color.BLACK);
         int videoDataOffset;
         int scrollShift;
@@ -186,12 +234,14 @@ public class VideoController implements Device {
     @Override
     public void saveState(Bundle outState) {
         outState.putInt(STATE_SCROLL_REGISTER, scrollRegister);
+        outState.putInt(STATE_PALETTE_INDEX, getColorPaletteIndex());
         outState.putBoolean(STATE_COLOR_MODE, isColorMode());
     }
 
     @Override
     public void restoreState(Bundle inState) {
         scrollRegister = inState.getInt(STATE_SCROLL_REGISTER);
+        setColorPaletteIndex(inState.getInt(STATE_PALETTE_INDEX));
         setColorMode(inState.getBoolean(STATE_COLOR_MODE));
     }
 

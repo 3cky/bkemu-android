@@ -82,7 +82,7 @@ public class PagedMemory implements Memory {
      * Get active memory page index.
      * @return active memory page index (or -1 of no active memory page selected)
      */
-    public int getActivePageIndex() {
+    public synchronized int getActivePageIndex() {
         return activePageIndex;
     }
 
@@ -90,7 +90,7 @@ public class PagedMemory implements Memory {
      * Set active memory page index.
      * @param pageIndex active memory page index to set (or -1 to unset active memory page)
      */
-    public void setActivePageIndex(int pageIndex) {
+    public synchronized void setActivePageIndex(int pageIndex) {
         this.activePageIndex = pageIndex;
         this.activePage = getPage(pageIndex);
     }
@@ -100,7 +100,7 @@ public class PagedMemory implements Memory {
      * @return active memory page or <code>null</code> if active memory page is not set
      * or no memory page set for active page index
      */
-    public Memory getActivePage() {
+    public synchronized Memory getActivePage() {
         return activePage;
     }
 
@@ -120,7 +120,7 @@ public class PagedMemory implements Memory {
     }
 
     @Override
-    public short[] getData() {
+    public synchronized short[] getData() {
         return activePage.getData();
     }
 
