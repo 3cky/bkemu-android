@@ -67,6 +67,11 @@ public class VideoControllerManager implements Device {
     }
 
     @Override
+    public void timer(long cpuTime) {
+        // Do nothing
+    }
+
+    @Override
     public void saveState(Bundle outState) {
         outState.putInt(STATE_VIDEO_PAGE_INDEX, pagedVideoMemory.getActivePageIndex());
     }

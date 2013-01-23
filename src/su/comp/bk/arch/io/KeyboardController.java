@@ -323,6 +323,11 @@ public class KeyboardController implements Device, OnTouchListener {
         writeStatusRegister(STATUS_VIRQ_MASK);
     }
 
+    @Override
+    public void timer(long cpuTime) {
+        // Do nothing
+    }
+
     protected int getLowRegisterKeyCode(int keyCode) {
         return lowRegisterKeyCodeTable[keyCode] & 0377;
     }

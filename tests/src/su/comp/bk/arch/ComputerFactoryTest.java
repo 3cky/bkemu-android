@@ -85,6 +85,11 @@ public class ComputerFactoryTest {
         }
 
         @Override
+        public void timer(long cpuTime) {
+            // Do nothing
+        }
+
+        @Override
         public void saveState(Bundle outState) {
             // Do nothing
         }

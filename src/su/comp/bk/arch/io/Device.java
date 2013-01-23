@@ -49,6 +49,12 @@ public interface Device {
     void restoreState(Bundle inState);
 
     /**
+     * Do timer task.
+     * @param cpuTime current CPU time (in clock ticks)
+     */
+    void timer(long cpuTime);
+
+    /**
      * Read value from I/O device. Devices always read as word.
      * @param cpuTime current CPU time (in clock ticks)
      * @param address absolute address to read (from address list this device is mapped to)

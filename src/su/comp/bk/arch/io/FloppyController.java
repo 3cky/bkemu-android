@@ -775,6 +775,11 @@ public class FloppyController implements Device {
     }
 
     @Override
+    public void timer(long cpuTime) {
+        // Do nothing
+    }
+
+    @Override
     public synchronized void saveState(Bundle outState) {
         outState.putSerializable(STATE_SELECTED_FLOPPY_DRIVE, getSelectedFloppyDriveIdentifier());
         outState.putBoolean(STATE_SYNCHRONOUS_READ, isSynchronousReadState());

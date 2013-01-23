@@ -38,6 +38,7 @@ import su.comp.bk.arch.io.KeyboardController;
 import su.comp.bk.arch.io.MemoryManager;
 import su.comp.bk.arch.io.PeripheralPort;
 import su.comp.bk.arch.io.Sel1RegisterSystemBits;
+import su.comp.bk.arch.io.SystemTimer;
 import su.comp.bk.arch.io.Timer;
 import su.comp.bk.arch.io.VideoController;
 import su.comp.bk.arch.io.VideoControllerManager;
@@ -263,6 +264,8 @@ public class Computer implements Runnable {
             videoController = new VideoController(pagedVideoMemory);
             addDevice(videoController);
             addDevice(new VideoControllerManager(videoController, pagedVideoMemory));
+            // Add system timer
+            addDevice(new SystemTimer(this));
         }
         // Add audio output
         audioOutput = new AudioOutput(this, config.isMemoryManagerPresent());
@@ -742,6 +745,16 @@ public class Computer implements Runnable {
         long cpuTimeUptimeDifference = cpu.getTime() - lastCpuTimeSyncTimestamp;
         if (cpuTimeUptimeDifference >= syncUptimeThresholdCpuTicks) {
             doSyncUptime();
+            doTimerTasks();
+        }
+    }
+
+    /**
+     * Do timer tasks.
+     */
+    public void doTimerTasks() {
+        for (Device device: deviceList) {
+            device.timer(uptime);
         }
     }
 

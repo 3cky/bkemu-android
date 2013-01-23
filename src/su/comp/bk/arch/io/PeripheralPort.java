@@ -67,6 +67,11 @@ public class PeripheralPort implements Device {
     }
 
     @Override
+    public void timer(long cpuTime) {
+        // Do nothing
+    }
+
+    @Override
     public int read(long cpuTime, int address) {
         return getState(cpuTime);
     }

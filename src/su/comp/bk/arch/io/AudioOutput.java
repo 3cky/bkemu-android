@@ -19,7 +19,6 @@
 package su.comp.bk.arch.io;
 
 import su.comp.bk.arch.Computer;
-import su.comp.bk.arch.Computer.Configuration;
 import su.comp.bk.arch.cpu.Cpu;
 import su.comp.bk.arch.cpu.opcode.BaseOpcode;
 import android.media.AudioFormat;
@@ -103,6 +102,11 @@ public class AudioOutput implements Device, Runnable {
 
     @Override
     public void init(long cpuTime) {
+    }
+
+    @Override
+    public void timer(long cpuTime) {
+        // Do nothing
     }
 
     public void start() {

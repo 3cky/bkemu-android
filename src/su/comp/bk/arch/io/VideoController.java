@@ -232,6 +232,11 @@ public class VideoController implements Device {
     }
 
     @Override
+    public void timer(long cpuTime) {
+        // Do nothing
+    }
+
+    @Override
     public void saveState(Bundle outState) {
         outState.putInt(STATE_SCROLL_REGISTER, scrollRegister);
         outState.putInt(STATE_PALETTE_INDEX, getColorPaletteIndex());

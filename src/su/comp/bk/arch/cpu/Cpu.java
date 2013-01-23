@@ -146,6 +146,8 @@ public class Cpu {
     public static final int TRAP_VECTOR_EMT = 030;
     /** TRAP instruction trap vector address */
     public static final int TRAP_VECTOR_TRAP = 034;
+    /** IRQ2 vector address */
+    public static final int TRAP_IRQ2 = 0100;
 
     // State save/restore: CPU time (in clock ticks)
     private static final String STATE_TIME =
@@ -174,6 +176,9 @@ public class Cpu {
 
     // First radial interrupt (IRQ1) requested
     private boolean isIrq1Requested;
+
+    // Second radial interrupt (IRQ2) requested
+    private boolean isIrq2Requested;
 
     // Vector interrupt (VIRQ) requested flag
     private boolean isVirqRequested;
@@ -656,6 +661,28 @@ public class Cpu {
     }
 
     /**
+     * Check second radial interrupt (IRQ2) is requested.
+     * @return <code>true</code> if IRQ2 requested, <code>false</code> otherwise
+     */
+    public boolean isIrq2Requested() {
+        return isIrq2Requested;
+    }
+
+    /**
+     * Request second radial interrupt (IRQ2).
+     */
+    public void requestIrq2() {
+        this.isIrq2Requested = true;
+    }
+
+    /**
+     * Clear pending second radial interrupt (IRQ2) request.
+     */
+    public void clearIrq2Request() {
+        this.isIrq2Requested = false;
+    }
+
+    /**
      * Request vector interrupt (VIRQ).
      * @param address vector interrupt address
      */
@@ -990,6 +1017,7 @@ public class Cpu {
      */
     public void initDevices() {
         clearIrq1Request();
+        clearIrq2Request();
         clearVirqRequest();
         computer.initDevices();
         setPswState((short) 0340);
@@ -1056,9 +1084,11 @@ public class Cpu {
                     clearIrq1Request();
                     isInterruptHandled = true;
                 } else if (!isPswFlagSet(PSW_FLAG_P)) {
-                    // TODO Handle pending maskable radial interrupt requests IRQ2, IRQ3
-                    // Check for pending vector interrupt request
-                    if (isVirqRequested()) {
+                    if (isIrq2Requested()) { // Check for pending radial interrupt request IRQ2
+                        processTrap(TRAP_IRQ2, true);
+                        clearIrq2Request();
+                        isInterruptHandled = true;
+                    } else if (isVirqRequested()) {  // Check for pending vector interrupt request
                         processTrap(getVirqAddress(), true);
                         clearVirqRequest();
                         isInterruptHandled = true;

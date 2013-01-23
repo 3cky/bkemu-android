@@ -67,6 +67,11 @@ public class MemoryManager implements Device {
     }
 
     @Override
+    public void timer(long cpuTime) {
+        // Do nothing
+    }
+
+    @Override
     public void saveState(Bundle outState) {
         // TODO Auto-generated method stub
 
