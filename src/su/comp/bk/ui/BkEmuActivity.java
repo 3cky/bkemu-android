@@ -28,13 +28,18 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+
+import org.apache.commons.lang.StringUtils;
 
 import su.comp.bk.R;
 import su.comp.bk.arch.Computer;
 import su.comp.bk.arch.Computer.Configuration;
 import su.comp.bk.arch.cpu.Cpu;
+import su.comp.bk.arch.cpu.addressing.IndexDeferredAddressingMode;
 import su.comp.bk.arch.cpu.opcode.EmtOpcode;
+import su.comp.bk.arch.cpu.opcode.JsrOpcode;
 import su.comp.bk.arch.io.FloppyController;
 import su.comp.bk.arch.io.FloppyController.FloppyDriveIdentifier;
 import su.comp.bk.arch.io.KeyboardController;
@@ -94,6 +99,8 @@ public class BkEmuActivity extends Activity {
     private static final String APPLICATION_SHARE_URL = "https://play.google.com" +
     		"/store/apps/details?id=su.comp.bk";
 
+    public static final int MAX_TAPE_FILE_NAME_LENGTH = 16;
+
     private static final int MAX_FILE_NAME_DISPLAY_LENGTH = 15;
     private static final int FILE_NAME_DISPLAY_SUFFIX_LENGTH = 3;
 
@@ -107,8 +114,8 @@ public class BkEmuActivity extends Activity {
     // Last selected disk image URI string
     protected String lastDiskImageFileUri;
 
-    // EMT 36 parameters block address
-    protected int emtParamsBlockAddr;
+    // Tape parameters block address
+    protected int tapeParamsBlockAddr;
 
     private BkEmuView bkEmuView;
 
@@ -180,9 +187,9 @@ public class BkEmuActivity extends Activity {
     }
 
     /**
-     * CPU hardware/software trap listener.
+     * BK0010 tape operations handler.
      */
-    class CpuOnTrapListener implements Cpu.OnTrapListener {
+    class TapeOperations10Handler implements Cpu.OnTrapListener {
         @Override
         public void onTrap(Cpu cpu, int trapVectorAddress) {
             switch (trapVectorAddress) {
@@ -218,26 +225,9 @@ public class BkEmuActivity extends Activity {
                     // Check EMT handler isn't hooked
                     int emtHandlerAddress = cpu.readMemory(false, Cpu.TRAP_VECTOR_EMT);
                     if (computer.isReadOnlyMemoryAddress(emtHandlerAddress)) {
-                        emtParamsBlockAddr = cpu.readRegister(false, Cpu.R1);
-                        Log.d(TAG, "EMT 36, R1=0" + Integer.toOctalString(emtParamsBlockAddr));
-                        // Read command code
-                        int tapeCmdCode = cpu.readMemory(true, emtParamsBlockAddr);
-                        switch (tapeCmdCode) {
-                            case 3: // Read from tape
-                                computer.pause();
-                                // Read file name
-                                byte[] tapeFileNameData = new byte[16];
-                                for (int idx = 0; idx < tapeFileNameData.length; idx++) {
-                                    tapeFileNameData[idx] = (byte) cpu.readMemory(true,
-                                            emtParamsBlockAddr + idx + 6);
-                                }
-                                String tapeFileName = getFileName(tapeFileNameData);
-                                Log.d(TAG, "EMT 36 load file: '" + tapeFileName + "'");
-                                activityHandler.post(new TapeLoaderTask(tapeFileName));
-                                break;
-                            default:
-                                break;
-                        }
+                        tapeParamsBlockAddr = cpu.readRegister(false, Cpu.R1);
+                        Log.d(TAG, "EMT 36, R1=0" + Integer.toOctalString(tapeParamsBlockAddr));
+                        handleTapeOperation(cpu);
                     }
                     break;
                 case Computer.BUS_ERROR:
@@ -249,12 +239,79 @@ public class BkEmuActivity extends Activity {
         }
 
         /**
-         * Get string file name from its 16 bytes array presentation.
-         * @param fileNameData internal file name array data
-         * @return string file name presentation
+         * Handle tape operation.
+         * @param cpu {@link Cpu} reference
          */
-        private String getFileName(byte[] fileNameData) {
-            String fileName;
+        private void handleTapeOperation(Cpu cpu) {
+            // Read command code
+            int tapeCmdCode = cpu.readMemory(true, tapeParamsBlockAddr);
+            switch (tapeCmdCode) {
+                case 3: // Read from tape
+                    computer.pause();
+                    // Read file name
+                    byte[] tapeFileNameData = new byte[MAX_TAPE_FILE_NAME_LENGTH];
+                    for (int idx = 0; idx < tapeFileNameData.length; idx++) {
+                        tapeFileNameData[idx] = (byte) cpu.readMemory(true,
+                                tapeParamsBlockAddr + idx + 6);
+                    }
+                    String tapeFileName = getFileName(tapeFileNameData);
+                    Log.d(TAG, "BK0010 tape load file: '" + tapeFileName + "'");
+                    activityHandler.post(new TapeLoaderTask(tapeFileName));
+                    break;
+                default:
+                    break;
+            }
+        }
+    }
+
+    /**
+     * BK0011 tape operations handler.
+     */
+    class TapeOperations11Handler implements Cpu.OnOpcodeListener {
+        @Override
+        public void onOpcodeExecuted(Cpu cpu, int opcode) {
+            if (cpu.readRegister(false, Cpu.PC) == 0154620) {
+                // .BMB10 BK0011 system call
+                tapeParamsBlockAddr = cpu.readRegister(false, Cpu.R0);
+                handleTapeOperation(cpu);
+            }
+        }
+
+        /**
+         * Handle tape operation.
+         * @param cpu {@link Cpu} reference
+         */
+        private void handleTapeOperation(Cpu cpu) {
+            // Read command code
+            int tapeCmdCode = cpu.readMemory(true, tapeParamsBlockAddr);
+            switch (tapeCmdCode) {
+                case 1: // Read from tape
+                    computer.pause();
+                    // FIXME handle memory pages setup
+                    // Read file name
+                    byte[] tapeFileNameData = new byte[MAX_TAPE_FILE_NAME_LENGTH];
+                    for (int idx = 0; idx < tapeFileNameData.length; idx++) {
+                        tapeFileNameData[idx] = (byte) cpu.readMemory(true,
+                                tapeParamsBlockAddr + idx + 6);
+                    }
+                    String tapeFileName = getFileName(tapeFileNameData);
+                    Log.d(TAG, "BK0011 tape load file: '" + tapeFileName + "'");
+                    activityHandler.post(new TapeLoaderTask(tapeFileName));
+                    break;
+                default:
+                    break;
+            }
+        }
+    }
+
+    /**
+     * Get string tape file name from its 16 bytes array presentation.
+     * @param fileNameData internal file name array data
+     * @return string file name presentation
+     */
+    public static String getFileName(byte[] fileNameData) {
+        String fileName;
+        if (fileNameData[0] != 0) { // BK0011 flag for any file
             try {
                 fileName = new String(fileNameData, "koi8-r");
             } catch (UnsupportedEncodingException e) {
@@ -267,28 +324,30 @@ public class BkEmuActivity extends Activity {
                 fileName = fileName.substring(0, dotIndex).trim().concat(
                         fileName.substring(dotIndex));
             }
-            return fileName;
+        } else {
+            fileName = "";
         }
+        return fileName;
+    }
 
-        /**
-         * Get trap (EMT/TRAP) number using pushed to stack PC.
-         * @param cpu {@link Cpu} reference
-         * @param trapBaseOpcode EMT/TRAP base opcode
-         * @return trap number or BUS_ERROR in case of addressing error
-         */
-        private int getTrapNumber(Cpu cpu, int trapBaseOpcode) {
-            int trapNumber = Computer.BUS_ERROR;
-            int pushedPc = cpu.readMemory(false, cpu.readRegister(false, Cpu.SP));
-            if (pushedPc != Computer.BUS_ERROR) {
-                // Read trap opcode
-                int trapOpcode = cpu.readMemory(false, pushedPc - 2);
-                if (trapOpcode != Computer.BUS_ERROR) {
-                    // Extract trap number from opcode
-                    trapNumber = trapOpcode - trapBaseOpcode;
-                }
+    /**
+     * Get trap (EMT/TRAP) number using pushed to stack PC.
+     * @param cpu {@link Cpu} reference
+     * @param trapBaseOpcode EMT/TRAP base opcode
+     * @return trap number or BUS_ERROR in case of addressing error
+     */
+    public static int getTrapNumber(Cpu cpu, int trapBaseOpcode) {
+        int trapNumber = Computer.BUS_ERROR;
+        int pushedPc = cpu.readMemory(false, cpu.readRegister(false, Cpu.SP));
+        if (pushedPc != Computer.BUS_ERROR) {
+            // Read trap opcode
+            int trapOpcode = cpu.readMemory(false, pushedPc - 2);
+            if (trapOpcode != Computer.BUS_ERROR) {
+                // Extract trap number from opcode
+                trapNumber = trapOpcode - trapBaseOpcode;
             }
-            return trapNumber;
         }
+        return trapNumber;
     }
 
     /** Called when the activity is first created. */
@@ -367,7 +426,13 @@ public class BkEmuActivity extends Activity {
             }
         }
         if (isComputerInitialized) {
-            computer.getCpu().setOnTrapListener(new CpuOnTrapListener());
+            if (!computer.getConfiguration().isMemoryManagerPresent()) {
+                computer.getCpu().setOnTrapListener(new TapeOperations10Handler());
+            } else {
+                TapeOperations11Handler handler = new TapeOperations11Handler();
+                computer.getCpu().setOnOpcodeListener(JsrOpcode.OPCODE | Cpu.PC | (Cpu.PC << 6)
+                            | (IndexDeferredAddressingMode.CODE << 3), handler);
+            }
             bkEmuView.setComputer(computer);
         } else {
             throw new IllegalStateException("Can't initialize computer state");
@@ -810,15 +875,45 @@ public class BkEmuActivity extends Activity {
         // Set result in parameters block
         if (isImageLoadedSuccessfully) {
             synchronized (computer) {
-                // Set "OK" result code
-                computer.writeMemory(true, emtParamsBlockAddr + 1, 0);
-                // Write loaded image start address
-                computer.writeMemory(false, emtParamsBlockAddr + 22, lastBinImageAddress);
-                // Write loaded image length
-                computer.writeMemory(false, emtParamsBlockAddr + 24, lastBinImageLength);
-                // TODO Write loaded image name
-                // Return from EMT 36
-                computer.getCpu().returnFromTrap(false);
+                int tapeParamsBlockAddrNameIdx;
+                if (!computer.getConfiguration().isMemoryManagerPresent()) { // BK0010
+                    tapeParamsBlockAddrNameIdx = 26;
+                    // Set "OK" result code
+                    computer.writeMemory(true, tapeParamsBlockAddr + 1, 0);
+                    // Write loaded image start address
+                    computer.writeMemory(false, tapeParamsBlockAddr + 22, lastBinImageAddress);
+                    // Write loaded image length
+                    computer.writeMemory(false, tapeParamsBlockAddr + 24, lastBinImageLength);
+                    // Return from EMT 36
+                    computer.getCpu().returnFromTrap(false);
+                } else { // BK0011
+                    tapeParamsBlockAddrNameIdx = 28;
+                    // Set "OK" result code
+                    computer.getCpu().clearPswFlagC();
+                    // Write loaded image start address
+                    computer.writeMemory(false, tapeParamsBlockAddr + 24, lastBinImageAddress);
+                    // Write loaded image length
+                    computer.writeMemory(false, tapeParamsBlockAddr + 26, lastBinImageLength);
+                    // Return from tape load routine
+                    computer.getCpu().writeRegister(false, Cpu.PC, computer.getCpu().pop());
+                }
+                // Write loaded image name
+                String tapeFileName = StringUtils.substringAfterLast(lastBinImageFileUri, "/");
+                tapeFileName = StringUtils.substring(tapeFileName, 0, MAX_TAPE_FILE_NAME_LENGTH);
+                byte[] tapeFileNameBuffer;
+                try {
+                    tapeFileNameBuffer = tapeFileName.getBytes("koi8-r");
+                } catch (UnsupportedEncodingException e) {
+                    tapeFileNameBuffer = tapeFileName.getBytes();
+                }
+                byte[] tapeFileNameData = new byte[MAX_TAPE_FILE_NAME_LENGTH];
+                Arrays.fill(tapeFileNameData, (byte) ' ');
+                System.arraycopy(tapeFileNameBuffer, 0, tapeFileNameData, 0,
+                        Math.min(tapeFileNameBuffer.length, MAX_TAPE_FILE_NAME_LENGTH));
+                for (int idx = 0; idx < tapeFileNameData.length; idx++) {
+                    computer.getCpu().writeMemory(true, tapeParamsBlockAddr +
+                            tapeParamsBlockAddrNameIdx + idx, tapeFileNameData[idx]);
+                }
             }
         }
     }

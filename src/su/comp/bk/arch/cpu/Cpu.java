@@ -250,6 +250,52 @@ public class Cpu {
         void onTrap(Cpu cpu, int trapVectorAddress);
     }
 
+    /**
+     * Opcode intercepter class.
+     */
+    protected class OpcodeIntercepter implements Opcode {
+        private final Opcode interceptedOpcode;
+        private final OnOpcodeListener opcodeListener;
+
+        OpcodeIntercepter(Opcode interceptedOpcode, OnOpcodeListener opcodeListener) {
+            this.interceptedOpcode = interceptedOpcode;
+            this.opcodeListener = opcodeListener;
+        }
+
+        @Override
+        public int getOpcode() {
+            return interceptedOpcode.getOpcode();
+        }
+
+        @Override
+        public void decode(int instruction) {
+            interceptedOpcode.decode(instruction);
+        }
+
+        @Override
+        public int getExecutionTime() {
+            return interceptedOpcode.getExecutionTime();
+        }
+
+        @Override
+        public void execute() {
+            interceptedOpcode.execute();
+            opcodeListener.onOpcodeExecuted(Cpu.this, interceptedOpcode.getOpcode());
+        }
+    }
+
+    /**
+     * Opcode listener interface.
+     */
+    public interface OnOpcodeListener {
+        /**
+         * Called after intercepted opcode execution.
+         * @param cpu CPU object reference
+         * @param opcode executed opcode
+         */
+        void onOpcodeExecuted(Cpu cpu, int opcode);
+    }
+
     public Cpu(Computer computer) {
         this.computer = computer;
         initializeAddressingModes();
@@ -387,6 +433,13 @@ public class Cpu {
 
     public void setOnTrapListener(OnTrapListener onTrapListener) {
         this.onTrapListener = onTrapListener;
+    }
+
+    public void setOnOpcodeListener(int instruction, OnOpcodeListener opcodeListener) {
+        Opcode opcode = decodeInstruction(instruction);
+        if (opcode != null) {
+            opcodesTable[instruction] = new OpcodeIntercepter(opcode, opcodeListener);
+        }
     }
 
     /**
