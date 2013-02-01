@@ -1055,6 +1055,7 @@ public class Cpu {
      * Reset processor state.
      */
     public void reset() {
+        clearFlags();
         initDevices();
         int sel1RegisterValue = readMemory(false, REG_SEL1);
         if (sel1RegisterValue != Computer.BUS_ERROR) {
@@ -1063,6 +1064,17 @@ public class Cpu {
             // FIXME Deal with bus error while read startup address
         }
         time += RESET_TIME;
+    }
+
+    /**
+     * Clear CPU flags.
+     */
+    private void clearFlags() {
+        clearBusError();
+        clearDeferredTraceTrap();
+        clearHaltMode();
+        clearInterruptWaitMode();
+        clearReservedOpcodeFetched();
     }
 
     /**
