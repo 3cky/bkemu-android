@@ -50,4 +50,6 @@
     <string name="fdd_image_c">Дисковод C</string>
     <string name="fdd_image_d">Дисковод D</string>
     <string name="fdd_empty">(Пусто)</string>
+    <string name="toast_image_info">Начальный адрес 0%1$o, длина 0%2$o</string>
+    <string name="toast_image_error">Ошибка загрузки файла \'%s\'</string>
 </resources>

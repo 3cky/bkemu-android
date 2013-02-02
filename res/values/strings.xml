@@ -54,4 +54,6 @@
     <string name="fdd_image_c">Floppy Drive C</string>
     <string name="fdd_image_d">Floppy Drive D</string>
     <string name="fdd_empty">(Empty)</string>
+    <string name="toast_image_info">Start address 0%1$o, length 0%2$o</string>
+    <string name="toast_image_error">Can\'t load image file \'%s\'</string>
 </resources>

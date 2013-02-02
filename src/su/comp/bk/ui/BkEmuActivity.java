@@ -67,6 +67,7 @@ import android.view.Window;
 import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 /**
  * Main application activity.
@@ -831,21 +832,22 @@ public class BkEmuActivity extends Activity {
             case REQUEST_MENU_BIN_IMAGE_FILE_LOAD:
                 if (resultCode == Activity.RESULT_OK) {
                     String binImageFilePath = data.getStringExtra(BkEmuFileDialog.INTENT_RESULT_PATH);
-                    Uri binImageFileUri = new Uri.Builder().scheme("file")
-                            .path(binImageFilePath).build();
-                    restartActivity(binImageFileUri);
+                    Configuration configuration = computer.getConfiguration();
+                    if (configuration.isMemoryManagerPresent() ||
+                            configuration.isFloppyControllerPresent()) {
+                        binImageFileLoad(binImageFilePath);
+                    } else {
+                        Uri binImageFileUri = new Uri.Builder().scheme("file")
+                                .path(binImageFilePath).build();
+                        restartActivity(binImageFileUri);
+                    }
                 }
                 break;
             case REQUEST_EMT_BIN_IMAGE_FILE_LOAD:
                 boolean isImageLoaded = false;
                 if (resultCode == Activity.RESULT_OK) {
                     String binImageFilePath = data.getStringExtra(BkEmuFileDialog.INTENT_RESULT_PATH);
-                    try {
-                        loadBinImageFile("file:" + binImageFilePath);
-                        isImageLoaded = true;
-                    } catch (Exception e) {
-                        Log.e(TAG, "Can't load emulator image", e);
-                    }
+                    isImageLoaded = binImageFileLoad(binImageFilePath);
                 }
                 doFinishBinImageLoad(isImageLoaded);
                 break;
@@ -869,6 +871,35 @@ public class BkEmuActivity extends Activity {
             default:
                 break;
         }
+    }
+
+    protected boolean binImageFileLoad(String binImageFilePath) {
+        boolean isImageLoaded = doBinImageFileLoad(binImageFilePath);
+        if (isImageLoaded) {
+            Toast.makeText(getApplicationContext(),
+                    getResources().getString(R.string.toast_image_info,
+                        lastBinImageAddress, lastBinImageLength),
+                    Toast.LENGTH_LONG)
+                    .show();
+        } else {
+            Toast.makeText(getApplicationContext(),
+                    getResources().getString(R.string.toast_image_error,
+                            binImageFilePath),
+                    Toast.LENGTH_LONG)
+                    .show();
+        }
+        return isImageLoaded;
+    }
+
+    protected boolean doBinImageFileLoad(String binImageFilePath) {
+        boolean isImageLoaded = false;
+        try {
+            loadBinImageFile("file:" + binImageFilePath);
+            isImageLoaded = true;
+        } catch (Exception e) {
+            Log.e(TAG, "Can't load emulator image", e);
+        }
+        return isImageLoaded;
     }
 
     protected void doFinishBinImageLoad(boolean isImageLoadedSuccessfully) {
