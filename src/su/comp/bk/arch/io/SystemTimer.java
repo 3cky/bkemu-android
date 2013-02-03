@@ -102,11 +102,13 @@ public class SystemTimer implements Device {
 
     @Override
     public void timer(long cpuTime) {
-        int currentTimerLogicLevel = getTimerLogicLevel(cpuTime);
-        int lastTimerLogicLevel = getTimerLogicLevel(getLastTimerEventTimestamp());
-        if (((currentTimerLogicLevel ^ lastTimerLogicLevel) & lastTimerLogicLevel) != 0) {
-            // Timer logic level transition from high to low detected
-            cpu.requestIrq2();
+        if (isInterruptEnabled()) {
+            int currentTimerLogicLevel = getTimerLogicLevel(cpuTime);
+            int lastTimerLogicLevel = getTimerLogicLevel(getLastTimerEventTimestamp());
+            if (((currentTimerLogicLevel ^ lastTimerLogicLevel) & lastTimerLogicLevel) != 0) {
+                // Timer logic level transition from high to low detected
+                cpu.requestIrq2();
+            }
         }
         setLastTimerEventTimestamp(cpuTime);
     }
@@ -120,7 +122,7 @@ public class SystemTimer implements Device {
     @Override
     public boolean write(long cpuTime, boolean isByteMode, int address, int value) {
         if (!isByteMode) {
-            setInterruptEnabled((value & STATE_ENABLED_FLAG) != 0);
+            setInterruptEnabled((value & STATE_ENABLED_FLAG) == 0);
             return true;
         }
         return false;
