@@ -18,7 +18,8 @@
     <string name="bk_0010_basic">БК 0010&#8211;01 (Бейсик Вильнюс)</string>
     <string name="bk_0010_mstd">БК 0010&#8211;01 (Фокал + тесты)</string>
     <string name="bk_0010_kngmd">БК 0010&#8211;01 (КНГМД)</string>
-    <string name="bk_0011m_mstd">БК 0011M (Тесты)</string>
+    <string name="bk_0011m_mstd">БК 0011M (МСТД)</string>
+    <string name="bk_0011m_kngmd">БК 0011M (КНГМД)</string>
     <string name="desc_erase">Удалить</string>
     <string name="desc_collapse">Сдвинуть</string>
     <string name="desc_expand">Расширить</string>

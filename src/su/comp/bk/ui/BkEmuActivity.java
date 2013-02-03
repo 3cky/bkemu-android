@@ -560,7 +560,7 @@ public class BkEmuActivity extends Activity {
 
     @Override
     public boolean onPrepareOptionsMenu(Menu menu) {
-        boolean isFloppyControllerAttached = (computer.getFloppyController() != null);
+        boolean isFloppyControllerAttached = computer.getConfiguration().isFloppyControllerPresent();
         menu.findItem(R.id.menu_disk_manager).setEnabled(isFloppyControllerAttached);
         menu.findItem(R.id.menu_disk_manager).setVisible(isFloppyControllerAttached);
         return true;

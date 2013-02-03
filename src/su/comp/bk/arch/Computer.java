@@ -136,7 +136,9 @@ public class Computer implements Runnable {
         /** BK0010 with connected floppy drive controller (КНГМД) */
         BK_0010_KNGMD(true),
         /** BK0011M - MSTD block attached */
-        BK_0011M_MSTD(false, true);
+        BK_0011M_MSTD(false, true),
+        /** BK0011M with connected floppy drive controller (КНГМД) */
+        BK_0011M_KNGMD(true, true);
 
         private final boolean isFloppyControllerPresent;
         private final boolean isMemoryManagerPresent;
@@ -251,6 +253,11 @@ public class Computer implements Runnable {
             switch (config) {
                 case BK_0011M_MSTD:
                     addReadOnlyMemory(resources, R.raw.mstd11m, "MSTD11M", 0160000);
+                    break;
+                case BK_0011M_KNGMD:
+                    addReadOnlyMemory(resources, R.raw.disk_327, "FloppyBios", 0160000);
+                    floppyController = new FloppyController(this);
+                    addDevice(floppyController);
                     break;
                 default:
                     break;
