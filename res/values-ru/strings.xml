@@ -41,7 +41,7 @@
     <string name="err">Ошибка</string>
     <string name="exit_confirm_title">Выход</string>
     <string name="exit_confirm_message">Вы действительно хотите выйти из программы?</string>
-    <string name="about_info">Эмулятор семейства 16-разрядных PDP-11-совместимых советских домашних компьютеров <b>Электроника БК&#8211;0010</b></string>
+    <string name="about_info">Эмулятор семейства 16-разрядных PDP-11-совместимых советских домашних компьютеров <b>Электроника БК&#8211;0010/11M</b></string>
     <string name="about_perf">Эффективная частота процессора: %1$.3f МГц (%2$.2f%%)</string>
     <string name="changelog_title">Что нового?</string>
     <string name="changelog_title_full">Списк изменений</string>

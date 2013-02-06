@@ -44,7 +44,7 @@
     <string name="exit_confirm_message">Do you really want to quit?</string>
     <string name="about_logo">BkEmu Logo</string>
     <string name="about_version">BkEmu v. %s</string>
-    <string name="about_info">Emulator of 16-bit PDP-11-compatible Soviet home computer Elektronika BK-0010</string>
+    <string name="about_info">Emulator of 16-bit PDP-11-compatible Soviet home computers Elektronika BK-0010/11M</string>
     <string name="about_perf">Effective clock frequency: %1$.3f MHz (%2$.2f%%)</string>
     <string name="about_link">https://github.com/3cky/bkemu-android</string>
     <string name="changelog_title">What\'s new?</string>

@@ -1,5 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <releases>
+    <release version="0.3.0" date="2013-02-07">
+        <changes>
+            <change>Implemented emulation of BK-0011M with MSTD or floppy controller blocks attached.</change>
+            <change>Now .BIN images are loaded without emulation restart for BK-0011M and BK-0010 with floppy controller.</change>
+            <change>Fixed computer reset - CPU flags clearing added.</change>
+        </changes>
+    </release>
     <release version="0.2.1" date="2013-01-13">
         <changes>
             <change>Fixed loading of files with Cyrillic characters in name. Fixed Basic files loading with name shorter than 6 characters.</change>
