@@ -51,6 +51,9 @@ public class KeyboardController implements Device, OnTouchListener {
     // Button pressed state flag in SEL1 register (0 - key is pressed, 1 - not pressed, read only)
     private final static int SEL1_REGISTER_BUTTON_PRESSED = (1 << 6);
 
+    // BK-0011M STOP button enabled flag in SEL1 register (1 - disabled, 0 - enabled, write only)
+    private final static int SEL1_BK11M_STOP_BUTTON_ENABLED = (1 << 12);
+
     private final static int[] ADDRESSES = {
         Cpu.REG_SEL1, STATUS_REGISTER_ADDRESS, DATA_REGISTER_ADDRESS
     };
@@ -69,9 +72,15 @@ public class KeyboardController implements Device, OnTouchListener {
     // State save/restore: Status register value
     private static final String STATE_STATUS_REGISTER =
             KeyboardController.class.getName() + "#status_reg";
+    // State save/restore: STOP button is blocked flag value
+    private static final String STATE_STOP_BUTTON_ENABLED_FLAG =
+            KeyboardController.class.getName() + "#stop_button_enabled";
 
     // Low register modifier key codes lookup table
     private static final byte[] lowRegisterKeyCodeTable = new byte[256];
+
+    // Is STOP button enabled flag
+    private boolean isStopButtonEnabled = true;
 
     // Latin mode flag
     private boolean isLatinMode;
@@ -104,6 +113,8 @@ public class KeyboardController implements Device, OnTouchListener {
     private long lastButtonPressTimestamp = -1L;
 
     private final Computer computer;
+
+    private final boolean isComputerBk11m;
 
     private boolean isOnScreenKeyboardVisible = false;
 
@@ -235,6 +246,7 @@ public class KeyboardController implements Device, OnTouchListener {
 
     public KeyboardController(Computer computer) {
         this.computer = computer;
+        this.isComputerBk11m = computer.getConfiguration().isMemoryManagerPresent();
     }
 
     private static void initializeLookupTables() {
@@ -330,6 +342,14 @@ public class KeyboardController implements Device, OnTouchListener {
 
     protected int getLowRegisterKeyCode(int keyCode) {
         return lowRegisterKeyCodeTable[keyCode] & 0377;
+    }
+
+    protected boolean isStopButtonEnabled() {
+        return isStopButtonEnabled;
+    }
+
+    protected void setStopButtonEnabled(boolean isStopButtonEnabled) {
+        this.isStopButtonEnabled = isStopButtonEnabled;
     }
 
     protected boolean isUppercaseMode() {
@@ -460,8 +480,15 @@ public class KeyboardController implements Device, OnTouchListener {
                 writeStatusRegister(value);
                 isWritten = true;
                 break;
+            case Cpu.REG_SEL1:
+                // Check for BK-0011M STOP button enabled flag state if register is selected
+                if (isComputerBk11m && !isByteMode && (value & MemoryManager.ENABLE_BIT) == 0) {
+                    setStopButtonEnabled((value & SEL1_BK11M_STOP_BUTTON_ENABLED) == 0);
+                    isWritten = true;
+                }
+                break;
             default:
-                // Data and SEL1 registers are read only and not respond to the CPU bus write request
+                // Data register is read only and not respond to the CPU bus write request
                 break;
         }
         return isWritten;
@@ -518,7 +545,7 @@ public class KeyboardController implements Device, OnTouchListener {
                 // Handle special buttons
                 switch (bkButton) {
                     case STOP:
-                        if (isPressed) {
+                        if (isPressed && isStopButtonEnabled()) {
                             computer.getCpu().requestIrq1();
                         }
                         break;
@@ -571,13 +598,16 @@ public class KeyboardController implements Device, OnTouchListener {
 
     @Override
     public void saveState(Bundle outState) {
-        // Save only VIRQ mask state from status register
+        // Save VIRQ mask state from status register
         outState.putInt(STATE_STATUS_REGISTER, readStatusRegister() & STATUS_VIRQ_MASK);
+        // Save STOP button enabled flag state
+        outState.putBoolean(STATE_STOP_BUTTON_ENABLED_FLAG, isStopButtonEnabled());
     }
 
     @Override
     public void restoreState(Bundle inState) {
         writeStatusRegister(inState.getInt(STATE_STATUS_REGISTER));
+        setStopButtonEnabled(inState.getBoolean(STATE_STOP_BUTTON_ENABLED_FLAG));
     }
 
 }
