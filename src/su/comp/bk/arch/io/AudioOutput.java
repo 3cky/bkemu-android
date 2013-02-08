@@ -160,7 +160,7 @@ public class AudioOutput implements Device, Runnable {
 
     @Override
     public boolean write(long cpuTime, boolean isByteMode, int address, int value) {
-        if (isBk0011mMode && (value & BK0011M_ENABLE_BIT) == 0) {
+        if (!isBk0011mMode || (value & BK0011M_ENABLE_BIT) == 0) {
             int outputState = value & OUTPUT_BIT;
             if ((outputState ^ lastOutputState) != 0) {
                 putPcmTimestamp(cpuTime);
