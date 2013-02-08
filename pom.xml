@@ -3,7 +3,7 @@
 	<groupId>su.comp.bk</groupId>
 	<artifactId>bkemu</artifactId>
 	<packaging>apk</packaging>
-	<version>0.3.0</version>
+	<version>0.3.1-SNAPSHOT</version>
 	<name>Emulator of 16-bit PDP-11-compatible Soviet home computers Elektronika BK-001x for Android platform</name>
     <inceptionYear>2012</inceptionYear>
 
@@ -24,7 +24,7 @@
 	   <connection>scm:git:git://github.com/${github.path}.git</connection>
 	   <developerConnection>scm:git:ssh://git@github.com/${github.path}.git</developerConnection>
 	   <url>https://github.com/${github.path}</url>
-	  <tag>bkemu-0.3.0</tag>
+	  <tag>HEAD</tag>
   </scm>
 
 	<developers>
