@@ -20,11 +20,17 @@ package su.comp.bk.arch.io;
 
 import su.comp.bk.arch.Computer;
 import android.os.Bundle;
+import android.util.Log;
+import android.view.MotionEvent;
+import android.view.View;
+import android.view.View.OnTouchListener;
 
 /**
  * BK-0010 peripheral port.
  */
-public class PeripheralPort implements Device {
+public class PeripheralPort implements Device, OnTouchListener {
+
+    private static final String TAG = PeripheralPort.class.getName();
 
     public final static int DATA_REGISTER_ADDRESS = 0177714;
 
@@ -37,6 +43,25 @@ public class PeripheralPort implements Device {
     public final static int JOYSTICK_RIGHT = 020;
     public final static int JOYSTICK_UP = 02000;
 
+    public enum JoystickButton {
+        ONE(JOYSTICK_BUTTON1),
+        TWO(JOYSTICK_BUTTON2),
+        LEFT(JOYSTICK_LEFT),
+        RIGHT(JOYSTICK_RIGHT),
+        UP(JOYSTICK_UP),
+        DOWN(JOYSTICK_DOWN);
+
+        private final int joystickButtonMask;
+
+        private JoystickButton(int joystickButtonMask) {
+            this.joystickButtonMask = joystickButtonMask;
+        }
+
+        public int getJoystickButtonMask() {
+            return joystickButtonMask;
+        }
+    }
+
     /** Joystick buttons pressing delay (in nanoseconds) */
     public final static long JOYSTICK_PRESS_DELAY = (250L * Computer.NANOSECS_IN_MSEC);
 
@@ -47,8 +72,10 @@ public class PeripheralPort implements Device {
 
     private final Computer computer;
 
-    // Last state change timestamp (in CPU clock ticks)
-    private long stateTimestamp;
+    private View onScreenJoystickView;
+
+    private boolean isOnScreenJoystickVisible;
+
     // Current port state
     private int state;
 
@@ -73,7 +100,7 @@ public class PeripheralPort implements Device {
 
     @Override
     public int read(long cpuTime, int address) {
-        return getState(cpuTime);
+        return getState();
     }
 
     @Override
@@ -92,50 +119,57 @@ public class PeripheralPort implements Device {
         // Do nothing
     }
 
-    private long getStateTimestamp() {
-        return this.stateTimestamp;
-    }
-
-    private void setStateTimestamp(long timestamp) {
-        this.stateTimestamp = timestamp;
-    }
-
     private void resetState(long cpuTime) {
-        setState(cpuTime, 0);
+        setState(0);
     }
 
-    private synchronized int getState(long cpuTime) {
-        if (computer.cpuTimeToNanos(cpuTime - getStateTimestamp()) > JOYSTICK_PRESS_DELAY) {
-            resetState(cpuTime);
-        }
+    private synchronized int getState() {
         return state;
     }
 
-    private synchronized void setState(long cpuTime, int state) {
+    private synchronized void setState(int state) {
         this.state = state;
-        setStateTimestamp(cpuTime);
     }
 
-    public boolean handleMotionEvent(long cpuTime, float distanceX, float distanceY) {
-        int nextState = getState(cpuTime);
-        nextState &= ~(JOYSTICK_LEFT | JOYSTICK_RIGHT | JOYSTICK_UP | JOYSTICK_DOWN);
-        if (Math.abs(distanceX) > JOYSTICK_PRESS_THRESHOLD) {
-            nextState |= (Math.signum(distanceX) > 0 ? JOYSTICK_LEFT : JOYSTICK_RIGHT);
+    public void setOnScreenJoystickView(View joystickView) {
+        this.onScreenJoystickView = joystickView;
+        for (JoystickButton joystickButton : JoystickButton.values()) {
+            View joystickButtonView = joystickView.findViewWithTag(joystickButton.name());
+            if (joystickButtonView != null) {
+                joystickButtonView.setOnTouchListener(this);
+            } else {
+                Log.w(TAG, "Can't find view for button: " + joystickButton.name());
+            }
         }
-        if (Math.abs(distanceY) > JOYSTICK_PRESS_THRESHOLD) {
-            nextState |= (Math.signum(distanceY) > 0 ? JOYSTICK_UP : JOYSTICK_DOWN);
+    }
+
+    public void setOnScreenJoystickVisibility(boolean isVisible) {
+        this.isOnScreenJoystickVisible = isVisible;
+        onScreenJoystickView.setVisibility(isVisible ? View.VISIBLE : View.GONE);
+    }
+
+    public boolean isOnScreenJoystickVisible() {
+        return isOnScreenJoystickVisible;
+    }
+
+    @Override
+    public boolean onTouch(View v, MotionEvent event) {
+        if (event.getAction() == MotionEvent.ACTION_UP
+                || event.getAction() == MotionEvent.ACTION_DOWN) {
+            JoystickButton joystickButton = JoystickButton.valueOf(v.getTag().toString());
+            boolean isPressed = event.getAction() == MotionEvent.ACTION_DOWN;
+            handleJoystickButton(joystickButton, isPressed);
         }
-        setState(cpuTime, nextState);
-        return true;
+        return false;
     }
 
-    public boolean handleSingleTapEvent(long cpuTime) {
-        setState(cpuTime, (getState(cpuTime) | JOYSTICK_BUTTON1));
-        return true;
+    private void handleJoystickButton(JoystickButton joystickButton, boolean isPressed) {
+        int currentState = getState();
+        if (isPressed) {
+            setState(currentState | joystickButton.getJoystickButtonMask());
+        } else {
+            setState(currentState & ~joystickButton.getJoystickButtonMask());
+        }
     }
 
-    public boolean handleDoubleTapEvent(long cpuTime) {
-        setState(cpuTime, (getState(cpuTime) | JOYSTICK_BUTTON2));
-        return true;
-    }
 }

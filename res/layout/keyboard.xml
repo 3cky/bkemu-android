@@ -4,25 +4,25 @@
     android:layout_height="wrap_content"
     android:layout_gravity="center_horizontal"
     android:orientation="vertical"
-    android:visibility="visible" >
+    android:visibility="visible"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:ignore="HardcodedText">
 
     <!-- First row horizontal container -->
-    <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-        xmlns:tools="http://schemas.android.com/tools"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="@dimen/btn_row_height"
         android:gravity="center_horizontal"
-        android:weightSum="31"
-        tools:ignore="HardcodedText" >
+        android:weightSum="31">
 
         <Button
             android:id="@+id/btn_repeat"
-            android:tag="REPEAT"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="3"
-            android:padding="0dp"
             android:background="@drawable/btn_gray"
+            android:padding="0dp"
+            android:tag="REPEAT"
             android:text="ПОВТ"
             android:textColor="@color/btn_text"
             android:textSize="@dimen/btn_text_size" />
@@ -138,13 +138,11 @@
     </LinearLayout>
 
     <!-- Second row horizontal container -->
-    <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-        xmlns:tools="http://schemas.android.com/tools"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="@dimen/btn_row_height"
         android:gravity="center_horizontal"
-        android:weightSum="31"
-        tools:ignore="HardcodedText" >
+        android:weightSum="31">
 
         <ImageButton
             android:id="@+id/btn_low_register"
@@ -329,13 +327,11 @@
     </LinearLayout>
 
     <!-- Third row horizontal container -->
-	<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-	    xmlns:tools="http://schemas.android.com/tools"
+	<LinearLayout
 	    android:layout_width="match_parent"
 	    android:layout_height="@dimen/btn_row_height"
 	    android:gravity="center_horizontal"
-	    android:weightSum="31"
-	    tools:ignore="HardcodedText" >
+	    android:weightSum="31">
 
 	    <Button
 	        android:id="@+id/btn_tab"
@@ -520,13 +516,11 @@
 	</LinearLayout>
 
 	<!-- Fourth row horizontal container -->
-    <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-        xmlns:tools="http://schemas.android.com/tools"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="@dimen/btn_row_height"
         android:weightSum="31"
-        android:gravity="center_horizontal"
-        tools:ignore="HardcodedText" >
+        android:gravity="center_horizontal">
 
         <su.comp.bk.ui.keyboard.ModifierButton
             android:id="@+id/btn_ctrl_symbol"
@@ -699,28 +693,24 @@
     </LinearLayout>
 
     <!-- Fifth and sixth rows plus cursor block horizontal container -->
-    <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-        xmlns:tools="http://schemas.android.com/tools"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="@dimen/btn_row_height_x2"
         android:gravity="center_horizontal"
         android:weightSum="31"
-        android:baselineAligned="false" >
+        android:baselineAligned="false">
 
         <!-- Fifth and sixth rows vertical container -->
-        <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-            xmlns:tools="http://schemas.android.com/tools"
+        <LinearLayout
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:orientation="vertical"
             android:layout_weight="24" >
             <!-- Fifth row horizontal container -->
-            <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-                xmlns:tools="http://schemas.android.com/tools"
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="@dimen/btn_row_height"
-                android:weightSum="24"
-                tools:ignore="HardcodedText" >
+                android:weightSum="24">
 
                 <Button
                     android:id="@+id/btn_uppercase"
@@ -868,12 +858,10 @@
 
             </LinearLayout>
             <!-- Sixth row horizontal container -->
-            <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-                xmlns:tools="http://schemas.android.com/tools"
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="@dimen/btn_row_height"
-                android:weightSum="24"
-                tools:ignore="HardcodedText" >
+                android:weightSum="24">
 
                 <Button
                     android:id="@+id/btn_rus"
@@ -926,13 +914,11 @@
             </LinearLayout>
         </LinearLayout>
 	    <!-- Cursor block horizontal container -->
-	    <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-	        xmlns:tools="http://schemas.android.com/tools"
+	    <LinearLayout
 	        android:layout_width="0dp"
 	        android:layout_height="match_parent"
             android:layout_weight="6"
-            android:weightSum="3"
-            tools:ignore="HardcodedText" >
+            android:weightSum="3">
             <!-- Left cursor button -->
             <ImageButton
                 android:id="@+id/btn_left"
@@ -946,14 +932,12 @@
                 android:scaleType="fitCenter"
                 android:contentDescription="@string/desc_left" />
             <!-- Up and down cursor buttons vertical container -->
-            <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-	            xmlns:tools="http://schemas.android.com/tools"
+            <LinearLayout
 	            android:layout_width="0dp"
 	            android:layout_height="match_parent"
 	            android:layout_weight="1"
 	            android:orientation="vertical"
-	            android:weightSum="2"
-	            tools:ignore="HardcodedText" >
+	            android:weightSum="2">
                 <!-- Up cursor button -->
 	            <ImageButton
 	                android:id="@+id/btn_up"

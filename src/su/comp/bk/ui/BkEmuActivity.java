@@ -43,6 +43,7 @@ import su.comp.bk.arch.cpu.opcode.JsrOpcode;
 import su.comp.bk.arch.io.FloppyController;
 import su.comp.bk.arch.io.FloppyController.FloppyDriveIdentifier;
 import su.comp.bk.arch.io.KeyboardController;
+import su.comp.bk.arch.io.PeripheralPort;
 import su.comp.bk.arch.io.VideoController;
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -57,11 +58,13 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.util.Log;
+import android.view.GestureDetector;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.Window;
 import android.widget.ImageView;
@@ -118,7 +121,7 @@ public class BkEmuActivity extends Activity {
     // Tape parameters block address
     protected int tapeParamsBlockAddr;
 
-    private BkEmuView bkEmuView;
+    protected BkEmuView bkEmuView;
 
     protected Computer computer;
 
@@ -127,6 +130,25 @@ public class BkEmuActivity extends Activity {
     protected String intentDataDiskImagePath;
 
     protected Handler activityHandler;
+
+    /**
+     * Gesture listener
+     */
+    class GestureListener extends GestureDetector.SimpleOnGestureListener {
+        @Override
+        public boolean onDown(MotionEvent e) {
+            return true;
+        }
+        @Override
+        public void onLongPress(MotionEvent e) {
+            bkEmuView.setFpsDrawingEnabled(!bkEmuView.isFpsDrawingEnabled());
+        }
+        @Override
+        public boolean onDoubleTap(MotionEvent e) {
+            toggleOnScreenControlsType();
+            return true;
+        }
+    }
 
     /**
      * Trying to load program image from path from intent data.
@@ -360,6 +382,7 @@ public class BkEmuActivity extends Activity {
         LayoutInflater layoutInflater = getLayoutInflater();
         View mainView = layoutInflater.inflate(R.layout.main, null);
         bkEmuView = (BkEmuView) mainView.findViewById(R.id.emu_view);
+        bkEmuView.setGestureListener(new GestureListener());
         String intentDataString = getIntent().getDataString();
         if (intentDataString != null) {
             if (BkEmuFileDialog.isFileNameFormatMatched(intentDataString,
@@ -385,6 +408,11 @@ public class BkEmuActivity extends Activity {
         KeyboardController keyboardController = this.computer.getKeyboardController();
         keyboardController.setOnScreenKeyboardView(keyboardView);
         keyboardController.setOnScreenKeyboardVisibility(false);
+        View joystickView = mainView.findViewById(R.id.joystick);
+        PeripheralPort peripheralPort = computer.getPeripheralPort();
+        peripheralPort.setOnScreenJoystickView(joystickView);
+        peripheralPort.setOnScreenJoystickVisibility(false);
+
         setContentView(mainView);
         // Show change log with latest changes once after application update
         BkEmuChangeLog changeLog = new BkEmuChangeLog(this);
@@ -515,8 +543,11 @@ public class BkEmuActivity extends Activity {
     @Override
     public void onBackPressed() {
         KeyboardController keyboardController = this.computer.getKeyboardController();
+        PeripheralPort peripheralPort = this.computer.getPeripheralPort();
         if (keyboardController.isOnScreenKeyboardVisible()) {
             keyboardController.setOnScreenKeyboardVisibility(false);
+        } else if (peripheralPort.isOnScreenJoystickVisible()) {
+            peripheralPort.setOnScreenJoystickVisibility(false);
         } else {
             this.computer.pause();
             new AlertDialog.Builder(this)
@@ -570,7 +601,7 @@ public class BkEmuActivity extends Activity {
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
             case R.id.menu_toggle_keyboard:
-                toggleOnScreenKeyboard();
+                toggleOnScreenControlsVisibility();
                 return true;
             case R.id.menu_toggle_screen_mode:
                 toggleScreenMode();
@@ -1037,11 +1068,45 @@ public class BkEmuActivity extends Activity {
         startActivity(Intent.createChooser(appShareIntent, null));
     }
 
-    private void toggleOnScreenKeyboard() {
-        Log.d(TAG, "toggling on-screen keyboard");
+    private void switchOnScreenKeyboardVisibility(boolean isVisible) {
+        Log.d(TAG, "switch on-screen keyboard visibility state: " + (isVisible ? "ON" : "OFF"));
         KeyboardController keyboardController = computer.getKeyboardController();
-        keyboardController.setOnScreenKeyboardVisibility(!keyboardController
-                .isOnScreenKeyboardVisible());
+        keyboardController.setOnScreenKeyboardVisibility(isVisible);
+    }
+
+    private void switchOnScreenJoystickVisibility(boolean isVisible) {
+        Log.d(TAG, "switch on-screen joystick visibility state: " + (isVisible ? "ON" : "OFF"));
+        PeripheralPort peripheralPort = computer.getPeripheralPort();
+        peripheralPort.setOnScreenJoystickVisibility(isVisible);
+    }
+
+    protected void toggleOnScreenControlsVisibility() {
+        boolean isOnScreenKeyboardVisible = computer.getKeyboardController().isOnScreenKeyboardVisible();
+        boolean isOnScreenJoystickVisible = computer.getPeripheralPort().isOnScreenJoystickVisible();
+        if (isOnScreenKeyboardVisible) {
+            // hide on-screen keyboard
+            switchOnScreenKeyboardVisibility(false);
+        } else if (isOnScreenJoystickVisible) {
+            // hide on-screen joystick
+            switchOnScreenJoystickVisibility(false);
+        } else {
+            // show on-screen keyboard
+            switchOnScreenKeyboardVisibility(true);
+        }
+    }
+
+    protected void toggleOnScreenControlsType() {
+        boolean isOnScreenKeyboardVisible = computer.getKeyboardController().isOnScreenKeyboardVisible();
+        boolean isOnScreenJoystickVisible = computer.getPeripheralPort().isOnScreenJoystickVisible();
+        if (isOnScreenJoystickVisible || isOnScreenKeyboardVisible) {
+            if (isOnScreenKeyboardVisible) {
+                switchOnScreenKeyboardVisibility(false);
+                switchOnScreenJoystickVisibility(true);
+            } else {
+                switchOnScreenJoystickVisibility(false);
+                switchOnScreenKeyboardVisibility(true);
+            }
+        }
     }
 
     private void toggleScreenMode() {

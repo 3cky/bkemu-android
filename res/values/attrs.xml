@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <declare-styleable name="CellLayout">
+        <attr name="wrapWidthMode" >
+            <enum name="none" value="0" />
+            <enum name="measure" value="1" />
+        </attr>
+        <attr name="wrapHeightMode" >
+            <enum name="none" value="0" />
+            <enum name="measure" value="1" />
+        </attr>
+        <attr name="cellSizeMode" >
+            <enum name="defaultMode" value="0" />
+            <enum name="equalByWidth" value="1" />
+            <enum name="equalByHeight" value="2" />
+        </attr>
+        <attr name="columnCount" format="integer" />
+        <attr name="rowCount" format="integer" />
+        <attr name="spacing" format="dimension" />
+        <attr name="clipToCellSize" format="boolean" />
+        <attr name="layout_column" format="integer" />
+        <attr name="layout_row" format="integer" />
+        <attr name="layout_columnSpan" format="integer" />
+        <attr name="layout_rowSpan" format="integer" />
+        <attr name="layout_meantWidth" format="boolean" />
+        <attr name="layout_meantHeight" format="boolean" />
+    </declare-styleable>
+</resources>

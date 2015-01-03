@@ -22,6 +22,7 @@ import su.comp.bk.R;
 import su.comp.bk.arch.Computer;
 import su.comp.bk.arch.io.FloppyController;
 import su.comp.bk.arch.io.VideoController;
+import su.comp.bk.ui.BkEmuActivity.GestureListener;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
@@ -101,33 +102,6 @@ public class BkEmuView extends SurfaceView implements SurfaceHolder.Callback {
     protected Matrix videoBufferBitmapTransformMatrix;
 
     protected Computer computer;
-
-    /*
-     * Gesture listener
-     */
-    class GestureListener extends GestureDetector.SimpleOnGestureListener {
-        @Override
-        public boolean onDown(MotionEvent e) {
-            return true;
-        }
-        @Override
-        public void onLongPress(MotionEvent e) {
-            setFpsDrawingEnabled(!isFpsDrawingEnabled());
-        }
-        @Override
-        public boolean onScroll(MotionEvent e1, MotionEvent e2, float distanceX, float distanceY) {
-            return computer.getPeripheralPort().handleMotionEvent(computer.getCpu().getTime(),
-                    distanceX, distanceY);
-        }
-        @Override
-        public boolean onSingleTapConfirmed(MotionEvent e) {
-            return computer.getPeripheralPort().handleSingleTapEvent(computer.getCpu().getTime());
-        }
-        @Override
-        public boolean onDoubleTap(MotionEvent e) {
-            return computer.getPeripheralPort().handleDoubleTapEvent(computer.getCpu().getTime());
-        }
-    }
 
 	/*
 	 * Surface view rendering thread
@@ -228,8 +202,6 @@ public class BkEmuView extends SurfaceView implements SurfaceHolder.Callback {
 
 	public BkEmuView(Context context, AttributeSet attrs) {
         super(context, attrs);
-        gestureDetector = new GestureDetector(context, new GestureListener());
-        gestureDetector.setIsLongpressEnabled(true);
         this.uiUpdateHandler = new Handler();
         // Enable focus grabbing by view
         this.setFocusable(true);
@@ -237,6 +209,11 @@ public class BkEmuView extends SurfaceView implements SurfaceHolder.Callback {
         // Set surface events listener
         SurfaceHolder surfaceHolder = getHolder();
         surfaceHolder.addCallback(this);
+	}
+
+	public void setGestureListener(GestureListener listener) {
+	    gestureDetector = new GestureDetector(getContext(), listener);
+        gestureDetector.setIsLongpressEnabled(true);
 	}
 
     public void setComputer(Computer computer) {
@@ -363,7 +340,7 @@ public class BkEmuView extends SurfaceView implements SurfaceHolder.Callback {
      */
     @Override
     public boolean onTouchEvent(MotionEvent event) {
-        return gestureDetector.onTouchEvent(event);
+        return (gestureDetector != null) ? gestureDetector.onTouchEvent(event)
+                    : super.onTouchEvent(event);
     }
-
 }
