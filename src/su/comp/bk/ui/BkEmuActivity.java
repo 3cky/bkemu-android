@@ -409,8 +409,11 @@ public class BkEmuActivity extends Activity {
         keyboardController.setOnScreenKeyboardView(keyboardView);
         keyboardController.setOnScreenKeyboardVisibility(false);
         View joystickView = mainView.findViewById(R.id.joystick);
+        View joystickDpadView = mainView.findViewById(R.id.joystick_dpad);
+        View joystickButtonsView = mainView.findViewById(R.id.joystick_buttons);
         PeripheralPort peripheralPort = computer.getPeripheralPort();
-        peripheralPort.setOnScreenJoystickView(joystickView);
+        peripheralPort.setOnScreenJoystickViews(new View[] { joystickView,
+                joystickDpadView, joystickButtonsView });
         peripheralPort.setOnScreenJoystickVisibility(false);
 
         setContentView(mainView);

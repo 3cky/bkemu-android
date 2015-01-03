@@ -72,7 +72,7 @@ public class PeripheralPort implements Device, OnTouchListener {
 
     private final Computer computer;
 
-    private View onScreenJoystickView;
+    private View[] onScreenJoystickViews;
 
     private boolean isOnScreenJoystickVisible;
 
@@ -131,13 +131,19 @@ public class PeripheralPort implements Device, OnTouchListener {
         this.state = state;
     }
 
-    public void setOnScreenJoystickView(View joystickView) {
-        this.onScreenJoystickView = joystickView;
+    public void setOnScreenJoystickViews(View... joystickViews) {
+        this.onScreenJoystickViews = joystickViews;
         for (JoystickButton joystickButton : JoystickButton.values()) {
-            View joystickButtonView = joystickView.findViewWithTag(joystickButton.name());
-            if (joystickButtonView != null) {
-                joystickButtonView.setOnTouchListener(this);
-            } else {
+            boolean isJoystickButtonFound = false;
+            for (View joystickView : joystickViews) {
+                if (joystickView != null) {
+                    View joystickButtonView = joystickView.findViewWithTag(joystickButton.name());
+                    if (joystickButtonView != null) {
+                        joystickButtonView.setOnTouchListener(this);
+                    }
+                }
+            }
+            if (!isJoystickButtonFound) {
                 Log.w(TAG, "Can't find view for button: " + joystickButton.name());
             }
         }
@@ -145,7 +151,11 @@ public class PeripheralPort implements Device, OnTouchListener {
 
     public void setOnScreenJoystickVisibility(boolean isVisible) {
         this.isOnScreenJoystickVisible = isVisible;
-        onScreenJoystickView.setVisibility(isVisible ? View.VISIBLE : View.GONE);
+        for (View joystickView : onScreenJoystickViews) {
+            if (joystickView != null) {
+                joystickView.setVisibility(isVisible ? View.VISIBLE : View.GONE);
+            }
+        }
     }
 
     public boolean isOnScreenJoystickVisible() {

@@ -4,139 +4,20 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_margin="@dimen/joy_margin"
     android:orientation="horizontal"
     tools:ignore="HardcodedText" >
 
-    <su.comp.bk.ui.layout.CellLayout
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        app:wrapWidthMode="measure"
-        app:wrapHeightMode="measure"
-        app:rowCount="3"
-        app:columnCount="3">
-
-        <su.comp.bk.ui.joystick.JoystickButton
-            android:id="@+id/joy_up"
-            android:layout_width="wrap_content"
-            android:layout_height="@dimen/joy_size"
-            android:layout_gravity="center"
-            app:layout_column="1"
-            app:layout_row="0"
-            android:background="@drawable/joy_red"
-            android:padding="@dimen/joy_image_padding"
-            android:scaleType="fitCenter"
-            android:src="@drawable/arrow_up"
-            android:tag="UP" />
-
-        <su.comp.bk.ui.joystick.JoystickButton
-            android:id="@+id/joy_down"
-            android:layout_width="wrap_content"
-            android:layout_height="@dimen/joy_size"
-            app:layout_column="1"
-            app:layout_row="2"
-            android:layout_gravity="center"
-            android:scaleType="fitCenter"
-            android:padding="@dimen/joy_image_padding"
-            android:src="@drawable/arrow_down"
-            android:background="@drawable/joy_red"
-            android:tag="DOWN" />
-
-        <su.comp.bk.ui.joystick.JoystickButton
-            android:id="@+id/joy_left"
-            android:layout_width="wrap_content"
-            android:layout_height="@dimen/joy_size"
-            app:layout_column="0"
-            app:layout_row="1"
-            android:layout_gravity="center"
-            android:scaleType="fitCenter"
-            android:padding="@dimen/joy_image_padding"
-            android:src="@drawable/arrow_left"
-            android:background="@drawable/joy_red"
-            android:tag="LEFT" />
-
-        <su.comp.bk.ui.joystick.JoystickButton
-            android:id="@+id/joy_right"
-            android:layout_width="wrap_content"
-            android:layout_height="@dimen/joy_size"
-            app:layout_column="2"
-            app:layout_row="1"
-            android:layout_gravity="center"
-            android:scaleType="fitCenter"
-            android:padding="@dimen/joy_image_padding"
-            android:src="@drawable/arrow_right"
-            android:background="@drawable/joy_red"
-            android:tag="RIGHT" />
-
-    </su.comp.bk.ui.layout.CellLayout>
+    <include
+        android:id="@+id/joystick_dpad"
+        layout="@layout/joystick_dpad" />
 
     <View
         android:layout_width="0dp"
         android:layout_height="match_parent"
         android:layout_weight="1" />
 
-    <su.comp.bk.ui.layout.CellLayout
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        app:wrapWidthMode="measure"
-        app:wrapHeightMode="measure"
-        app:rowCount="3"
-        app:columnCount="3">
-
-        <FrameLayout
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            app:layout_column="0"
-            app:layout_row="1">
-
-            <su.comp.bk.ui.joystick.JoystickButton
-                android:id="@+id/joy_1"
-                android:layout_width="wrap_content"
-                android:layout_height="@dimen/joy_size"
-                android:layout_gravity="center"
-                android:scaleType="fitCenter"
-                android:src="@null"
-                android:background="@drawable/joy_green"
-                android:tag="ONE" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center"
-                android:clickable="false"
-                android:textColor="@color/joy_text"
-                android:textSize="@dimen/joy_text_size"
-                android:text="1" />
-
-        </FrameLayout>
-
-        <FrameLayout
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            app:layout_column="2"
-            app:layout_row="1">
-
-            <su.comp.bk.ui.joystick.JoystickButton
-                android:id="@+id/joy_2"
-                android:layout_width="wrap_content"
-                android:layout_height="@dimen/joy_size"
-                android:layout_gravity="center"
-                android:scaleType="fitCenter"
-                android:src="@null"
-                android:background="@drawable/joy_yellow"
-                android:tag="TWO" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center"
-                android:clickable="false"
-                android:textColor="@color/joy_text"
-                android:textSize="@dimen/joy_text_size"
-                android:text="2" />
-
-        </FrameLayout>
-
-    </su.comp.bk.ui.layout.CellLayout>
+    <include
+        android:id="@+id/joystick_buttons"
+        layout="@layout/joystick_buttons" />
 
 </LinearLayout>
