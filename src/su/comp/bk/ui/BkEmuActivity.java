@@ -32,7 +32,6 @@ import java.util.Arrays;
 import java.util.List;
 
 import org.apache.commons.lang.StringUtils;
-import com.transitionseverywhere.Scene;
 
 import su.comp.bk.R;
 import su.comp.bk.arch.Computer;
@@ -61,7 +60,6 @@ import android.os.Handler;
 import android.util.Log;
 import android.view.GestureDetector;
 import android.view.KeyEvent;
-import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
@@ -73,6 +71,10 @@ import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import com.transitionseverywhere.AutoTransition;
+import com.transitionseverywhere.Transition;
+import com.transitionseverywhere.TransitionManager;
 
 /**
  * Main application activity.
@@ -122,6 +124,10 @@ public class BkEmuActivity extends Activity {
 
     // Tape parameters block address
     protected int tapeParamsBlockAddr;
+
+    protected ViewGroup mainView;
+
+    protected Transition onScreenControlsTransition;
 
     protected BkEmuView bkEmuView;
 
@@ -380,10 +386,10 @@ public class BkEmuActivity extends Activity {
     public void onCreate(Bundle savedInstanceState) {
         Log.d(TAG, "onCreate(), Intent: " + getIntent());
         super.onCreate(savedInstanceState);
+        setContentView(R.layout.main);
         this.activityHandler = new Handler();
-        LayoutInflater layoutInflater = getLayoutInflater();
-        View mainView = layoutInflater.inflate(R.layout.main, null);
-        bkEmuView = (BkEmuView) mainView.findViewById(R.id.emu_view);
+        mainView = (ViewGroup) findViewById(R.id.main_view);
+        bkEmuView = (BkEmuView) findViewById(R.id.emu_view);
         bkEmuView.setGestureListener(new GestureListener());
         String intentDataString = getIntent().getDataString();
         if (intentDataString != null) {
@@ -406,20 +412,22 @@ public class BkEmuActivity extends Activity {
                 this.intentDataDiskImagePath = null;
             }
         }
+
+        onScreenControlsTransition = new AutoTransition();
+        onScreenControlsTransition.setDuration(150l);
+
         KeyboardController keyboardController = this.computer.getKeyboardController();
-        ViewGroup keyboardView = (ViewGroup) mainView.findViewById(R.id.keyboard);
-        Scene keyboardOnScene = Scene.getSceneForLayout(keyboardView, R.layout.keyboard_on, this);
-        Scene keyboardOffScene = Scene.getSceneForLayout(keyboardView, R.layout.keyboard_off, this);
-        keyboardController.setOnScreenKeyboardView(keyboardView, keyboardOnScene, keyboardOffScene);
-        View joystickView = mainView.findViewById(R.id.joystick);
-        View joystickDpadView = mainView.findViewById(R.id.joystick_dpad);
-        View joystickButtonsView = mainView.findViewById(R.id.joystick_buttons);
+        ViewGroup keyboardView = (ViewGroup) findViewById(R.id.keyboard);
+        keyboardController.setOnScreenKeyboardView(keyboardView);
+        keyboardController.setOnScreenKeyboardVisibility(false);
+        View joystickView = findViewById(R.id.joystick);
+        View joystickDpadView = findViewById(R.id.joystick_dpad);
+        View joystickButtonsView = findViewById(R.id.joystick_buttons);
         PeripheralPort peripheralPort = computer.getPeripheralPort();
         peripheralPort.setOnScreenJoystickViews(new View[] { joystickView,
                 joystickDpadView, joystickButtonsView });
         peripheralPort.setOnScreenJoystickVisibility(false);
 
-        setContentView(mainView);
         // Show change log with latest changes once after application update
         BkEmuChangeLog changeLog = new BkEmuChangeLog(this);
         if (changeLog.isCurrentVersionGreaterThanLast()) {
@@ -474,6 +482,7 @@ public class BkEmuActivity extends Activity {
         }
     }
 
+    @Override
     protected void onStart() {
         Log.d(TAG, "onStart()");
         this.computer.start();
@@ -551,8 +560,10 @@ public class BkEmuActivity extends Activity {
         KeyboardController keyboardController = this.computer.getKeyboardController();
         PeripheralPort peripheralPort = this.computer.getPeripheralPort();
         if (keyboardController.isOnScreenKeyboardVisible()) {
+            startOnScreenControlsTransition();
             keyboardController.setOnScreenKeyboardVisibility(false);
         } else if (peripheralPort.isOnScreenJoystickVisible()) {
+            startOnScreenControlsTransition();
             peripheralPort.setOnScreenJoystickVisibility(false);
         } else {
             this.computer.pause();
@@ -654,6 +665,7 @@ public class BkEmuActivity extends Activity {
                     .setTitle(R.string.menu_select_model)
                     .setSingleChoiceItems(models, getComputerConfiguration().ordinal(),
                             new DialogInterface.OnClickListener() {
+                        @Override
                         public void onClick(DialogInterface dialog, int which) {
                             // Mark selected item by tag
                             ListView listView = ((AlertDialog) dialog).getListView();
@@ -661,6 +673,7 @@ public class BkEmuActivity extends Activity {
                         }
                     })
                     .setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
+                        @Override
                         public void onClick(DialogInterface dialog, int whichButton) {
                             // Get tagged selected item, if any
                             ListView listView = ((AlertDialog) dialog).getListView();
@@ -676,6 +689,7 @@ public class BkEmuActivity extends Activity {
                         }
                     })
                     .setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
+                        @Override
                         public void onClick(DialogInterface dialog, int whichButton) {
                             // Do nothing on cancel
                         }
@@ -1089,6 +1103,7 @@ public class BkEmuActivity extends Activity {
     protected void toggleOnScreenControlsVisibility() {
         boolean isOnScreenKeyboardVisible = computer.getKeyboardController().isOnScreenKeyboardVisible();
         boolean isOnScreenJoystickVisible = computer.getPeripheralPort().isOnScreenJoystickVisible();
+        startOnScreenControlsTransition();
         if (isOnScreenKeyboardVisible) {
             // hide on-screen keyboard
             switchOnScreenKeyboardVisibility(false);
@@ -1105,6 +1120,7 @@ public class BkEmuActivity extends Activity {
         boolean isOnScreenKeyboardVisible = computer.getKeyboardController().isOnScreenKeyboardVisible();
         boolean isOnScreenJoystickVisible = computer.getPeripheralPort().isOnScreenJoystickVisible();
         if (isOnScreenJoystickVisible || isOnScreenKeyboardVisible) {
+            startOnScreenControlsTransition();
             if (isOnScreenKeyboardVisible) {
                 switchOnScreenKeyboardVisibility(false);
                 switchOnScreenJoystickVisibility(true);
@@ -1113,6 +1129,10 @@ public class BkEmuActivity extends Activity {
                 switchOnScreenKeyboardVisibility(true);
             }
         }
+    }
+
+    protected void startOnScreenControlsTransition() {
+        TransitionManager.beginDelayedTransition(mainView, onScreenControlsTransition);
     }
 
     private void toggleScreenMode() {
