@@ -22,12 +22,19 @@ import su.comp.bk.R;
 import su.comp.bk.arch.Computer;
 import su.comp.bk.arch.cpu.Cpu;
 import su.comp.bk.ui.keyboard.ModifierButton;
+
+import com.transitionseverywhere.Scene;
+import com.transitionseverywhere.Slide;
+import com.transitionseverywhere.TransitionManager;
+
 import android.os.Bundle;
 import android.util.Log;
+import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.View.OnTouchListener;
+import android.view.ViewGroup;
 import android.widget.ImageButton;
 
 /**
@@ -119,6 +126,8 @@ public class KeyboardController implements Device, OnTouchListener {
     private boolean isOnScreenKeyboardVisible = false;
 
     private View onScreenKeyboardView;
+    private Scene onScreenKeyboardOnScene;
+    private Scene onScreenKeyboardOffScene;
 
     private ModifierButton ar2Button;
     private ModifierButton ctrlSymbolButton;
@@ -279,8 +288,11 @@ public class KeyboardController implements Device, OnTouchListener {
         lowRegisterKeyCodeTable[0137] = 0177;
     }
 
-    public void setOnScreenKeyboardView(View keyboardView) {
+    public void setOnScreenKeyboardView(ViewGroup keyboardView, Scene keyboardOnScene,
+            Scene keyboardOffScene) {
         this.onScreenKeyboardView = keyboardView;
+        this.onScreenKeyboardOnScene = keyboardOnScene;
+        this.onScreenKeyboardOffScene = keyboardOffScene;
         for (BkButton bkButton : BkButton.values()) {
             View buttonView = keyboardView.findViewWithTag(bkButton.name());
             if (buttonView != null) {
@@ -300,7 +312,9 @@ public class KeyboardController implements Device, OnTouchListener {
 
     public void setOnScreenKeyboardVisibility(boolean isVisible) {
         this.isOnScreenKeyboardVisible = isVisible;
-        onScreenKeyboardView.setVisibility(isVisible ? View.VISIBLE : View.GONE);
+        Slide slide = new Slide(Gravity.BOTTOM);
+        slide.setDuration(250l);
+        TransitionManager.go(isVisible ? onScreenKeyboardOnScene : onScreenKeyboardOffScene, slide);
     }
 
     public boolean isOnScreenKeyboardVisible() {

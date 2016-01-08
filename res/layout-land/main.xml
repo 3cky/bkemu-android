@@ -69,6 +69,6 @@
 
     <include
         android:id="@+id/keyboard"
-        layout="@layout/keyboard" />
+        layout="@layout/keyboard_off" />
 
 </LinearLayout>

@@ -50,7 +50,7 @@
 
     <include
         android:id="@+id/keyboard"
-        layout="@layout/keyboard" />
+        layout="@layout/keyboard_off" />
 
     <include
         android:id="@+id/joystick"

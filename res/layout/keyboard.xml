@@ -4,7 +4,6 @@
     android:layout_height="wrap_content"
     android:layout_gravity="center_horizontal"
     android:orientation="vertical"
-    android:visibility="visible"
     xmlns:tools="http://schemas.android.com/tools"
     tools:ignore="HardcodedText">
 

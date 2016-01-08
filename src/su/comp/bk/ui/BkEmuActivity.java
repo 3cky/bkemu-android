@@ -32,6 +32,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import org.apache.commons.lang.StringUtils;
+import com.transitionseverywhere.Scene;
 
 import su.comp.bk.R;
 import su.comp.bk.arch.Computer;
@@ -66,6 +67,7 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.Window;
 import android.widget.ImageView;
 import android.widget.ListView;
@@ -404,10 +406,11 @@ public class BkEmuActivity extends Activity {
                 this.intentDataDiskImagePath = null;
             }
         }
-        View keyboardView = mainView.findViewById(R.id.keyboard);
         KeyboardController keyboardController = this.computer.getKeyboardController();
-        keyboardController.setOnScreenKeyboardView(keyboardView);
-        keyboardController.setOnScreenKeyboardVisibility(false);
+        ViewGroup keyboardView = (ViewGroup) mainView.findViewById(R.id.keyboard);
+        Scene keyboardOnScene = Scene.getSceneForLayout(keyboardView, R.layout.keyboard_on, this);
+        Scene keyboardOffScene = Scene.getSceneForLayout(keyboardView, R.layout.keyboard_off, this);
+        keyboardController.setOnScreenKeyboardView(keyboardView, keyboardOnScene, keyboardOffScene);
         View joystickView = mainView.findViewById(R.id.joystick);
         View joystickDpadView = mainView.findViewById(R.id.joystick_dpad);
         View joystickButtonsView = mainView.findViewById(R.id.joystick_buttons);
