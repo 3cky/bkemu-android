@@ -99,7 +99,7 @@ public class BkEmuView extends SurfaceView implements SurfaceHolder.Callback {
 
     private GestureDetector gestureDetector;
 
-    protected Matrix videoBufferBitmapTransformMatrix;
+    protected volatile Matrix videoBufferBitmapTransformMatrix;
 
     protected Computer computer;
 
@@ -271,7 +271,6 @@ public class BkEmuView extends SurfaceView implements SurfaceHolder.Callback {
         int bitmapWidth = videoBufferBitmap.getWidth();
         int bitmapHeight = videoBufferBitmap.getHeight();
         float bitmapAspectRatio = (float) bitmapWidth / bitmapHeight;
-        videoBufferBitmapTransformMatrix = new Matrix();
         float bitmapTranslateX;
         float bitmapTranslateY;
         float bitmapScaleX;
@@ -287,8 +286,10 @@ public class BkEmuView extends SurfaceView implements SurfaceHolder.Callback {
             bitmapTranslateX = 0f;
             bitmapTranslateY = 0f;
         }
-        videoBufferBitmapTransformMatrix.setScale(bitmapScaleX, bitmapScaleY);
-        videoBufferBitmapTransformMatrix.postTranslate(bitmapTranslateX, bitmapTranslateY);
+        Matrix m = new Matrix();
+        m.setScale(bitmapScaleX, bitmapScaleY);
+        m.postTranslate(bitmapTranslateX, bitmapTranslateY);
+        videoBufferBitmapTransformMatrix = m;
     }
 
 	/* (non-Javadoc)

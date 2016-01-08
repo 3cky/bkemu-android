@@ -414,7 +414,7 @@ public class BkEmuActivity extends Activity {
         }
 
         onScreenControlsTransition = new AutoTransition();
-        onScreenControlsTransition.setDuration(150l);
+        onScreenControlsTransition.setDuration(200l);
 
         KeyboardController keyboardController = this.computer.getKeyboardController();
         ViewGroup keyboardView = (ViewGroup) findViewById(R.id.keyboard);
