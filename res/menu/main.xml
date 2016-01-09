@@ -1,13 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
-<menu xmlns:android="http://schemas.android.com/apk/res/android" >
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+        xmlns:app="http://schemas.android.com/apk/res-auto" >
     <item android:id="@+id/menu_toggle_screen_mode"
           android:icon="@drawable/colourbars"
           android:title="@string/menu_toggle_screen_mode"
-          android:showAsAction="ifRoom" />
+          app:showAsAction="ifRoom" />
     <item android:id="@+id/menu_toggle_keyboard"
           android:icon="@drawable/keyboard"
           android:title="@string/menu_toggle_keyboard"
-          android:showAsAction="ifRoom" />
+          app:showAsAction="ifRoom" />
     <item android:id="@+id/menu_open_image"
           android:title="@string/menu_open_image" />
     <item android:id="@+id/menu_disk_manager"
@@ -15,7 +16,7 @@
           android:title="@string/menu_disk_manager"
           android:visible="false"
           android:enabled="false"
-          android:showAsAction="ifRoom" />
+          app:showAsAction="ifRoom" />
     <item android:id="@+id/menu_change_model"
           android:title="@string/menu_change_model" />
     <item android:id="@+id/menu_reset"
@@ -26,6 +27,5 @@
           android:title="@string/menu_changelog" />
     <item android:id="@+id/menu_share"
           android:icon="@drawable/share"
-          android:title="@string/menu_share"
-          android:showAsAction="ifRoom" />
+          android:title="@string/menu_share" />
 </menu>

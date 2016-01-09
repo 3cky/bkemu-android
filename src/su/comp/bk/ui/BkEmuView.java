@@ -29,6 +29,7 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Matrix;
 import android.os.Handler;
+import android.support.v4.content.ContextCompat;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.GestureDetector;
@@ -124,6 +125,7 @@ public class BkEmuView extends SurfaceView implements SurfaceHolder.Callback {
 	        long timeDelta;
 	        Canvas canvas;
 	        VideoController videoController = computer.getVideoController();
+	        int bgColor = ContextCompat.getColor(getContext(), R.color.theme_window_background);
 			while (isRunning) {
 				timeStamp = System.currentTimeMillis();
 				// Repaint surface
@@ -131,7 +133,7 @@ public class BkEmuView extends SurfaceView implements SurfaceHolder.Callback {
 	            if (canvas != null) {
 	                try {
 	                    synchronized (surfaceHolder) {
-	                        canvas.drawColor(Color.BLACK);
+	                        canvas.drawColor(bgColor);
 	                        if (computer != null) {
 	                            canvas.drawBitmap(videoController.renderVideoBuffer(),
 	                                    videoBufferBitmapTransformMatrix, null);

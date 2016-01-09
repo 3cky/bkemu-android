@@ -72,6 +72,10 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import android.support.v7.app.ActionBar;
+import android.support.v7.widget.Toolbar;
+import android.support.v7.app.AppCompatActivity;
+
 import com.transitionseverywhere.AutoTransition;
 import com.transitionseverywhere.Transition;
 import com.transitionseverywhere.TransitionManager;
@@ -79,7 +83,7 @@ import com.transitionseverywhere.TransitionManager;
 /**
  * Main application activity.
  */
-public class BkEmuActivity extends Activity {
+public class BkEmuActivity extends AppCompatActivity {
 
     protected static final String TAG = BkEmuActivity.class.getName();
 
@@ -387,6 +391,7 @@ public class BkEmuActivity extends Activity {
         Log.d(TAG, "onCreate(), Intent: " + getIntent());
         super.onCreate(savedInstanceState);
         setContentView(R.layout.main);
+        initToolbar();
         this.activityHandler = new Handler();
         mainView = (ViewGroup) findViewById(R.id.main_view);
         bkEmuView = (BkEmuView) findViewById(R.id.emu_view);
@@ -437,6 +442,16 @@ public class BkEmuActivity extends Activity {
             if (!changeLog.isFirstRun()) {
                 changeLog.getDialog(false).show();
             }
+        }
+    }
+
+    private void initToolbar() {
+        final Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
+        setSupportActionBar(toolbar);
+        final ActionBar actionBar = getSupportActionBar();
+        if (actionBar != null) {
+            actionBar.setHomeAsUpIndicator(R.drawable.icon);
+            actionBar.setDisplayHomeAsUpEnabled(true);
         }
     }
 

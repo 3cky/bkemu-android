@@ -137,7 +137,7 @@
 	                <version>4.3.0</version>
 	                <configuration>
 	                    <sdk>
-	                        <platform>21</platform>
+	                        <platform>23</platform>
 	                    </sdk>
                         <androidManifestFile>${project.basedir}/AndroidManifest.xml</androidManifestFile>
                         <sourceDirectories>
@@ -185,6 +185,21 @@
                                         <ignore />
                                     </action>
                                 </pluginExecution>
+                                <pluginExecution>
+                                    <pluginExecutionFilter>
+                                        <groupId>org.bitbucket.komo81</groupId>
+                                        <artifactId>
+                                            eclipse-aar-maven-plugin
+                                        </artifactId>
+                                        <versionRange>[1.0.0,)</versionRange>
+                                        <goals>
+                                            <goal>generate</goal>
+                                        </goals>
+                                    </pluginExecutionFilter>
+                                    <action>
+                                        <ignore />
+                                    </action>
+                                </pluginExecution>
                             </pluginExecutions>
                         </lifecycleMappingMetadata>
                     </configuration>
@@ -211,23 +226,17 @@
                     </execution>
                 </executions>
             </plugin>
+            <!-- https://bitbucket.org/komo81/eclipse-aar-maven-plugin -->
             <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-dependency-plugin</artifactId>
+                <groupId>org.bitbucket.komo81</groupId>
+                <artifactId>eclipse-aar-maven-plugin</artifactId>
+                <version>1.0.0</version>
                 <executions>
                     <execution>
-                        <id>copy-dependencies</id>
-                        <phase>package</phase>
                         <goals>
-                            <goal>copy-dependencies</goal>
+                            <goal>clean</goal>
+                            <goal>generate</goal>
                         </goals>
-                        <configuration>
-                            <outputDirectory>${project.basedir}/libs</outputDirectory>
-                            <overWriteReleases>false</overWriteReleases>
-                            <overWriteSnapshots>true</overWriteSnapshots>
-                            <overWriteIfNewer>true</overWriteIfNewer>
-                            <includeScope>runtime</includeScope>
-                        </configuration>
                     </execution>
                 </executions>
             </plugin>
@@ -362,7 +371,13 @@
         <dependency>
             <groupId>com.android.support</groupId>
             <artifactId>support-v4</artifactId>
-            <version>21.0.3</version>
+            <version>23.1.1</version>
+            <type>aar</type>
+        </dependency>
+        <dependency>
+            <groupId>com.android.support</groupId>
+            <artifactId>appcompat-v7</artifactId>
+            <version>23.1.1</version>
             <type>aar</type>
         </dependency>
 
