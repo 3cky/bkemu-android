@@ -145,11 +145,11 @@ public class BkEmuFileDialog extends ListActivity {
         if (!currentPath.equals(ROOT_PATH)) {
 
             item.add(ROOT_PATH);
-            addItem(ROOT_PATH, R.drawable.folder);
+            addItem(ROOT_PATH, R.drawable.ic_folder_white_24dp);
             path.add(ROOT_PATH);
 
             item.add("../");
-            addItem("../", R.drawable.folder);
+            addItem("../", R.drawable.ic_folder_white_24dp);
             path.add(f.getParent());
             parentPath = f.getParent();
 
@@ -188,11 +188,11 @@ public class BkEmuFileDialog extends ListActivity {
                 new int[] { R.id.fd_row_text, R.id.fd_row_image });
 
         for (String dir : dirsMap.tailMap("").values()) {
-            addItem(dir, R.drawable.folder);
+            addItem(dir, R.drawable.ic_folder_white_24dp);
         }
 
         for (String file : filesMap.tailMap("").values()) {
-            addItem(file, R.drawable.file);
+            addItem(file, R.drawable.ic_description_white_24dp);
         }
 
         fileList.notifyDataSetChanged();

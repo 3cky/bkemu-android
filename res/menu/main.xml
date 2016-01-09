@@ -2,17 +2,17 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
         xmlns:app="http://schemas.android.com/apk/res-auto" >
     <item android:id="@+id/menu_toggle_screen_mode"
-          android:icon="@drawable/colourbars"
+          android:icon="@drawable/ic_tv_white_24dp"
           android:title="@string/menu_toggle_screen_mode"
           app:showAsAction="ifRoom" />
     <item android:id="@+id/menu_toggle_keyboard"
-          android:icon="@drawable/keyboard"
+          android:icon="@drawable/ic_keyboard_white_24dp"
           android:title="@string/menu_toggle_keyboard"
           app:showAsAction="ifRoom" />
     <item android:id="@+id/menu_open_image"
           android:title="@string/menu_open_image" />
     <item android:id="@+id/menu_disk_manager"
-          android:icon="@drawable/floppy_icon"
+          android:icon="@drawable/ic_save_white_24dp"
           android:title="@string/menu_disk_manager"
           android:visible="false"
           android:enabled="false"
@@ -26,6 +26,5 @@
     <item android:id="@+id/menu_changelog"
           android:title="@string/menu_changelog" />
     <item android:id="@+id/menu_share"
-          android:icon="@drawable/share"
           android:title="@string/menu_share" />
 </menu>
