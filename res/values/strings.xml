@@ -2,8 +2,9 @@
 <resources>
     <string name="app_name">BkEmu</string>
     <string name="fps_string">%d FPS</string>
-    <string name="menu_toggle_keyboard">Toggle on-screen keyboard</string>
-    <string name="menu_toggle_screen_mode">Toggle color mode</string>
+    <string name="menu_toggle_keyboard">On-screen keyboard</string>
+    <string name="menu_toggle_joystick">On-screen joystick</string>
+    <string name="menu_toggle_screen_mode">Screen mode</string>
     <string name="menu_reset">Reset computer</string>
     <string name="menu_change_model">Change model</string>
     <string name="menu_select_model">Select model</string>

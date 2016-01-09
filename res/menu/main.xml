@@ -9,6 +9,10 @@
           android:icon="@drawable/ic_keyboard_white_24dp"
           android:title="@string/menu_toggle_keyboard"
           app:showAsAction="ifRoom" />
+    <item android:id="@+id/menu_toggle_joystick"
+          android:icon="@drawable/ic_gamepad_white_24dp"
+          android:title="@string/menu_toggle_joystick"
+          app:showAsAction="ifRoom" />
     <item android:id="@+id/menu_open_image"
           android:title="@string/menu_open_image" />
     <item android:id="@+id/menu_disk_manager"

@@ -2,6 +2,7 @@
 <resources>
     <string name="fps_string">%d КВС</string>
     <string name="menu_toggle_keyboard">Клавиатура</string>
+    <string name="menu_toggle_joystick">Джойстик</string>
     <string name="menu_toggle_screen_mode">Режим экрана</string>
     <string name="menu_reset">Аппаратный сброс</string>
     <string name="menu_change_model">Выбрать модель</string>

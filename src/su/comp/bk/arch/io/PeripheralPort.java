@@ -148,6 +148,8 @@ public class PeripheralPort implements Device, OnTouchListener {
                     View joystickButtonView = joystickView.findViewWithTag(joystickButton.name());
                     if (joystickButtonView != null) {
                         joystickButtonView.setOnTouchListener(this);
+                        isJoystickButtonFound = true;
+                        break;
                     }
                 }
             }

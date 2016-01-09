@@ -71,7 +71,6 @@ import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
-
 import android.support.v7.app.ActionBar;
 import android.support.v7.widget.Toolbar;
 import android.support.v7.app.AppCompatActivity;
@@ -93,6 +92,13 @@ public class BkEmuActivity extends AppCompatActivity {
     // State save/restore: Last selected disk image file URI
     private static final String LAST_DISK_IMAGE_FILE_URI = BkEmuActivity.class.getName() +
             "#last_disk_image_file_uri";
+    // State save/restore: On-screen joystick visibility state
+    private static final String ON_SCREEN_JOYSTICK_VISIBLE = BkEmuActivity.class.getName() +
+            "#on_screen_joystick_visible";
+    // State save/restore: On-screen keyboard visibility state
+    private static final String ON_SCREEN_KEYBOARD_VISIBLE =  BkEmuActivity.class.getName() +
+            "#on_screen_keyboard_visible";
+
 
     public final static int STACK_TOP_ADDRESS = 01000;
 
@@ -157,7 +163,7 @@ public class BkEmuActivity extends AppCompatActivity {
         }
         @Override
         public boolean onDoubleTap(MotionEvent e) {
-            toggleOnScreenControlsType();
+            toggleOnScreenControlsVisibility();
             return true;
         }
     }
@@ -545,17 +551,25 @@ public class BkEmuActivity extends AppCompatActivity {
         outState.putString(LAST_BIN_IMAGE_FILE_URI, lastBinImageFileUri);
         // Save last disk image file path
         outState.putString(LAST_DISK_IMAGE_FILE_URI, lastDiskImageFileUri);
+        // Save on-screen control states
+        outState.putBoolean(ON_SCREEN_JOYSTICK_VISIBLE, isOnScreenJoystickVisible());
+        outState.putBoolean(ON_SCREEN_KEYBOARD_VISIBLE, isOnScreenKeyboardVisible());
+        // Save computer state
         this.computer.saveState(getResources(), outState);
         super.onSaveInstanceState(outState);
     }
 
     @Override
-    protected void onRestoreInstanceState(Bundle savedInstanceState) {
+    protected void onRestoreInstanceState(Bundle inState) {
+        Log.d(TAG, "onRestoreInstanceState()");
         // Restore last emulator image file path
-        lastBinImageFileUri = savedInstanceState.getString(LAST_BIN_IMAGE_FILE_URI);
+        lastBinImageFileUri = inState.getString(LAST_BIN_IMAGE_FILE_URI);
         // Restore last disk image file path
-        lastDiskImageFileUri = savedInstanceState.getString(LAST_DISK_IMAGE_FILE_URI);
-        super.onRestoreInstanceState(savedInstanceState);
+        lastDiskImageFileUri = inState.getString(LAST_DISK_IMAGE_FILE_URI);
+        // Restore on-screen control states
+        switchOnScreenJoystickVisibility(inState.getBoolean(ON_SCREEN_JOYSTICK_VISIBLE));
+        switchOnScreenKeyboardVisibility(inState.getBoolean(ON_SCREEN_KEYBOARD_VISIBLE));
+        super.onRestoreInstanceState(inState);
     }
 
     @Override
@@ -633,7 +647,10 @@ public class BkEmuActivity extends AppCompatActivity {
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
             case R.id.menu_toggle_keyboard:
-                toggleOnScreenControlsVisibility();
+                toggleOnScreenKeyboardVisibility();
+                return true;
+            case R.id.menu_toggle_joystick:
+                toggleOnScreenJoystickVisibility();
                 return true;
             case R.id.menu_toggle_screen_mode:
                 toggleScreenMode();
@@ -1103,6 +1120,14 @@ public class BkEmuActivity extends AppCompatActivity {
         startActivity(Intent.createChooser(appShareIntent, null));
     }
 
+    protected boolean isOnScreenJoystickVisible() {
+        return computer.getPeripheralPort().isOnScreenJoystickVisible();
+    }
+
+    protected boolean isOnScreenKeyboardVisible() {
+        return computer.getKeyboardController().isOnScreenKeyboardVisible();
+    }
+
     private void switchOnScreenKeyboardVisibility(boolean isVisible) {
         Log.d(TAG, "switch on-screen keyboard visibility state: " + (isVisible ? "ON" : "OFF"));
         KeyboardController keyboardController = computer.getKeyboardController();
@@ -1116,14 +1141,14 @@ public class BkEmuActivity extends AppCompatActivity {
     }
 
     protected void toggleOnScreenControlsVisibility() {
-        boolean isOnScreenKeyboardVisible = computer.getKeyboardController().isOnScreenKeyboardVisible();
-        boolean isOnScreenJoystickVisible = computer.getPeripheralPort().isOnScreenJoystickVisible();
         startOnScreenControlsTransition();
-        if (isOnScreenKeyboardVisible) {
-            // hide on-screen keyboard
+        if (isOnScreenKeyboardVisible()) {
+            // hide on-screen keyboard, show joystick
             switchOnScreenKeyboardVisibility(false);
-        } else if (isOnScreenJoystickVisible) {
-            // hide on-screen joystick
+            switchOnScreenJoystickVisibility(true);
+        } else if (isOnScreenJoystickVisible()) {
+            // hide on-screen controls
+            switchOnScreenKeyboardVisibility(false);
             switchOnScreenJoystickVisibility(false);
         } else {
             // show on-screen keyboard
@@ -1131,19 +1156,20 @@ public class BkEmuActivity extends AppCompatActivity {
         }
     }
 
-    protected void toggleOnScreenControlsType() {
-        boolean isOnScreenKeyboardVisible = computer.getKeyboardController().isOnScreenKeyboardVisible();
-        boolean isOnScreenJoystickVisible = computer.getPeripheralPort().isOnScreenJoystickVisible();
-        if (isOnScreenJoystickVisible || isOnScreenKeyboardVisible) {
-            startOnScreenControlsTransition();
-            if (isOnScreenKeyboardVisible) {
-                switchOnScreenKeyboardVisibility(false);
-                switchOnScreenJoystickVisibility(true);
-            } else {
-                switchOnScreenJoystickVisibility(false);
-                switchOnScreenKeyboardVisibility(true);
-            }
+    protected void toggleOnScreenJoystickVisibility() {
+        startOnScreenControlsTransition();
+        if (isOnScreenKeyboardVisible()) {
+            switchOnScreenKeyboardVisibility(false);
         }
+        switchOnScreenJoystickVisibility(!isOnScreenJoystickVisible());
+    }
+
+    protected void toggleOnScreenKeyboardVisibility() {
+        startOnScreenControlsTransition();
+        if (isOnScreenJoystickVisible()) {
+            switchOnScreenJoystickVisibility(false);
+        }
+        switchOnScreenKeyboardVisibility(!isOnScreenKeyboardVisible());
     }
 
     protected void startOnScreenControlsTransition() {
