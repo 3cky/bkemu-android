@@ -48,8 +48,6 @@ public class BkEmuFileDialog extends ListActivity {
 
     private InputMethodManager inputManager;
 
-    private LinearLayout layoutCreate;
-
     protected String parentPath;
     protected String currentPath;
 
@@ -110,13 +108,13 @@ public class BkEmuFileDialog extends ListActivity {
         getListView().setFastScrollEnabled(true);
 
         pathTextView = (TextView) findViewById(R.id.path);
-        fileNameEditText = (EditText) findViewById(R.id.fd_edit_text_file);
+        fileNameEditText = (EditText) findViewById(R.id.fd_edit_text_filename);
         progressBar = (ProgressBar) findViewById(R.id.fd_progress_bar);
 
         inputManager = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
 
-        layoutCreate = (LinearLayout) findViewById(R.id.fd_layout_create);
-        layoutCreate.setVisibility(View.GONE);
+        LinearLayout layoutFilename = (LinearLayout) findViewById(R.id.fd_layout_filename);
+        layoutFilename.setVisibility(View.GONE); // FIXME should be visible on save
 
         formatFilter = getIntent().getStringArrayExtra(INTENT_FORMAT_FILTER);
         if (formatFilter == null) {
@@ -128,12 +126,13 @@ public class BkEmuFileDialog extends ListActivity {
         cancelButton.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
-                setCreateVisibility(v, false);
+                finish();
             }
         });
 
-        final Button createButton = (Button) findViewById(R.id.fd_btn_create);
-        createButton.setOnClickListener(new OnClickListener() {
+        final Button saveButton = (Button) findViewById(R.id.fd_btn_save);
+        saveButton.setVisibility(View.GONE); // FIXME should be visible on save
+        saveButton.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
                 if (fileNameEditText.getText().length() > 0) {
@@ -144,6 +143,8 @@ public class BkEmuFileDialog extends ListActivity {
                 }
             }
         });
+        final Button createDirButton = (Button) findViewById(R.id.fd_btn_create_dir);
+        createDirButton.setVisibility(View.GONE); // FIXME should be visible on save
 
         String startPath = getIntent().getStringExtra(INTENT_START_PATH);
         startPath = (startPath != null) ? startPath : ROOT_PATH;
@@ -292,7 +293,6 @@ public class BkEmuFileDialog extends ListActivity {
      * @param isCreateVisible <code>true</code> to set visible, <code>false</code> to set invisible
      */
     protected void setCreateVisibility(View v, boolean isCreateVisible) {
-        layoutCreate.setVisibility(isCreateVisible ? View.VISIBLE : View.GONE);
-        inputManager.hideSoftInputFromWindow(v.getWindowToken(), 0);
+        inputManager.hideSoftInputFromWindow(v.getWindowToken(), 0); // FIXME
     }
 }

@@ -16,25 +16,34 @@
         android:indeterminate="true" />
 
     <LinearLayout
-        android:id="@+id/fd_layout_create"
+        android:id="@+id/fd_layout_controls"
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
         android:orientation="vertical" >
 
-        <TextView
-            android:id="@+id/fd_text_view_filename"
-            android:layout_width="fill_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/fd_file_name" />
 
-        <EditText
-            android:id="@+id/fd_edit_text_file"
+        <LinearLayout
+            android:id="@+id/fd_layout_filename"
             android:layout_width="fill_parent"
             android:layout_height="wrap_content"
-            android:inputType="textUri"
-            android:text="" >
-        </EditText>
+            android:orientation="vertical" >
+
+            <TextView
+                android:id="@+id/fd_text_view_filename"
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/fd_file_name" />
+
+            <EditText
+                android:id="@+id/fd_edit_text_filename"
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:inputType="textUri"
+                android:text="" >
+            </EditText>
+
+        </LinearLayout>
 
         <LinearLayout
             android:layout_width="fill_parent"
@@ -42,19 +51,27 @@
             android:orientation="horizontal" >
 
             <Button
+                android:id="@+id/fd_btn_create_dir"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".33"
+                android:text="@string/fd_create_dir" >
+            </Button>
+
+            <Button
                 android:id="@+id/fd_btn_cancel"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_weight=".3"
+                android:layout_weight=".33"
                 android:text="@string/cancel" >
             </Button>
 
             <Button
-                android:id="@+id/fd_btn_create"
+                android:id="@+id/fd_btn_save"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_weight=".7"
-                android:text="@string/fd_create" >
+                android:layout_weight=".33"
+                android:text="@string/fd_save" >
             </Button>
         </LinearLayout>
     </LinearLayout>
@@ -62,7 +79,7 @@
     <LinearLayout
         android:layout_width="fill_parent"
         android:layout_height="fill_parent"
-        android:layout_above="@+id/fd_layout_create"
+        android:layout_above="@+id/fd_layout_controls"
         android:orientation="vertical" >
 
         <TextView

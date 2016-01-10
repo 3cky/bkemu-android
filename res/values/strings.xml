@@ -38,7 +38,8 @@
     <string name="fd_new_file">New</string>
     <string name="fd_select">Select</string>
     <string name="fd_file_name">File name:</string>
-    <string name="fd_create">Save</string>
+    <string name="fd_save">Save</string>
+    <string name="fd_create_dir">New Folder</string>
     <string name="fd_no_data">No Data</string>
     <string name="err">Error</string>
     <string name="exit_confirm_title">Quit emulator</string>

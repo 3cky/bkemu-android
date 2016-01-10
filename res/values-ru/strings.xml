@@ -7,7 +7,7 @@
     <string name="menu_reset">Аппаратный сброс</string>
     <string name="menu_change_model">Выбрать модель</string>
     <string name="menu_select_model">Выберите модель</string>
-    <string name="menu_open_image">Открыть файл</string>
+    <string name="menu_open_image">Загрузить BIN-файл</string>
     <string name="menu_disk_manager">Диспетчер дисков</string>
     <string name="menu_about">Об эмуляторе</string>
     <string name="menu_share">Поделиться!</string>
@@ -37,7 +37,8 @@
     <string name="fd_new_file">Новый</string>
     <string name="fd_select">Выбрать</string>
     <string name="fd_file_name">Имя файла:</string>
-    <string name="fd_create">Сохранить</string>
+    <string name="fd_save">Сохранить</string>
+    <string name="fd_create_dir">Создать</string>
     <string name="fd_no_data">Нет файлов</string>
     <string name="err">Ошибка</string>
     <string name="exit_confirm_title">Выход</string>
