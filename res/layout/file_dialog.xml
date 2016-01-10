@@ -5,6 +5,16 @@
     android:orientation="vertical"
     android:background="?attr/colorPrimary" >
 
+    <ProgressBar
+        android:id="@+id/fd_progress_bar"
+        style="?android:attr/progressBarStyleLarge"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerHorizontal="true"
+        android:layout_centerVertical="true"
+        android:visibility="invisible"
+        android:indeterminate="true" />
+
     <LinearLayout
         android:id="@+id/fd_layout_create"
         android:layout_width="fill_parent"
