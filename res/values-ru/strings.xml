@@ -31,18 +31,23 @@
     <string name="desc_down">Вниз</string>
     <string name="desc_right">Вправо</string>
     <string name="desc_enter">Ввод</string>
-    <string name="fd_title">Выберите файл образа (%s)</string>
+    <string name="fd_label">Файловый менеджер</string>
+    <string name="fd_title_load">Выберите файл (%s)</string>
+    <string name="fd_title_save">Сохранение файла (%s)</string>
     <string name="fd_location">Текущий путь</string>
-    <string name="fd_cant_read_folder">Не могу прочитать содержимое директории!</string>
+    <string name="fd_cant_read_dir">Не могу прочитать содержимое директории!</string>
+    <string name="fd_cant_create_dir">Не удалось создать директорию</string>
     <string name="fd_new_file">Новый</string>
     <string name="fd_select">Выбрать</string>
     <string name="fd_file_name">Имя файла:</string>
     <string name="fd_save">Сохранить</string>
     <string name="fd_create_dir">Создать</string>
+    <string name="fd_create_dir_title">Новая директория</string>
+    <string name="fd_create_dir_label">Имя директории:</string>
     <string name="fd_no_data">Нет файлов</string>
     <string name="err">Ошибка</string>
     <string name="exit_confirm_title">Выход</string>
-    <string name="exit_confirm_message">Вы действительно хотите выйти из программы?</string>
+    <string name="exit_confirm_message">Вы действительно хотите выйти?</string>
     <string name="about_info">Эмулятор семейства 16-разрядных PDP-11-совместимых советских домашних компьютеров <b>Электроника БК&#8211;0010/11M</b></string>
     <string name="about_perf">Эффективная частота процессора: %1$.3f МГц (%2$.2f%%)</string>
     <string name="changelog_title">Что нового?</string>
@@ -53,6 +58,8 @@
     <string name="fdd_image_c">Дисковод C</string>
     <string name="fdd_image_d">Дисковод D</string>
     <string name="fdd_empty">(Пусто)</string>
-    <string name="toast_image_info">Начальный адрес 0%1$o, длина 0%2$o</string>
-    <string name="toast_image_error">Ошибка загрузки файла \'%s\'</string>
+    <string name="toast_image_load_info">Начальный адрес 0%1$o, длина %2$d</string>
+    <string name="toast_image_load_error">Ошибка загрузки файла \'%s\'</string>
+    <string name="toast_image_save_info">Файл \'%s\' сохранен</string>
+    <string name="toast_image_save_error">Ошибка сохранения файла \'%s\'</string>
 </resources>

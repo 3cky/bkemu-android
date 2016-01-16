@@ -20,10 +20,12 @@
 package su.comp.bk.ui;
 
 import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URL;
@@ -86,9 +88,15 @@ public class BkEmuActivity extends AppCompatActivity {
 
     protected static final String TAG = BkEmuActivity.class.getName();
 
-    // State save/restore: Last loaded emulator binary image file URI
+    // State save/restore: Last accessed emulator binary image file URI
     private static final String LAST_BIN_IMAGE_FILE_URI = BkEmuActivity.class.getName() +
             "#last_bin_image_file_uri";
+    // State save/restore: Last accessed emulator binary image file address
+    private static final String LAST_BIN_IMAGE_FILE_LENGTH = BkEmuActivity.class.getName() +
+            "#last_bin_image_file_address";
+    // State save/restore: Last accessed emulator binary image file length
+    private static final String LAST_BIN_IMAGE_FILE_ADDRESS = BkEmuActivity.class.getName() +
+            "#last_bin_image_file_length";
     // State save/restore: Last selected disk image file URI
     private static final String LAST_DISK_IMAGE_FILE_URI = BkEmuActivity.class.getName() +
             "#last_disk_image_file_uri";
@@ -112,6 +120,7 @@ public class BkEmuActivity extends AppCompatActivity {
     private static final int REQUEST_MENU_BIN_IMAGE_FILE_LOAD = 1;
     private static final int REQUEST_EMT_BIN_IMAGE_FILE_LOAD = 2;
     private static final int REQUEST_MENU_DISK_IMAGE_FILE_SELECT = 3;
+    private static final int REQUEST_EMT_BIN_IMAGE_FILE_SAVE = 4;
 
     // Google Play application URL to share
     private static final String APPLICATION_SHARE_URL = "https://play.google.com" +
@@ -228,6 +237,20 @@ public class BkEmuActivity extends AppCompatActivity {
     }
 
     /**
+     * Tape saver task.
+     */
+    class TapeSaverTask implements Runnable {
+        private final String tapeFileName;
+        public TapeSaverTask(String tapeFileName) {
+            this.tapeFileName = tapeFileName;
+        }
+        @Override
+        public void run() {
+            showBinImageFileSaveDialog(REQUEST_EMT_BIN_IMAGE_FILE_SAVE, tapeFileName);
+        }
+    }
+
+    /**
      * BK0010 tape operations handler.
      */
     class TapeOperations10Handler implements Cpu.OnTrapListener {
@@ -287,17 +310,27 @@ public class BkEmuActivity extends AppCompatActivity {
             // Read command code
             int tapeCmdCode = cpu.readMemory(true, tapeParamsBlockAddr);
             switch (tapeCmdCode) {
+                case 2: // Save to tape
                 case 3: // Read from tape
                     computer.pause();
-                    // Read file name
+                    // Get file name
                     byte[] tapeFileNameData = new byte[MAX_TAPE_FILE_NAME_LENGTH];
                     for (int idx = 0; idx < tapeFileNameData.length; idx++) {
                         tapeFileNameData[idx] = (byte) cpu.readMemory(true,
                                 tapeParamsBlockAddr + idx + 6);
                     }
                     String tapeFileName = getFileName(tapeFileNameData);
-                    Log.d(TAG, "BK0010 tape load file: '" + tapeFileName + "'");
-                    activityHandler.post(new TapeLoaderTask(tapeFileName));
+                    if (tapeCmdCode == 2) {
+                        lastBinImageAddress = cpu.readMemory(false, tapeParamsBlockAddr + 2);
+                        lastBinImageLength = cpu.readMemory(false, tapeParamsBlockAddr + 4);
+                        Log.d(TAG, "BK0010 tape save file: '" + tapeFileName + "', address: 0" +
+                                Integer.toOctalString(lastBinImageAddress) +
+                                ", length: " + lastBinImageLength);
+                        activityHandler.post(new TapeSaverTask(tapeFileName));
+                    } else {
+                        Log.d(TAG, "BK0010 tape load file: '" + tapeFileName + "'");
+                        activityHandler.post(new TapeLoaderTask(tapeFileName));
+                    }
                     break;
                 default:
                     break;
@@ -326,18 +359,27 @@ public class BkEmuActivity extends AppCompatActivity {
             // Read command code
             int tapeCmdCode = cpu.readMemory(true, tapeParamsBlockAddr);
             switch (tapeCmdCode) {
+                case 0: // Save to tape
                 case 1: // Read from tape
                     computer.pause();
                     // FIXME handle memory pages setup
-                    // Read file name
+                    // Get file name
                     byte[] tapeFileNameData = new byte[MAX_TAPE_FILE_NAME_LENGTH];
                     for (int idx = 0; idx < tapeFileNameData.length; idx++) {
                         tapeFileNameData[idx] = (byte) cpu.readMemory(true,
                                 tapeParamsBlockAddr + idx + 6);
                     }
                     String tapeFileName = getFileName(tapeFileNameData);
-                    Log.d(TAG, "BK0011 tape load file: '" + tapeFileName + "'");
-                    activityHandler.post(new TapeLoaderTask(tapeFileName));
+                    if (tapeCmdCode == 0) {
+                        lastBinImageAddress = cpu.readMemory(false, tapeParamsBlockAddr + 2);
+                        lastBinImageLength = cpu.readMemory(false, tapeParamsBlockAddr + 4);
+                        Log.d(TAG, "BK0011 tape save file: '" + tapeFileName + "', address: " +
+                                lastBinImageAddress + ", length: " + lastBinImageLength);
+                        activityHandler.post(new TapeSaverTask(tapeFileName));
+                    } else {
+                        Log.d(TAG, "BK0011 tape load file: '" + tapeFileName + "'");
+                        activityHandler.post(new TapeLoaderTask(tapeFileName));
+                    }
                     break;
                 default:
                     break;
@@ -547,8 +589,10 @@ public class BkEmuActivity extends AppCompatActivity {
     @Override
     protected void onSaveInstanceState(Bundle outState) {
         Log.d(TAG, "onSaveInstanceState()");
-        // Save last emulator image file path
+        // Save last accessed emulator image file parameters
         outState.putString(LAST_BIN_IMAGE_FILE_URI, lastBinImageFileUri);
+        outState.putInt(LAST_BIN_IMAGE_FILE_ADDRESS, lastBinImageAddress);
+        outState.putInt(LAST_BIN_IMAGE_FILE_LENGTH, lastBinImageLength);
         // Save last disk image file path
         outState.putString(LAST_DISK_IMAGE_FILE_URI, lastDiskImageFileUri);
         // Save on-screen control states
@@ -562,8 +606,10 @@ public class BkEmuActivity extends AppCompatActivity {
     @Override
     protected void onRestoreInstanceState(Bundle inState) {
         Log.d(TAG, "onRestoreInstanceState()");
-        // Restore last emulator image file path
+        // Restore last accessed emulator image file parameters
         lastBinImageFileUri = inState.getString(LAST_BIN_IMAGE_FILE_URI);
+        lastBinImageAddress = inState.getInt(LAST_BIN_IMAGE_FILE_ADDRESS);
+        lastBinImageLength = inState.getInt(LAST_BIN_IMAGE_FILE_LENGTH);
         // Restore last disk image file path
         lastDiskImageFileUri = inState.getString(LAST_DISK_IMAGE_FILE_URI);
         // Restore on-screen control states
@@ -891,6 +937,19 @@ public class BkEmuActivity extends AppCompatActivity {
         if (tapeFileName != null && tapeFileName.length() > 0) {
             intent.putExtra(BkEmuFileDialog.INTENT_FORMAT_FILTER, new String[] { tapeFileName });
         }
+        intent.putExtra(BkEmuFileDialog.INTENT_MODE, BkEmuFileDialog.Mode.LOAD);
+        startActivityForResult(intent, requestCode);
+    }
+
+    /**
+     * Show BIN emulator image file save dialog.
+     * @param tapeFileName file name to save
+     */
+    protected void showBinImageFileSaveDialog(int requestCode, String tapeFileName) {
+        Intent intent = new Intent(getBaseContext(), BkEmuFileDialog.class);
+        String startPath = new File(getFileDirectoryPath(lastBinImageFileUri), tapeFileName).getPath();
+        intent.putExtra(BkEmuFileDialog.INTENT_START_PATH, startPath);
+        intent.putExtra(BkEmuFileDialog.INTENT_MODE, BkEmuFileDialog.Mode.SAVE);
         startActivityForResult(intent, requestCode);
     }
 
@@ -905,6 +964,7 @@ public class BkEmuActivity extends AppCompatActivity {
         intent.putExtra(BkEmuFileDialog.INTENT_FORMAT_FILTER,
                 BkEmuFileDialog.FORMAT_FILTER_DISK_IMAGES);
         intent.putExtra(FloppyDriveIdentifier.class.getName(), fddIdentifier.name());
+        intent.putExtra(BkEmuFileDialog.INTENT_MODE, BkEmuFileDialog.Mode.LOAD);
         startActivityForResult(intent, REQUEST_MENU_DISK_IMAGE_FILE_SELECT);
     }
 
@@ -934,6 +994,14 @@ public class BkEmuActivity extends AppCompatActivity {
                 }
                 doFinishBinImageLoad(isImageLoaded);
                 break;
+            case REQUEST_EMT_BIN_IMAGE_FILE_SAVE:
+                boolean isImageSaved = false;
+                if (resultCode == Activity.RESULT_OK) {
+                    String binImageFilePath = data.getStringExtra(BkEmuFileDialog.INTENT_RESULT_PATH);
+                    isImageSaved = binImageFileSave(binImageFilePath);
+                }
+                doFinishBinImageSave(isImageSaved);
+                break;
             case REQUEST_MENU_DISK_IMAGE_FILE_SELECT:
                 FloppyController floppyController = computer.getFloppyController();
                 if (resultCode == Activity.RESULT_OK && floppyController != null) {
@@ -956,17 +1024,69 @@ public class BkEmuActivity extends AppCompatActivity {
         }
     }
 
+    protected boolean binImageFileSave(String binImageFilePath) {
+        boolean isImageSaved = doBinImageFileSave(binImageFilePath);
+        if (isImageSaved) {
+            Toast.makeText(getApplicationContext(),
+                    getResources().getString(R.string.toast_image_save_info,
+                            binImageFilePath),
+                            Toast.LENGTH_LONG)
+                            .show();
+        } else {
+            Toast.makeText(getApplicationContext(),
+                    getResources().getString(R.string.toast_image_save_error,
+                            binImageFilePath),
+                            Toast.LENGTH_LONG)
+                            .show();
+        }
+        return isImageSaved;
+    }
+
+    protected boolean doBinImageFileSave(String binImageFilePath) {
+        boolean isImageSaved = false;
+        try {
+            saveBinImageFile(binImageFilePath);
+            isImageSaved = true;
+        } catch (Exception e) {
+            Log.e(TAG, "Can't save emulator image", e);
+        }
+        return isImageSaved;
+    }
+
+    protected void doFinishBinImageSave(boolean isImageSavedSuccessfully) {
+        // Set result in parameters block
+        synchronized (computer) {
+            if (!computer.getConfiguration().isMemoryManagerPresent()) { // BK0010
+                // Set result code
+                int resultCode = isImageSavedSuccessfully ? 0 : 3; // OK / STOP
+                computer.writeMemory(true, tapeParamsBlockAddr + 1, resultCode);
+                // Return from EMT 36
+                computer.getCpu().returnFromTrap(false);
+            } else { // BK0011
+                // Set result code
+                if (isImageSavedSuccessfully) {
+                    computer.getCpu().clearPswFlagC();
+                } else {
+                    computer.getCpu().setPswFlagC();
+                    computer.writeMemory(true, 052, 4); // STOP
+                }
+                // Return from tape save routine
+                computer.getCpu().writeRegister(false, Cpu.PC, computer.getCpu().pop());
+            }
+        }
+    }
+
     protected boolean binImageFileLoad(String binImageFilePath) {
         boolean isImageLoaded = doBinImageFileLoad(binImageFilePath);
         if (isImageLoaded) {
             Toast.makeText(getApplicationContext(),
-                    getResources().getString(R.string.toast_image_info,
+                    getResources().getString(R.string.toast_image_load_info,
                         lastBinImageAddress, lastBinImageLength),
                     Toast.LENGTH_LONG)
                     .show();
         } else {
             Toast.makeText(getApplicationContext(),
-                    getResources().getString(R.string.toast_image_error,
+                    getResources().getString(R.string.toast_image_load_error,
                             binImageFilePath),
                     Toast.LENGTH_LONG)
                     .show();
@@ -977,7 +1097,7 @@ public class BkEmuActivity extends AppCompatActivity {
     protected boolean doBinImageFileLoad(String binImageFilePath) {
         boolean isImageLoaded = false;
         try {
-            loadBinImageFile("file:" + binImageFilePath);
+            loadBinImageFile(binImageFilePath);
             isImageLoaded = true;
         } catch (Exception e) {
             Log.e(TAG, "Can't load emulator image", e);
@@ -1073,20 +1193,32 @@ public class BkEmuActivity extends AppCompatActivity {
      */
     protected int loadBinImageFile(String binImageFilePath) throws Exception {
         Log.d(TAG, "loading image: " + binImageFilePath);
-        BufferedInputStream binImageInput = new BufferedInputStream(
-                new URL(binImageFilePath).openStream());
         ByteArrayOutputStream binImageOutput = new ByteArrayOutputStream();
-        int readByte;
-        while ((readByte = binImageInput.read()) != -1) {
-            binImageOutput.write(readByte);
+        BufferedInputStream binImageInput = null;
+        String bunImageFileUri = "file:" + binImageFilePath;
+        try {
+            binImageInput = new BufferedInputStream(new URL(bunImageFileUri).openStream());
+            int readByte;
+            while ((readByte = binImageInput.read()) != -1) {
+                binImageOutput.write(readByte);
+            }
+        } finally {
+            try {
+                if (binImageInput != null) {
+                    binImageInput.close();
+                }
+            } catch (Exception e) {
+                // Do nothing
+            }
         }
-        this.lastBinImageFileUri = binImageFilePath;
+        this.lastBinImageFileUri = bunImageFileUri;
         return loadBinImage(binImageOutput.toByteArray());
     }
 
     /**
      * Load image in bin format (address/length/data) from byte array.
      * @param imageData image data byte array
+     * @return image load address
      * @throws IOException in case of loading error
      */
     public int loadBinImage(byte[] imageData) throws IOException {
@@ -1104,13 +1236,64 @@ public class BkEmuActivity extends AppCompatActivity {
             for (int imageIndex = 0; imageIndex < lastBinImageLength; imageIndex++) {
                 if (!computer.writeMemory(true, lastBinImageAddress + imageIndex, imageDataInputStream.read())) {
                     throw new IllegalStateException("Can't write binary image data to address: 0" +
-                            Integer.toOctalString(lastBinImageAddress) + imageIndex);
+                            Integer.toOctalString(lastBinImageAddress + imageIndex));
                 }
             }
         }
         Log.d(TAG, "loaded bin image file: address 0" + Integer.toOctalString(lastBinImageAddress) +
                 ", length: " + lastBinImageLength);
         return lastBinImageAddress;
+    }
+
+    /**
+     * Save program image in bin format (address/length/data) from given path.
+     * @param binImageFilePath emulator image file path
+     * @throws Exception in case of saving error
+     */
+    protected void saveBinImageFile(String binImageFilePath) throws Exception {
+        Log.d(TAG, "saving image: " + binImageFilePath);
+        ByteArrayOutputStream binImageOutput = new ByteArrayOutputStream();
+        binImageOutput.write(lastBinImageAddress & 0377);
+        binImageOutput.write((lastBinImageAddress >> 8) & 0377);
+        binImageOutput.write(lastBinImageLength & 0377);
+        binImageOutput.write((lastBinImageLength >> 8) & 0377);
+        synchronized (computer) {
+            for (int imageIndex = 0; imageIndex < lastBinImageLength; imageIndex++) {
+                int imageData = computer.readMemory(true, lastBinImageAddress + imageIndex);
+                if (imageData == Computer.BUS_ERROR) {
+                    throw new IllegalStateException("Can't read binary image data from address: 0" +
+                            Integer.toOctalString(lastBinImageAddress + imageIndex));
+                }
+                binImageOutput.write(imageData);
+            }
+        }
+        saveBinImage(binImageFilePath, binImageOutput.toByteArray());
+        this.lastBinImageFileUri = "file:" + binImageFilePath;
+    }
+
+    /**
+     * Save image in bin format (address/length/data) from byte array.
+     * @param imagePath image file path
+     * @param imageData image data byte array
+     * @throws IOException in case of saving error
+     */
+    public void saveBinImage(String imagePath, byte[] imageData) throws IOException {
+        BufferedOutputStream binImageOutput = null;
+        try {
+            binImageOutput = new BufferedOutputStream(new FileOutputStream(imagePath));
+            binImageOutput.write(imageData);
+            binImageOutput.flush();
+        } finally {
+            try {
+                if (binImageOutput != null) {
+                    binImageOutput.close();
+                }
+            } catch (Exception e) {
+                // Do nothing
+            }
+        }
+        Log.d(TAG, "saved bin image file: address 0" + Integer.toOctalString(lastBinImageAddress) +
+                ", length: " + lastBinImageLength);
     }
 
     private void shareApplication() {

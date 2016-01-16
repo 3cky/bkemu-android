@@ -32,14 +32,19 @@
     <string name="desc_down">Down</string>
     <string name="desc_right">Right</string>
     <string name="desc_enter">Enter</string>
-    <string name="fd_title">Open image file (%s)</string>
+    <string name="fd_label">File manager</string>
+    <string name="fd_title_load">Open file (%s)</string>
+    <string name="fd_title_save">Save file (%s)</string>
     <string name="fd_location">Location</string>
-    <string name="fd_cant_read_folder">folder can\'t be read!</string>
+    <string name="fd_cant_read_dir">Can\'t read directory!</string>
+    <string name="fd_cant_create_dir">Can\'t create directory</string>
     <string name="fd_new_file">New</string>
     <string name="fd_select">Select</string>
     <string name="fd_file_name">File name:</string>
     <string name="fd_save">Save</string>
     <string name="fd_create_dir">New Folder</string>
+    <string name="fd_create_dir_title">New directory</string>
+    <string name="fd_create_dir_label">Directory name:</string>
     <string name="fd_no_data">No Data</string>
     <string name="err">Error</string>
     <string name="exit_confirm_title">Quit emulator</string>
@@ -57,6 +62,8 @@
     <string name="fdd_image_c">Floppy Drive C</string>
     <string name="fdd_image_d">Floppy Drive D</string>
     <string name="fdd_empty">(Empty)</string>
-    <string name="toast_image_info">Start address 0%1$o, length 0%2$o</string>
-    <string name="toast_image_error">Can\'t load image file \'%s\'</string>
+    <string name="toast_image_load_info">Start address 0%1$o, length %2$d</string>
+    <string name="toast_image_load_error">Can\'t load file \'%s\'</string>
+    <string name="toast_image_save_info">File \'%s\' saved</string>
+    <string name="toast_image_save_error">Can\'t save file \'%s\'</string>
 </resources>

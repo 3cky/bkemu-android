@@ -22,7 +22,6 @@
         android:layout_alignParentBottom="true"
         android:orientation="vertical" >
 
-
         <LinearLayout
             android:id="@+id/fd_layout_filename"
             android:layout_width="fill_parent"
@@ -81,6 +80,10 @@
         android:layout_height="fill_parent"
         android:layout_above="@+id/fd_layout_controls"
         android:orientation="vertical" >
+
+        <include
+            android:id="@+id/fd_toolbar"
+            layout="@layout/toolbar" />
 
         <TextView
             android:id="@+id/path"
