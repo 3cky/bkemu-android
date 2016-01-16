@@ -506,6 +506,13 @@ public class KeyboardController implements Device, OnTouchListener {
      */
     public boolean handleKeyCode(int keyCode, boolean isKeyPress) {
         Log.d(TAG, "handle key " + (isKeyPress ? "press" : "release") + ", code: " + keyCode);
+        // Handle special cases
+        if (keyCode == KeyEvent.KEYCODE_AT) {
+            // Some hardware keyboards (i.e. emulator) translate SHIFT + 2 in KEYCODE_AT
+            // instead of two events (KEYCODE_SHIFT_LEFT + KEYCODE_2)
+            setLowRegisterPressed(isKeyPress);
+            keyCode = KeyEvent.KEYCODE_2;
+        }
         BkButton bkButton = BkButton.getByAndroidKeyCode(keyCode);
         return handleBkButton(bkButton, isKeyPress);
     }
