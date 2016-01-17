@@ -498,7 +498,7 @@ public class BkEmuActivity extends AppCompatActivity {
         setSupportActionBar(toolbar);
         final ActionBar actionBar = getSupportActionBar();
         if (actionBar != null) {
-            actionBar.setHomeAsUpIndicator(R.drawable.icon);
+            actionBar.setHomeAsUpIndicator(R.drawable.icon_toolbar);
             actionBar.setDisplayHomeAsUpEnabled(true);
         }
     }
