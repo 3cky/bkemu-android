@@ -25,7 +25,7 @@
             android:background="@drawable/joy_red"
             android:padding="@dimen/joy_image_padding"
             android:scaleType="fitCenter"
-            android:src="@drawable/arrow_up"
+            android:src="@drawable/joy_arrow_up"
             android:tag="UP" />
 
         <su.comp.bk.ui.joystick.JoystickButton
@@ -37,7 +37,7 @@
             android:layout_gravity="center"
             android:scaleType="fitCenter"
             android:padding="@dimen/joy_image_padding"
-            android:src="@drawable/arrow_down"
+            android:src="@drawable/joy_arrow_down"
             android:background="@drawable/joy_red"
             android:tag="DOWN" />
 
@@ -50,7 +50,7 @@
             android:layout_gravity="center"
             android:scaleType="fitCenter"
             android:padding="@dimen/joy_image_padding"
-            android:src="@drawable/arrow_left"
+            android:src="@drawable/joy_arrow_left"
             android:background="@drawable/joy_red"
             android:tag="LEFT" />
 
@@ -63,7 +63,7 @@
             android:layout_gravity="center"
             android:scaleType="fitCenter"
             android:padding="@dimen/joy_image_padding"
-            android:src="@drawable/arrow_right"
+            android:src="@drawable/joy_arrow_right"
             android:background="@drawable/joy_red"
             android:tag="RIGHT" />
 
