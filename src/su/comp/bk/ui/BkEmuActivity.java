@@ -152,7 +152,7 @@ public class BkEmuActivity extends AppCompatActivity {
 
     protected Computer computer;
 
-    protected String intentDataProgramImagePath;
+    protected String intentDataProgramImageUri;
 
     protected String intentDataDiskImagePath;
 
@@ -184,8 +184,8 @@ public class BkEmuActivity extends AppCompatActivity {
         @Override
         public void run() {
             try {
-                int startAddress = loadBinImageFile(intentDataProgramImagePath);
-                intentDataProgramImagePath = null;
+                int startAddress = loadBinImageFile(intentDataProgramImageUri);
+                intentDataProgramImageUri = null;
                 // Start loaded image
                 synchronized (computer) {
                     if (startAddress < STACK_TOP_ADDRESS) {
@@ -273,7 +273,7 @@ public class BkEmuActivity extends AppCompatActivity {
             int emtNumber = getTrapNumber(cpu, EmtOpcode.OPCODE);
             switch (emtNumber) {
                 case 6: // EMT 6 - read char from keyboard
-                    if (intentDataProgramImagePath != null) {
+                    if (intentDataProgramImageUri != null) {
                         // Monitor command prompt, load program from path from intent data
                         activityHandler.post(new IntentDataProgramImageLoader());
                     } else if (intentDataDiskImagePath != null) {
@@ -448,7 +448,7 @@ public class BkEmuActivity extends AppCompatActivity {
         if (intentDataString != null) {
             if (BkEmuFileDialog.isFileNameFormatMatched(intentDataString,
                     BkEmuFileDialog.FORMAT_FILTER_BIN_IMAGES)) {
-                this.intentDataProgramImagePath = intentDataString;
+                this.intentDataProgramImageUri = intentDataString;
             } else if (BkEmuFileDialog.isFileNameFormatMatched(intentDataString,
                     BkEmuFileDialog.FORMAT_FILTER_DISK_IMAGES)) {
                 this.intentDataDiskImagePath = intentDataString;
@@ -519,7 +519,7 @@ public class BkEmuActivity extends AppCompatActivity {
             // Computer state can't be restored, do startup initialization
             try {
                 Configuration configuration = getComputerConfiguration();
-                if (intentDataProgramImagePath != null) {
+                if (intentDataProgramImageUri != null) {
                     configuration = Configuration.BK_0010_MONITOR;
                 } else if (intentDataDiskImagePath != null) {
                     configuration = Configuration.BK_0010_KNGMD;
@@ -1077,7 +1077,8 @@ public class BkEmuActivity extends AppCompatActivity {
     }
 
     protected boolean binImageFileLoad(String binImageFilePath) {
-        boolean isImageLoaded = doBinImageFileLoad(binImageFilePath);
+        String binImageFileUri = "file:" + binImageFilePath;
+        boolean isImageLoaded = doBinImageFileLoad(binImageFileUri);
         if (isImageLoaded) {
             Toast.makeText(getApplicationContext(),
                     getResources().getString(R.string.toast_image_load_info,
@@ -1094,10 +1095,10 @@ public class BkEmuActivity extends AppCompatActivity {
         return isImageLoaded;
     }
 
-    protected boolean doBinImageFileLoad(String binImageFilePath) {
+    protected boolean doBinImageFileLoad(String binImageFileUri) {
         boolean isImageLoaded = false;
         try {
-            loadBinImageFile(binImageFilePath);
+            loadBinImageFile(binImageFileUri);
             isImageLoaded = true;
         } catch (Exception e) {
             Log.e(TAG, "Can't load emulator image", e);
@@ -1187,17 +1188,16 @@ public class BkEmuActivity extends AppCompatActivity {
 
     /**
      * Load program image in bin format (address/length/data) from given path.
-     * @param binImageFilePath emulator image file path
+     * @param binImageFileUri emulator image file URI
      * @return start address of loaded emulator image
      * @throws Exception in case of loading error
      */
-    protected int loadBinImageFile(String binImageFilePath) throws Exception {
-        Log.d(TAG, "loading image: " + binImageFilePath);
+    protected int loadBinImageFile(String binImageFileUri) throws Exception {
+        Log.d(TAG, "loading image: " + binImageFileUri);
         ByteArrayOutputStream binImageOutput = new ByteArrayOutputStream();
         BufferedInputStream binImageInput = null;
-        String bunImageFileUri = "file:" + binImageFilePath;
         try {
-            binImageInput = new BufferedInputStream(new URL(bunImageFileUri).openStream());
+            binImageInput = new BufferedInputStream(new URL(binImageFileUri).openStream());
             int readByte;
             while ((readByte = binImageInput.read()) != -1) {
                 binImageOutput.write(readByte);
@@ -1211,7 +1211,7 @@ public class BkEmuActivity extends AppCompatActivity {
                 // Do nothing
             }
         }
-        this.lastBinImageFileUri = bunImageFileUri;
+        this.lastBinImageFileUri = binImageFileUri;
         return loadBinImage(binImageOutput.toByteArray());
     }
 
