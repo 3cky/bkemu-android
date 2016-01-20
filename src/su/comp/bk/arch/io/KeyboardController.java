@@ -107,7 +107,7 @@ public class KeyboardController implements Device, OnTouchListener {
     private int dataRegister;
 
     /** Key pressing delay (in nanoseconds) */
-    public final static long KEY_PRESS_DELAY = (150L * Computer.NANOSECS_IN_MSEC);
+    public final static long KEY_PRESS_DELAY = (100L * Computer.NANOSECS_IN_MSEC);
     // Button pressed state flag in SEL1 register
     private boolean isButtonPressed;
     // Non-modifier button was pressed flag
