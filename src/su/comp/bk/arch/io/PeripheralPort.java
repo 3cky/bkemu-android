@@ -18,20 +18,12 @@
  */
 package su.comp.bk.arch.io;
 
-import com.transitionseverywhere.Scene;
-import com.transitionseverywhere.Slide;
-import com.transitionseverywhere.TransitionManager;
-import com.transitionseverywhere.TransitionSet;
-
-import su.comp.bk.R;
 import su.comp.bk.arch.Computer;
 import android.os.Bundle;
 import android.util.Log;
-import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.View.OnTouchListener;
-import android.view.ViewGroup;
 
 /**
  * BK-0010 peripheral port.
