@@ -678,6 +678,10 @@ public class Computer implements Runnable {
         }
     }
 
+    public boolean isPaused() {
+        return isPaused;
+    }
+
     /**
      * Pause computer.
      */

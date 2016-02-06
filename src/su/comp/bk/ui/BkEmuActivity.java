@@ -59,6 +59,9 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
+import android.support.v7.app.ActionBar;
+import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.view.GestureDetector;
 import android.view.KeyEvent;
@@ -73,13 +76,12 @@ import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
-import android.support.v7.app.ActionBar;
-import android.support.v7.widget.Toolbar;
-import android.support.v7.app.AppCompatActivity;
 
-import com.transitionseverywhere.AutoTransition;
+import com.transitionseverywhere.ChangeBounds;
+import com.transitionseverywhere.Fade;
 import com.transitionseverywhere.Transition;
 import com.transitionseverywhere.TransitionManager;
+import com.transitionseverywhere.TransitionSet;
 
 /**
  * Main application activity.
@@ -466,8 +468,15 @@ public class BkEmuActivity extends AppCompatActivity {
             }
         }
 
-        onScreenControlsTransition = new AutoTransition();
-        onScreenControlsTransition.setDuration(200l);
+        TransitionSet ts = new TransitionSet();
+        ts.setOrdering(TransitionSet.ORDERING_SEQUENTIAL);
+        ts.addTransition(new Fade(Fade.OUT));
+        ChangeBounds cbt = new ChangeBounds();
+        ts.addTransition(cbt);
+        ts.addTransition(new Fade(Fade.IN));
+        ts.setDuration(200l);
+        cbt.setDuration(0l);
+        onScreenControlsTransition = ts;
 
         KeyboardController keyboardController = this.computer.getKeyboardController();
         ViewGroup keyboardView = (ViewGroup) findViewById(R.id.keyboard);
@@ -1357,6 +1366,7 @@ public class BkEmuActivity extends AppCompatActivity {
 
     protected void startOnScreenControlsTransition() {
         TransitionManager.beginDelayedTransition(mainView, onScreenControlsTransition);
+        bkEmuView.setOnScreenControlsTransitionStarted();
     }
 
     private void toggleScreenMode() {

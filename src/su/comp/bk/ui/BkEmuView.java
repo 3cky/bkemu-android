@@ -18,6 +18,8 @@
  */
 package su.comp.bk.ui;
 
+import java.util.concurrent.atomic.AtomicBoolean;
+
 import su.comp.bk.R;
 import su.comp.bk.arch.Computer;
 import su.comp.bk.arch.io.FloppyController;
@@ -100,9 +102,14 @@ public class BkEmuView extends SurfaceView implements SurfaceHolder.Callback {
 
     private GestureDetector gestureDetector;
 
+    private AtomicBoolean isOnScreenControlsTransitionStarted = new AtomicBoolean();
+
     protected volatile Matrix videoBufferBitmapTransformMatrix;
 
     protected Computer computer;
+
+    private int lastViewHeight;
+    private int lastViewWidth;
 
 	/*
 	 * Surface view rendering thread
@@ -128,21 +135,21 @@ public class BkEmuView extends SurfaceView implements SurfaceHolder.Callback {
 	        int bgColor = ContextCompat.getColor(getContext(), R.color.theme_window_background);
 			while (isRunning) {
 				timeStamp = System.currentTimeMillis();
-				// Repaint surface
-	            canvas = surfaceHolder.lockCanvas(null);
-	            if (canvas != null) {
-	                try {
-	                    synchronized (surfaceHolder) {
-	                        canvas.drawColor(bgColor);
-	                        if (computer != null) {
-	                            canvas.drawBitmap(videoController.renderVideoBuffer(),
-	                                    videoBufferBitmapTransformMatrix, null);
-	                        }
-	                    }
-	                } finally {
-	                    surfaceHolder.unlockCanvasAndPost(canvas);
-	                }
-	            }
+				if (computer != null && !computer.isPaused()) {
+				    // Repaint surface
+				    canvas = surfaceHolder.lockCanvas(null);
+				    if (canvas != null) {
+				        try {
+				            synchronized (surfaceHolder) {
+				                canvas.drawColor(bgColor);
+				                canvas.drawBitmap(videoController.renderVideoBuffer(),
+				                        videoBufferBitmapTransformMatrix, null);
+				            }
+				        } finally {
+				            surfaceHolder.unlockCanvasAndPost(canvas);
+				        }
+				    }
+				}
 	            long currentTime = System.currentTimeMillis();
 	            updateFpsCounters(currentTime);
 	            updateFloppyActivityIndicator(currentTime);
@@ -236,6 +243,10 @@ public class BkEmuView extends SurfaceView implements SurfaceHolder.Callback {
         return isFpsDrawingEnabled;
     }
 
+    public void setOnScreenControlsTransitionStarted() {
+        this.isOnScreenControlsTransitionStarted.set(true);
+    }
+
     protected void updateFpsCounters(long currentTime) {
         if (fpsCountersUpdateTimestamp > 0) {
         	fpsFrameCounter++;
@@ -269,6 +280,8 @@ public class BkEmuView extends SurfaceView implements SurfaceHolder.Callback {
 
     private void updateVideoBufferBitmapTransformMatrix(int viewWidth, int viewHeight) {
         Log.d(TAG, "update transform matrix, w:" + viewWidth + ", h:" + viewHeight);
+        lastViewWidth = viewWidth;
+        lastViewHeight = viewHeight;
         Bitmap videoBufferBitmap = computer.getVideoController().getVideoBuffer();
         int bitmapWidth = videoBufferBitmap.getWidth();
         int bitmapHeight = videoBufferBitmap.getHeight();
@@ -300,8 +313,11 @@ public class BkEmuView extends SurfaceView implements SurfaceHolder.Callback {
 	@Override
 	public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
 	    Log.d(TAG, "surface changed");
-        // Update emulator screen bitmap scale matrix
-        updateVideoBufferBitmapTransformMatrix(width, height);
+	    if (!isOnScreenControlsTransitionStarted.getAndSet(false) // dirty fix for first invalid view size when transition is started
+	            && (width != lastViewWidth || height != lastViewHeight) ) {
+            // Update emulator screen bitmap scale matrix
+            updateVideoBufferBitmapTransformMatrix(width, height);
+	    }
 	}
 
 	/* (non-Javadoc)
