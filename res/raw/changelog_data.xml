@@ -1,5 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <releases>
+    <release version="0.4.0" date="2016-02-08">
+        <changes>
+            <change>Added six-button on-screen joystick.</change>
+            <change>Implemented file save using standard BK0010/11 system calls.</change>
+            <change>Fixed double quotes input on some hardware keyboards.</change>
+            <change>On-screen keyboard now is not hiding after screen rotation.</change>
+            <change>Added "Cancel" button to image file open dialog.</change>
+            <change>New Material Design icons.</change>
+        </changes>
+    </release>
     <release version="0.3.0" date="2013-02-08">
         <changes>
             <change>Implemented emulation of BK-0011M with MSTD or floppy controller blocks attached.</change>
