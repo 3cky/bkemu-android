@@ -435,6 +435,18 @@ public class BkEmuActivity extends AppCompatActivity {
         return trapNumber;
     }
 
+    @Override
+    protected void onNewIntent(Intent intent) {
+        Log.d(TAG, "onNewIntent(), Intent: " + intent);
+        super.onNewIntent(intent);
+        setIntent(intent);
+        if (checkIntentData()) {
+            initializeComputer(null);
+            mountIntentDataDiskImage();
+            setupOnScreenControllers();
+        }
+    }
+
     /** Called when the activity is first created. */
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -446,27 +458,10 @@ public class BkEmuActivity extends AppCompatActivity {
         mainView = (ViewGroup) findViewById(R.id.main_view);
         bkEmuView = (BkEmuView) findViewById(R.id.emu_view);
         bkEmuView.setGestureListener(new GestureListener());
-        String intentDataString = getIntent().getDataString();
-        if (intentDataString != null) {
-            if (BkEmuFileDialog.isFileNameFormatMatched(intentDataString,
-                    BkEmuFileDialog.FORMAT_FILTER_BIN_IMAGES)) {
-                this.intentDataProgramImageUri = intentDataString;
-            } else if (BkEmuFileDialog.isFileNameFormatMatched(intentDataString,
-                    BkEmuFileDialog.FORMAT_FILTER_DISK_IMAGES)) {
-                this.intentDataDiskImagePath = intentDataString;
-            }
-        }
+
+        checkIntentData();
         initializeComputer(savedInstanceState);
-        // Mount intent disk image, if set
-        if (this.intentDataDiskImagePath != null) {
-            try {
-                computer.getFloppyController().mountDiskImage(intentDataDiskImagePath,
-                        FloppyDriveIdentifier.A, true);
-            } catch (Exception e) {
-                Log.e(TAG, "Can't mount bootstrap emulator disk image", e);
-                this.intentDataDiskImagePath = null;
-            }
-        }
+        mountIntentDataDiskImage();
 
         TransitionSet ts = new TransitionSet();
         ts.setOrdering(TransitionSet.ORDERING_SEQUENTIAL);
@@ -478,6 +473,21 @@ public class BkEmuActivity extends AppCompatActivity {
         cbt.setDuration(0l);
         onScreenControlsTransition = ts;
 
+        setupOnScreenControllers();
+
+        // Show change log with latest changes once after application update
+        BkEmuChangeLog changeLog = new BkEmuChangeLog(this);
+        if (changeLog.isCurrentVersionGreaterThanLast()) {
+            // Store current version to preferences store
+            changeLog.saveCurrentVersionName();
+            // Show change log dialog but not at the first run
+            if (!changeLog.isFirstRun()) {
+                changeLog.getDialog(false).show();
+            }
+        }
+    }
+
+    private void setupOnScreenControllers() {
         KeyboardController keyboardController = this.computer.getKeyboardController();
         ViewGroup keyboardView = (ViewGroup) findViewById(R.id.keyboard);
         keyboardController.setOnScreenKeyboardView(keyboardView);
@@ -489,15 +499,34 @@ public class BkEmuActivity extends AppCompatActivity {
         peripheralPort.setOnScreenJoystickViews(new View[] { joystickView,
                 joystickDpadView, joystickButtonsView });
         peripheralPort.setOnScreenJoystickVisibility(false);
+    }
 
-        // Show change log with latest changes once after application update
-        BkEmuChangeLog changeLog = new BkEmuChangeLog(this);
-        if (changeLog.isCurrentVersionGreaterThanLast()) {
-            // Store current version to preferences store
-            changeLog.saveCurrentVersionName();
-            // Show change log dialog but not at the first run
-            if (!changeLog.isFirstRun()) {
-                changeLog.getDialog(false).show();
+    // Check intent data for program/disk image to mount
+    private boolean checkIntentData() {
+        String intentDataString = getIntent().getDataString();
+        if (intentDataString != null) {
+            if (BkEmuFileDialog.isFileNameFormatMatched(intentDataString,
+                    BkEmuFileDialog.FORMAT_FILTER_BIN_IMAGES)) {
+                this.intentDataProgramImageUri = intentDataString;
+                return true;
+            } else if (BkEmuFileDialog.isFileNameFormatMatched(intentDataString,
+                    BkEmuFileDialog.FORMAT_FILTER_DISK_IMAGES)) {
+                this.intentDataDiskImagePath = intentDataString;
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // Mount intent disk image, if set
+    private void mountIntentDataDiskImage() {
+        if (this.intentDataDiskImagePath != null) {
+            try {
+                computer.getFloppyController().mountDiskImage(intentDataDiskImagePath,
+                        FloppyDriveIdentifier.A, true);
+            } catch (Exception e) {
+                Log.e(TAG, "Can't mount bootstrap emulator disk image", e);
+                this.intentDataDiskImagePath = null;
             }
         }
     }
