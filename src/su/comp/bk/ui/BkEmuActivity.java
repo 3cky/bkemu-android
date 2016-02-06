@@ -443,7 +443,7 @@ public class BkEmuActivity extends AppCompatActivity {
         if (checkIntentData()) {
             initializeComputer(null);
             mountIntentDataDiskImage();
-            setupOnScreenControllers();
+            setupOnScreenControls(false);
         }
     }
 
@@ -473,7 +473,7 @@ public class BkEmuActivity extends AppCompatActivity {
         cbt.setDuration(0l);
         onScreenControlsTransition = ts;
 
-        setupOnScreenControllers();
+        setupOnScreenControls(true);
 
         // Show change log with latest changes once after application update
         BkEmuChangeLog changeLog = new BkEmuChangeLog(this);
@@ -487,18 +487,20 @@ public class BkEmuActivity extends AppCompatActivity {
         }
     }
 
-    private void setupOnScreenControllers() {
+    private void setupOnScreenControls(boolean hideAllControls) {
         KeyboardController keyboardController = this.computer.getKeyboardController();
         ViewGroup keyboardView = (ViewGroup) findViewById(R.id.keyboard);
         keyboardController.setOnScreenKeyboardView(keyboardView);
-        keyboardController.setOnScreenKeyboardVisibility(false);
         View joystickView = findViewById(R.id.joystick);
         View joystickDpadView = findViewById(R.id.joystick_dpad);
         View joystickButtonsView = findViewById(R.id.joystick_buttons);
         PeripheralPort peripheralPort = computer.getPeripheralPort();
         peripheralPort.setOnScreenJoystickViews(new View[] { joystickView,
                 joystickDpadView, joystickButtonsView });
-        peripheralPort.setOnScreenJoystickVisibility(false);
+        if (hideAllControls) {
+            keyboardController.setOnScreenKeyboardVisibility(false);
+            peripheralPort.setOnScreenJoystickVisibility(false);
+        }
     }
 
     // Check intent data for program/disk image to mount
