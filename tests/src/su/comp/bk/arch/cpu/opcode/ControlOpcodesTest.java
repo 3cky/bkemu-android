@@ -18,49 +18,35 @@
  */
 package su.comp.bk.arch.cpu.opcode;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
-import static org.easymock.EasyMock.expect;
-import static org.easymock.EasyMock.anyObject;
-
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import static org.powermock.api.easymock.PowerMock.*;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.junit4.PowerMockRunner;
-
-import android.os.Bundle;
-import android.util.Log;
+import org.robolectric.RobolectricTestRunner;
+import org.robolectric.annotation.Config;
 
 import su.comp.bk.arch.Computer;
 import su.comp.bk.arch.cpu.Cpu;
 import su.comp.bk.arch.io.Device;
 import su.comp.bk.arch.io.Sel1RegisterSystemBits;
 import su.comp.bk.arch.memory.ReadOnlyMemory;
+import android.os.Bundle;
 
 /**
  * Control opcodes (RESET/WAIT/HALT) tests.
  */
-@RunWith(PowerMockRunner.class)
-@PrepareForTest(value=Log.class)
+@RunWith(RobolectricTestRunner.class)
+@Config(sdk = 21)
 public class ControlOpcodesTest {
 
     private Computer computer;
 
     @Before
     public void setUp() throws Exception {
-        mockStatic(Log.class);
-        expect(Log.d(anyObject(String.class), anyObject(String.class))).andReturn(0).anyTimes();
-        replay(Log.class);
         computer = new Computer();
         computer.addDevice(new Sel1RegisterSystemBits(0100000));
-    }
-
-    @After
-    public void tearDown() throws Exception {
-        verifyAll();
     }
 
     @Test

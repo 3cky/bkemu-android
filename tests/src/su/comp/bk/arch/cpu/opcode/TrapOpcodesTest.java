@@ -18,21 +18,14 @@
  */
 package su.comp.bk.arch.cpu.opcode;
 
-import static org.easymock.EasyMock.anyObject;
-import static org.easymock.EasyMock.expect;
-import static org.junit.Assert.*;
-import static org.powermock.api.easymock.PowerMock.replay;
-import static org.powermock.api.easymock.PowerMock.verifyAll;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.powermock.api.easymock.PowerMock;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.junit4.PowerMockRunner;
-
-import android.util.Log;
+import org.robolectric.RobolectricTestRunner;
+import org.robolectric.annotation.Config;
 
 import su.comp.bk.arch.Computer;
 import su.comp.bk.arch.cpu.Cpu;
@@ -43,25 +36,17 @@ import su.comp.bk.arch.memory.ReadOnlyMemory;
 /**
  * Trap opcodes (EMT/TRAP/RTI) tests.
  */
-@RunWith(PowerMockRunner.class)
-@PrepareForTest(value=Log.class)
+@RunWith(RobolectricTestRunner.class)
+@Config(sdk = 21)
 public class TrapOpcodesTest {
 
     private Computer computer;
 
     @Before
     public void setUp() throws Exception {
-        PowerMock.mockStatic(Log.class);
-        expect(Log.d(anyObject(String.class), anyObject(String.class))).andReturn(0).anyTimes();
-        replay(Log.class);
         computer = new Computer();
         computer.addDevice(new Sel1RegisterSystemBits(0100000));
         computer.addMemory(new RandomAccessMemory("TestRam", 0, 01000));
-    }
-
-    @After
-    public void tearDown() throws Exception {
-        verifyAll();
     }
 
     @Test
