@@ -98,6 +98,17 @@
 	                <groupId>org.apache.maven.plugins</groupId>
 	                <artifactId>maven-javadoc-plugin</artifactId>
 	                <version>2.10.1</version>
+                    <executions>
+                        <execution>
+                            <id>attach-javadocs</id>
+                            <goals>
+                                <goal>jar</goal>
+                            </goals>
+                            <configuration>
+                                <additionalparam>-Xdoclint:none</additionalparam>
+                            </configuration>
+                        </execution>
+                    </executions>
 	            </plugin>
 	            <plugin>
 	                <groupId>org.apache.maven.plugins</groupId>
@@ -287,7 +298,7 @@
 					<!-- the signed apk then needs to be zipaligned and we activate proguard
 						and we run the manifest update -->
 					<plugin>
-						<groupId>com.jayway.maven.plugins.android.generation2</groupId>
+						<groupId>com.simpligility.maven.plugins</groupId>
 						<artifactId>android-maven-plugin</artifactId>
 						<inherited>true</inherited>
 						<configuration>
@@ -363,9 +374,9 @@
 
 	<dependencies>
 		<dependency>
-			<groupId>com.google.android</groupId>
+			<groupId>android</groupId>
 			<artifactId>android</artifactId>
-			<version>4.1.1.4</version>
+			<version>6.0_r2</version>
 			<scope>provided</scope>
 		</dependency>
         <dependency>

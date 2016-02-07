@@ -45,12 +45,22 @@ PDP-11-совместимых советских 16-разрядных дома�
 
 ## Сборка эмулятора
 
-Для самостоятельной сборки приложения необходимо установить
+Для самостоятельной сборки эмулятора необходимо установить Java 8.0 или выше,
 [Android SDK](http://developer.android.com/sdk/index.html), а также
-[Maven](http://maven.apache.org/download.html) версии 3.0.3 или выше. Помимо этого, необходимо
+[Maven](http://maven.apache.org/download.html) версии 3.2.1 или выше. Помимо этого, необходимо
 определить переменную окружения `ANDROID_HOME`, содержащую путь к Android SDK, например:
 
     export ANDROID_HOME=/opt/google/android-sdk-linux_x86
+
+Для установки необходимых Maven-зависимостей Android скачайте [Maven Android SDK Deployer](https://github.com/simpligility/maven-android-sdk-deployer):
+
+    git clone https://github.com/simpligility/maven-android-sdk-deployer
+
+В директории Maven Android SDK Deployer выполните команду **mvn install -fn**
+
+После выполнения необходимые зависимости будут установлены в локальный репозиторий Maven. Не обращайте внимания на ошибки установки неиспользуемых эмулятором платформ.
+
+Для сборки релизной версии через `maven-release-plugin` необходим [Proguard 5.2.1](http://sourceforge.net/projects/proguard/files/proguard/5.2/). Данной версией нужно заменить Android SDK Proguard (`${ANDROID_HOME}/tools/proguard`).
 
 После этого сборка приложения осуществляется вызовом команды `mvn clean package` в директории,
 содержащей исходные тексты приложения.
@@ -82,12 +92,22 @@ feature requests and to see the list of known issues.
 
 ## Building
 
-The build requires [Maven](http://maven.apache.org/download.html) v3.0.3+ and the
+The build requires Java 8.0+, [Maven](http://maven.apache.org/download.html) v3.2.1+ and the
 [Android SDK](http://developer.android.com/sdk/index.html) to be installed in your
 development environment. In addition you'll need to set the `ANDROID_HOME` environment variable
 to the location of your SDK, i.e.:
 
     export ANDROID_HOME=/opt/google/android-sdk-linux_x86
+
+Download [Maven Android SDK Deployer](https://github.com/simpligility/maven-android-sdk-deployer). This project will make available the necessary Android dependencies for a maven build:
+
+    git clone https://github.com/simpligility/maven-android-sdk-deployer
+
+Navigate to Maven Android SDK Deployer folder and run the command **mvn install -fn**
+
+This command will try to make available all Android packages for Maven, do not worry about the errors for the platforms we are not using.
+
+Release build using `maven-release-plugin` requires [Proguard 5.2.1](http://sourceforge.net/projects/proguard/files/proguard/5.2/). This version replaces Android SDK Proguard (`${ANDROID_HOME}/tools/proguard`).
 
 After satisfying those requirements, the build is pretty simple - just run `mvn clean package` in
 directory containing pulled source code.
