@@ -7,12 +7,17 @@ import java.util.List;
 import java.util.TreeMap;
 
 import su.comp.bk.R;
+import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.ListActivity;
 import android.content.DialogInterface;
+import android.content.pm.PackageManager;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.CountDownTimer;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.app.ActivityCompat.OnRequestPermissionsResultCallback;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatCallback;
 import android.support.v7.app.AppCompatDelegate;
@@ -36,7 +41,8 @@ import android.widget.TextView;
  * Emulator image file selector dialog.
  * Based on code from http://code.google.com/p/android-file-dialog/ project.
  */
-public class BkEmuFileDialog extends ListActivity implements AppCompatCallback {
+public class BkEmuFileDialog extends ListActivity implements AppCompatCallback,
+        OnRequestPermissionsResultCallback {
 
     private static final String ITEM_KEY = "key";
     private static final String ITEM_IMAGE = "image";
@@ -64,9 +70,12 @@ public class BkEmuFileDialog extends ListActivity implements AppCompatCallback {
 
     private InputMethodManager inputManager;
 
+    protected String startPath;
     protected String parentPath;
     protected String currentPath;
     protected String filename;
+
+    public final static int REQUEST_CODE_ASK_PERMISSIONS = 0;
 
     public final static String[] FORMAT_FILTER_BIN_IMAGES = new String[] { ".BIN" };
     public final static String[] FORMAT_FILTER_DISK_IMAGES = new String[] { ".BKD", ".IMG" };
@@ -142,7 +151,7 @@ public class BkEmuFileDialog extends ListActivity implements AppCompatCallback {
         Button saveButton = (Button) findViewById(R.id.fd_btn_save);
         Button createDirButton = (Button) findViewById(R.id.fd_btn_create_dir);
 
-        String startPath = getIntent().getStringExtra(INTENT_START_PATH);
+        startPath = getIntent().getStringExtra(INTENT_START_PATH);
         if (startPath == null) {
             startPath = ROOT_PATH;
         }
@@ -194,7 +203,68 @@ public class BkEmuFileDialog extends ListActivity implements AppCompatCallback {
             }
         });
 
-        new DirListTask().execute(startPath);
+        showStartPathWithPermissionsCheck();
+    }
+
+    protected void showStartPathWithPermissionsCheck() {
+        int hasExternalStorageAccessPermissions = ContextCompat.checkSelfPermission(this,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE);
+        if (hasExternalStorageAccessPermissions != PackageManager.PERMISSION_GRANTED) {
+            if (!ActivityCompat.shouldShowRequestPermissionRationale(this,
+                    Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
+                showPermissionsRationaleDialog();
+            } else {
+                requestPermissions();
+            }
+        } else {
+            new DirListTask().execute(startPath);
+        }
+    }
+
+    protected void showPermissionsRationaleDialog() {
+        new AlertDialog.Builder(this)
+            .setMessage(R.string.fd_permissions_rationale)
+            .setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    requestPermissions();
+                }
+            })
+            .setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    finish();
+                }
+            })
+            .setIcon(R.drawable.ic_folder_white_24dp)
+            .show();
+    }
+
+    protected void requestPermissions() {
+        ActivityCompat.requestPermissions(BkEmuFileDialog.this,
+                new String[] { Manifest.permission.WRITE_EXTERNAL_STORAGE },
+                REQUEST_CODE_ASK_PERMISSIONS);
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String permissions[], int[] grantResults) {
+        switch (requestCode) {
+            case REQUEST_CODE_ASK_PERMISSIONS: {
+                // If request is cancelled, the result arrays are empty.
+                if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    // permission was granted, show files
+                    new DirListTask().execute(startPath);
+                } else {
+                    // permission denied, close activity
+                    finish();
+                }
+                break;
+            }
+            default:
+                // unknown request code, close activity
+                finish();
+                break;
+        }
     }
 
     @SuppressLint("InflateParams")
@@ -363,7 +433,9 @@ public class BkEmuFileDialog extends ListActivity implements AppCompatCallback {
 
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
-        if (keyCode == KeyEvent.KEYCODE_BACK && !currentPath.equals(ROOT_PATH)) {
+        if (keyCode == KeyEvent.KEYCODE_BACK
+                && currentPath != null
+                && !currentPath.equals(ROOT_PATH)) {
             new DirListTask().execute(parentPath);
             return true;
         }

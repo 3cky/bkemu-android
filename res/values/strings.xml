@@ -46,6 +46,7 @@
     <string name="fd_create_dir_title">New directory</string>
     <string name="fd_create_dir_label">Directory name:</string>
     <string name="fd_no_data">No Data</string>
+    <string name="fd_permissions_rationale">SD card access should be allowed</string>
     <string name="err">Error</string>
     <string name="exit_confirm_title">Quit emulator</string>
     <string name="exit_confirm_message">Do you really want to quit?</string>

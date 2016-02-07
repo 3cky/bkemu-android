@@ -45,6 +45,7 @@
     <string name="fd_create_dir_title">Новая директория</string>
     <string name="fd_create_dir_label">Имя директории:</string>
     <string name="fd_no_data">Нет файлов</string>
+    <string name="fd_permissions_rationale">Необходимо разрешить доступ к файлам на SD-карте</string>
     <string name="err">Ошибка</string>
     <string name="exit_confirm_title">Выход</string>
     <string name="exit_confirm_message">Вы действительно хотите выйти?</string>
