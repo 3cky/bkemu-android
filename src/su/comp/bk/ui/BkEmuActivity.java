@@ -51,6 +51,7 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.DialogInterface;
+import android.content.DialogInterface.OnCancelListener;
 import android.content.DialogInterface.OnKeyListener;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -682,7 +683,7 @@ public class BkEmuActivity extends AppCompatActivity {
             peripheralPort.setOnScreenJoystickVisibility(false);
         } else {
             this.computer.pause();
-            new AlertDialog.Builder(this)
+            AlertDialog exitConfirmDialog = new AlertDialog.Builder(this)
                     .setIcon(android.R.drawable.ic_dialog_alert)
                     .setTitle(R.string.exit_confirm_title)
                     .setMessage(R.string.exit_confirm_message)
@@ -710,7 +711,15 @@ public class BkEmuActivity extends AppCompatActivity {
                                     return false;
                                 }
                             })
-                    .show();
+                    .create();
+            exitConfirmDialog.setCanceledOnTouchOutside(true);
+            exitConfirmDialog.setOnCancelListener(new OnCancelListener() {
+                @Override
+                public void onCancel(DialogInterface dialog) {
+                    BkEmuActivity.this.computer.resume();
+                }
+            });
+            exitConfirmDialog.show();
         }
     }
 
