@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-        android:versionName="0.4.0-SNAPSHOT"
-        android:versionCode="4000"
+        android:versionName="0.4.1-SNAPSHOT"
+        android:versionCode="4001"
         package="su.comp.bk">
 
     <uses-sdk android:minSdkVersion="7" android:targetSdkVersion="23"/>
