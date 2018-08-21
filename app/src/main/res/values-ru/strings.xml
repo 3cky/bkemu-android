@@ -63,4 +63,8 @@
     <string name="toast_image_load_error">Ошибка загрузки файла \'%s\'</string>
     <string name="toast_image_save_info">Файл \'%s\' сохранен</string>
     <string name="toast_image_save_error">Ошибка сохранения файла \'%s\'</string>
+    <string name="app_name">BkEmu</string>
+    <string name="about_logo">Лого BkEmu</string>
+    <string name="about_version">BkEmu версии %s</string>
+    <string name="about_link">https://github.com/3cky/bkemu-android</string>
 </resources>

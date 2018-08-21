@@ -1,15 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-        android:versionName="0.4.1-SNAPSHOT"
-        android:versionCode="4001"
         package="su.comp.bk">
-
-    <uses-sdk android:minSdkVersion="7" android:targetSdkVersion="23"/>
 
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
 
     <application
-        android:debuggable="true"
         android:icon="@drawable/icon"
         android:label="@string/app_name"
         android:theme="@style/AppTheme">

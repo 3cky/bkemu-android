@@ -22,12 +22,14 @@ package su.comp.bk.arch.io;
 import static org.junit.Assert.*;
 
 import java.io.File;
+import java.net.URL;
 
 import org.apache.commons.io.FileUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import su.comp.bk.ResourceFileTestBase;
 import su.comp.bk.arch.Computer;
 import su.comp.bk.arch.cpu.Cpu;
 import su.comp.bk.arch.io.FloppyController.FloppyDrive;
@@ -41,11 +43,11 @@ import su.comp.bk.util.Crc16;
 /**
  * {@link FloppyController} class unit tests.
  */
-public class FloppyControllerTest {
+public class FloppyControllerTest extends ResourceFileTestBase {
 
-    private final static String TEST_DISK_IMAGE_FILE_NAME = "target/test-classes/test.img";
-    private final static String FDD_ROM_FILE_NAME = "res/raw/disk_327.rom";
-    private final static String MONITOR_ROM_FILE_NAME = "res/raw/monit10.rom";
+    private final static String TEST_DISK_IMAGE_FILE_NAME = "test.img";
+    private final static String FDD_ROM_FILE_NAME = "disk_327.rom";
+    private final static String MONITOR_ROM_FILE_NAME = "monit10.rom";
 
     private static final int FDD_BLOCK_START_ADDR = 02000;
     private static final int FDD_BLOCK_DRIVE_NUM = FDD_BLOCK_START_ADDR + 034;
@@ -65,9 +67,9 @@ public class FloppyControllerTest {
         RandomAccessMemory videoMemory = new RandomAccessMemory("TestVideoMemory", 040000, 020000);
         computer.addMemory(videoMemory);
         computer.addMemory(new ReadOnlyMemory("TestMonitorRom", 0100000,
-                FileUtils.readFileToByteArray(new File(MONITOR_ROM_FILE_NAME))));
+                FileUtils.readFileToByteArray(getTestResourceFile(MONITOR_ROM_FILE_NAME))));
         computer.addMemory(new ReadOnlyMemory("TestFloppyRom", 0160000,
-                FileUtils.readFileToByteArray(new File(FDD_ROM_FILE_NAME))));
+                FileUtils.readFileToByteArray(getTestResourceFile(FDD_ROM_FILE_NAME))));
         floppyController = new FloppyController(computer);
         computer.addDevice(floppyController);
         computer.addDevice(new Sel1RegisterSystemBits(0100000));
@@ -246,7 +248,7 @@ public class FloppyControllerTest {
     }
 
     private byte[] mountTestDiskImage() throws Exception {
-        File testDiskImageFile = new File(TEST_DISK_IMAGE_FILE_NAME);
+        File testDiskImageFile = getTestResourceFile(TEST_DISK_IMAGE_FILE_NAME);
         byte[] testDiskImageData = FileUtils.readFileToByteArray(testDiskImageFile);
         floppyController.mountDiskImage(testDiskImageFile.toURI().toString(),
                 FloppyDriveIdentifier.A, true);

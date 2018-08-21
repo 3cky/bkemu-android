@@ -32,6 +32,7 @@ import org.junit.Test;
 
 import android.os.Bundle;
 
+import su.comp.bk.ResourceFileTestBase;
 import su.comp.bk.arch.cpu.Cpu;
 import su.comp.bk.arch.io.Device;
 import su.comp.bk.arch.memory.RandomAccessMemory;
@@ -40,9 +41,7 @@ import su.comp.bk.arch.memory.ReadOnlyMemory;
 /**
  * {@link Computer} class factory unit tests.
  */
-public class ComputerFactoryTest {
-
-    private final static String TEST_BASEDIR = "target/test-classes/";
+public class ComputerFactoryTest extends ResourceFileTestBase {
 
     private static final long MAX_EXECUTION_TIME = 10000L;
 
@@ -142,7 +141,7 @@ public class ComputerFactoryTest {
     }
 
     private void setupTestData(String testName) throws Exception {
-        byte[] testData = FileUtils.readFileToByteArray(new File(TEST_BASEDIR + testName));
+        byte[] testData = FileUtils.readFileToByteArray(getTestResourceFile(testName));
         for (int idx = 0; idx < testData.length; idx++) {
             workMemory.write(true, workMemory.getStartAddress() + idx, testData[idx]);
         }
