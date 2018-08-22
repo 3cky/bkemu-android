@@ -107,7 +107,7 @@ public class KeyboardController implements Device, OnTouchListener {
     private int dataRegister;
 
     /** Key pressing delay (in nanoseconds) */
-    public final static long KEY_PRESS_DELAY = (100L * Computer.NANOSECS_IN_MSEC);
+    private final static long KEY_PRESS_DELAY = (100L * Computer.NANOSECS_IN_MSEC);
     // Button pressed state flag in SEL1 register
     private boolean isButtonPressed;
     // Non-modifier button was pressed flag
@@ -257,9 +257,8 @@ public class KeyboardController implements Device, OnTouchListener {
         for (int i = 0; i < 256; i++) {
             lowRegisterKeyCodeTable[i] = (byte) i;
         }
-        for (int i = 'A'; i <= 'Z'; i++) {
-            lowRegisterKeyCodeTable[i] = (byte) (i ^ 040);
-            lowRegisterKeyCodeTable[i ^ 040] = (byte) i;
+        for (int i = 0100; i <= 0137; i++) {
+            lowRegisterKeyCodeTable[i] = (byte) (i + 040);
         }
         lowRegisterKeyCodeTable[';'] = '+';
         lowRegisterKeyCodeTable['1'] = '!';
@@ -275,11 +274,8 @@ public class KeyboardController implements Device, OnTouchListener {
         lowRegisterKeyCodeTable['-'] = '=';
         lowRegisterKeyCodeTable['/'] = '?';
         lowRegisterKeyCodeTable[':'] = '*';
-        lowRegisterKeyCodeTable['\\'] = '|';
         lowRegisterKeyCodeTable['.'] = '>';
-        lowRegisterKeyCodeTable['@'] = '`';
         lowRegisterKeyCodeTable[','] = '<';
-        lowRegisterKeyCodeTable[0137] = 0177;
     }
 
     public void setOnScreenKeyboardView(ViewGroup keyboardView) {
@@ -292,12 +288,9 @@ public class KeyboardController implements Device, OnTouchListener {
                 Log.w(TAG, "Can't find view for button: " + bkButton.name());
             }
         }
-        this.ctrlSymbolButton = (ModifierButton) onScreenKeyboardView
-                .findViewById(R.id.btn_ctrl_symbol);
-        this.ar2Button = (ModifierButton) onScreenKeyboardView
-                .findViewById(R.id.btn_ar2);
-        this.lowRegisterButton = (ImageButton) onScreenKeyboardView
-                .findViewById(R.id.btn_low_register);
+        this.ctrlSymbolButton = onScreenKeyboardView.findViewById(R.id.btn_ctrl_symbol);
+        this.ar2Button = onScreenKeyboardView.findViewById(R.id.btn_ar2);
+        this.lowRegisterButton = onScreenKeyboardView.findViewById(R.id.btn_low_register);
         clearModifierFlags();
     }
 
@@ -343,40 +336,40 @@ public class KeyboardController implements Device, OnTouchListener {
         // Do nothing
     }
 
-    protected int getLowRegisterKeyCode(int keyCode) {
+    private int getLowRegisterKeyCode(int keyCode) {
         return lowRegisterKeyCodeTable[keyCode] & 0377;
     }
 
-    protected boolean isStopButtonEnabled() {
+    private boolean isStopButtonEnabled() {
         return isStopButtonEnabled;
     }
 
-    protected void setStopButtonEnabled(boolean isStopButtonEnabled) {
+    private void setStopButtonEnabled(boolean isStopButtonEnabled) {
         this.isStopButtonEnabled = isStopButtonEnabled;
     }
 
-    protected boolean isUppercaseMode() {
+    private boolean isUppercaseMode() {
         return isUppercaseMode;
     }
 
-    protected void setUppercaseMode(boolean isUppercaseMode) {
+    private void setUppercaseMode(boolean isUppercaseMode) {
         this.isUppercaseMode = isUppercaseMode;
     }
 
-    protected boolean isLatinMode() {
+    private boolean isLatinMode() {
         return isLatinMode;
     }
 
-    protected void setLatinMode(boolean isLatinMode) {
+    private void setLatinMode(boolean isLatinMode) {
         this.isLatinMode = isLatinMode;
     }
 
-    protected boolean isButtonPressed(long cpuTime) {
-        return (lastButtonPressTimestamp < 0 || computer.cpuTimeToNanos(cpuTime -
-                    lastButtonPressTimestamp) > KEY_PRESS_DELAY) ? isButtonPressed : true;
+    private boolean isButtonPressed(long cpuTime) {
+        return (lastButtonPressTimestamp >= 0 && computer.cpuTimeToNanos(cpuTime -
+                lastButtonPressTimestamp) <= KEY_PRESS_DELAY) || isButtonPressed;
     }
 
-    protected void setButtonPressed(long cpuTime, boolean isPressed) {
+    private void setButtonPressed(long cpuTime, boolean isPressed) {
         this.isButtonPressed = isPressed;
         if (isPressed) {
             this.wasButtonPressed = true;
@@ -384,40 +377,40 @@ public class KeyboardController implements Device, OnTouchListener {
         }
     }
 
-    protected boolean wasButtonPressed() {
+    private boolean wasButtonPressed() {
         return wasButtonPressed;
     }
 
-    protected void clearModifierFlags() {
+    private void clearModifierFlags() {
         setLowRegisterPressed(false);
         setCtrlSymbolPressed(false);
         setAr2Pressed(false);
         this.wasButtonPressed = false;
     }
 
-    protected boolean isCtrlSymbolPressed() {
+    private boolean isCtrlSymbolPressed() {
         return isCtrlSymbolPressed;
     }
 
-    protected void setCtrlSymbolPressed(boolean isCtrlSymbolPressed) {
+    private void setCtrlSymbolPressed(boolean isCtrlSymbolPressed) {
         this.isCtrlSymbolPressed = isCtrlSymbolPressed;
         this.ctrlSymbolButton.setChecked(isCtrlSymbolPressed);
     }
 
-    protected boolean isAr2Pressed() {
+    private boolean isAr2Pressed() {
         return isAr2Pressed;
     }
 
-    protected void setAr2Pressed(boolean isAr2Pressed) {
+    private void setAr2Pressed(boolean isAr2Pressed) {
         this.isAr2Pressed = isAr2Pressed;
         this.ar2Button.setChecked(isAr2Pressed);
     }
 
-    protected boolean isLowRegisterPressed() {
+    private boolean isLowRegisterPressed() {
         return isLowRegisterPressed;
     }
 
-    protected void setLowRegisterPressed(boolean isLowRegisterPressed) {
+    private void setLowRegisterPressed(boolean isLowRegisterPressed) {
         this.isLowRegisterPressed = isLowRegisterPressed;
         this.lowRegisterButton.setImageResource(isLowRegisterPressed
                 ? R.drawable.arrow_shift_on : R.drawable.arrow_shift);
@@ -524,7 +517,7 @@ public class KeyboardController implements Device, OnTouchListener {
      * @return <code>true</code> if key code was handled by keyboard controller,
      * <code>false</code> otherwise
      */
-    public synchronized boolean handleBkButton(BkButton bkButton, boolean isPressed) {
+    private synchronized boolean handleBkButton(BkButton bkButton, boolean isPressed) {
         boolean isKeyCodeHandled = false;
         if (bkButton != null) {
             int bkKeyCode = bkButton.getBkKeyCode();
@@ -540,8 +533,9 @@ public class KeyboardController implements Device, OnTouchListener {
                         bkKeyCode &= 037;
                     }
                     // Check Low Register modifier and uppercase mode states
-                    if (((isLatinMode() ^ isUppercaseMode()) && isLetterButton(bkKeyCode))
-                            ^ isLowRegisterPressed()) {
+                    boolean isLowRegister = !isLetterButton(bkKeyCode) ? isLowRegisterPressed() :
+                            isLatinMode() != isUppercaseMode() || isLowRegisterPressed();
+                    if (isLowRegister) {
                         bkKeyCode = getLowRegisterKeyCode(bkKeyCode);
                     }
                 }
@@ -600,10 +594,7 @@ public class KeyboardController implements Device, OnTouchListener {
     }
 
     private static boolean isLetterButton(int bkKeyCode) {
-        return ('A' <= bkKeyCode && bkKeyCode <= 'Z') || ('a' <= bkKeyCode && bkKeyCode <= 'z')
-                || (bkKeyCode == 0137) || (bkKeyCode == 0177) // Ъ
-                || (bkKeyCode == '\\') || (bkKeyCode == '|')  // Э
-                || (bkKeyCode == '@') || (bkKeyCode == '`');  // Ю
+        return (0100 <= bkKeyCode && bkKeyCode <= 0137);
     }
 
     @Override
