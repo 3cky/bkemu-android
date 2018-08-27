@@ -20,14 +20,14 @@
 package su.comp.bk.ui.joystick;
 
 import android.content.Context;
+import android.support.v7.widget.AppCompatImageButton;
 import android.util.AttributeSet;
-import android.widget.ImageButton;
 
 /**
  * @author avm
  *
  */
-public class JoystickButton extends ImageButton {
+public class JoystickButton extends AppCompatImageButton {
 
     public JoystickButton(Context context) {
         super(context);
