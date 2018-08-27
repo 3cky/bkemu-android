@@ -1,18 +1,18 @@
 # BkEmu-Android
 
-![Bk0010-01-sideview](http://upload.wikimedia.org/wikipedia/commons/thumb/8/89/Bk0010-01-sideview.jpg/320px-Bk0010-01-sideview.jpg)
+![Bk0010-01-sideview](https://upload.wikimedia.org/wikipedia/commons/thumb/8/89/Bk0010-01-sideview.jpg/320px-Bk0010-01-sideview.jpg)
 
 Данный репозиторий содержит исходные тексты приложения BkEmu - эмулятора семейства
 PDP-11-совместимых советских 16-разрядных домашних компьютеров
-[Электроника БК-0010/11М](http://ru.wikipedia.org/wiki/БК-0010) для платформы Android.
+[Электроника БК-0010/11М](https://ru.wikipedia.org/wiki/БК-0010) для платформы Android.
 
 <a href="https://play.google.com/store/apps/details?id=su.comp.bk" alt="Download from Google Play">
-  <img src="http://www.android.com/images/brand/android_app_on_play_large.png">
+  <img src="https://play.google.com/intl/en_us/badges/images/generic/en_badge_web_generic.png" height="80">
 </a>
 
 # Лицензия
 
-* [GNU General Public License v.3.0](http://www.gnu.org/licenses/gpl-3.0.html)
+* [GNU General Public License v.3.0](https://www.gnu.org/licenses/gpl-3.0.html)
 
 # Эмулируемые функции
 
@@ -45,25 +45,20 @@ PDP-11-совместимых советских 16-разрядных дома�
 
 ## Сборка эмулятора
 
-Для самостоятельной сборки эмулятора необходимо установить Java 8.0 или выше,
-[Android SDK](http://developer.android.com/sdk/index.html), а также
-[Maven](http://maven.apache.org/download.html) версии 3.2.1 или выше. Помимо этого, необходимо
-определить переменную окружения `ANDROID_HOME`, содержащую путь к Android SDK, например:
+Проект использует систему сборки [Gradle](https://gradle.org/).
 
-    export ANDROID_HOME=/opt/google/android-sdk-linux_x86
+Исходные тексты проекта можно получить командой:
 
-Для установки необходимых Maven-зависимостей Android скачайте [Maven Android SDK Deployer](https://github.com/simpligility/maven-android-sdk-deployer):
+```
+git clone https://github.com/3cky/bkemu-android.git
+```
 
-    git clone https://github.com/simpligility/maven-android-sdk-deployer
+Также исходные тексты доступны в виде [архива](https://github.com/3cky/bkemu-android/archive/master.zip).
 
-В директории Maven Android SDK Deployer выполните команду **mvn install -fn**
+После этого импортируйте проект в [Android Studio](https://developer.android.com/studio/) (опция "Import Project"),
+указав директорию с загруженными исходными текстами.
 
-После выполнения необходимые зависимости будут установлены в локальный репозиторий Maven. Не обращайте внимания на ошибки установки неиспользуемых эмулятором платформ.
-
-Для сборки релизной версии через `maven-release-plugin` необходим [Proguard 5.2.1](http://sourceforge.net/projects/proguard/files/proguard/5.2/). Данной версией нужно заменить Android SDK Proguard (`${ANDROID_HOME}/tools/proguard`).
-
-После этого сборка приложения осуществляется вызовом команды `mvn clean package` в директории,
-содержащей исходные тексты приложения.
+Также можно собрать проект в консоли командой `./gradlew build`.
 
 ## Участие в разработке
 
@@ -80,7 +75,7 @@ GitHub fork и [pull requests](https://github.com/github/android/pulls).
 # BkEmu-Android
 
 This repository contains the source code for the BkEmu - emulator of 16-bit PDP-11-compatible
-Soviet home computers [Elektronika BK-0010/11M](http://en.wikipedia.org/wiki/Elektronika\_BK) for
+Soviet home computers [Elektronika BK-0010/11M](https://en.wikipedia.org/wiki/Elektronika\_BK) for
 Android platform.
 
 Please see the [issues](https://github.com/3cky/bkemu-android/issues) section to report any bugs or
@@ -88,29 +83,19 @@ feature requests and to see the list of known issues.
 
 ## License
 
-* [GNU General Public License v.3.0](http://www.gnu.org/licenses/gpl-3.0.html)
+* [GNU General Public License v.3.0](https://www.gnu.org/licenses/gpl-3.0.html)
 
 ## Building
 
-The build requires Java 8.0+, [Maven](http://maven.apache.org/download.html) v3.2.1+ and the
-[Android SDK](http://developer.android.com/sdk/index.html) to be installed in your
-development environment. In addition you'll need to set the `ANDROID_HOME` environment variable
-to the location of your SDK, i.e.:
+This project uses the [Gradle](https://gradle.org/) build system.
 
-    export ANDROID_HOME=/opt/google/android-sdk-linux_x86
+First download the sources by cloning this repository or downloading an
+[archived snapshot](https://github.com/3cky/bkemu-android/archive/master.zip).
 
-Download [Maven Android SDK Deployer](https://github.com/simpligility/maven-android-sdk-deployer). This project will make available the necessary Android dependencies for a maven build:
+In [Android Studio](https://developer.android.com/studio/) use the "Import Project" option.
+Next select the directory that you downloaded from this repository.
 
-    git clone https://github.com/simpligility/maven-android-sdk-deployer
-
-Navigate to Maven Android SDK Deployer folder and run the command **mvn install -fn**
-
-This command will try to make available all Android packages for Maven, do not worry about the errors for the platforms we are not using.
-
-Release build using `maven-release-plugin` requires [Proguard 5.2.1](http://sourceforge.net/projects/proguard/files/proguard/5.2/). This version replaces Android SDK Proguard (`${ANDROID_HOME}/tools/proguard`).
-
-After satisfying those requirements, the build is pretty simple - just run `mvn clean package` in
-directory containing pulled source code.
+Alternatively use the `./gradlew build` command to build the project directly.
 
 ## Contributing
 
