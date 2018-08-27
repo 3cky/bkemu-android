@@ -60,8 +60,7 @@ public class BkEmuChangeLog {
 
     private final Context context;
 
-    private static final String KEY_LAST_VERSION_NAME = BkEmuChangeLog.class.getName() +
-            ":LAST_VERSION";
+    private static final String PREFS_KEY_LAST_VERSION_NAME = "su.comp.bk.ui.p:LAST_VERSION";
 
     // Last application run version name (like "0.1.0", or empty string if this
     // is first application run)
@@ -77,7 +76,7 @@ public class BkEmuChangeLog {
         this.context = context;
         // Get current version name from manifest
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
-        setLastVersionName(prefs.getString(KEY_LAST_VERSION_NAME, ""));
+        setLastVersionName(prefs.getString(PREFS_KEY_LAST_VERSION_NAME, ""));
         Log.d(TAG, "BkEmu last version: " + getLastVersionName());
         // Get stored last version name
         try {
@@ -109,7 +108,7 @@ public class BkEmuChangeLog {
     public void saveCurrentVersionName() {
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
         SharedPreferences.Editor prefsEditor = prefs.edit();
-        prefsEditor.putString(KEY_LAST_VERSION_NAME, getCurrentVersionName());
+        prefsEditor.putString(PREFS_KEY_LAST_VERSION_NAME, getCurrentVersionName());
         prefsEditor.commit();
     }
 

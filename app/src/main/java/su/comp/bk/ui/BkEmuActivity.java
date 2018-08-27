@@ -134,6 +134,8 @@ public class BkEmuActivity extends AppCompatActivity {
     private static final int MAX_FILE_NAME_DISPLAY_LENGTH = 15;
     private static final int FILE_NAME_DISPLAY_SUFFIX_LENGTH = 3;
 
+    private static final String PREFS_KEY_COMPUTER_CONFIGURATION = "su.comp.bk.a.c";
+
     // Last loaded emulator binary image address
     protected int lastBinImageAddress;
     // Last loaded emulator binary image length
@@ -1220,7 +1222,7 @@ public class BkEmuActivity extends AppCompatActivity {
      */
     protected Configuration getComputerConfiguration() {
         SharedPreferences prefs = getPreferences(MODE_PRIVATE);
-        String configName = prefs.getString(Configuration.class.getName(), null);
+        String configName = prefs.getString(PREFS_KEY_COMPUTER_CONFIGURATION, null);
         return (configName == null) ? Configuration.BK_0010_BASIC : Configuration.valueOf(configName);
     }
 
@@ -1231,7 +1233,7 @@ public class BkEmuActivity extends AppCompatActivity {
     protected void setComputerConfiguration(Configuration configuration) {
         SharedPreferences prefs = getPreferences(MODE_PRIVATE);
         SharedPreferences.Editor prefsEditor = prefs.edit();
-        prefsEditor.putString(Configuration.class.getName(), configuration.name());
+        prefsEditor.putString(PREFS_KEY_COMPUTER_CONFIGURATION, configuration.name());
         prefsEditor.commit();
     }
 
