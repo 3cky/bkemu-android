@@ -1,5 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <releases>
+    <release version="0.4.1" date="2018-08-27">
+        <changes>
+            <change>Fixed on-screen keyboard buttons handling.</change>
+            <change>Fixed configuration reset bug after app update.</change>
+        </changes>
+    </release>
     <release version="0.4.0" date="2016-02-08">
         <changes>
             <change>Added six-button on-screen joystick.</change>
