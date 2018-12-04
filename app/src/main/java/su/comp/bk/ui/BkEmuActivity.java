@@ -19,40 +19,9 @@
 
 package su.comp.bk.ui;
 
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.DataInputStream;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.net.URL;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-
-import org.apache.commons.lang.StringUtils;
-
-import su.comp.bk.R;
-import su.comp.bk.arch.Computer;
-import su.comp.bk.arch.Computer.Configuration;
-import su.comp.bk.arch.cpu.Cpu;
-import su.comp.bk.arch.cpu.addressing.IndexDeferredAddressingMode;
-import su.comp.bk.arch.cpu.opcode.EmtOpcode;
-import su.comp.bk.arch.cpu.opcode.JsrOpcode;
-import su.comp.bk.arch.io.FloppyController;
-import su.comp.bk.arch.io.FloppyController.FloppyDriveIdentifier;
-import su.comp.bk.arch.io.KeyboardController;
-import su.comp.bk.arch.io.PeripheralPort;
-import su.comp.bk.arch.io.VideoController;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
-import android.content.DialogInterface;
-import android.content.DialogInterface.OnCancelListener;
-import android.content.DialogInterface.OnKeyListener;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager.NameNotFoundException;
@@ -83,6 +52,35 @@ import com.transitionseverywhere.Fade;
 import com.transitionseverywhere.Transition;
 import com.transitionseverywhere.TransitionManager;
 import com.transitionseverywhere.TransitionSet;
+
+import org.apache.commons.lang.StringUtils;
+
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
+import su.comp.bk.R;
+import su.comp.bk.arch.Computer;
+import su.comp.bk.arch.Computer.Configuration;
+import su.comp.bk.arch.cpu.Cpu;
+import su.comp.bk.arch.cpu.addressing.IndexDeferredAddressingMode;
+import su.comp.bk.arch.cpu.opcode.EmtOpcode;
+import su.comp.bk.arch.cpu.opcode.JsrOpcode;
+import su.comp.bk.arch.io.FloppyController;
+import su.comp.bk.arch.io.FloppyController.FloppyDriveIdentifier;
+import su.comp.bk.arch.io.KeyboardController;
+import su.comp.bk.arch.io.PeripheralPort;
+import su.comp.bk.arch.io.VideoController;
 
 /**
  * Main application activity.
@@ -192,14 +190,13 @@ public class BkEmuActivity extends AppCompatActivity {
                 int startAddress = loadBinImageFile(intentDataProgramImageUri);
                 intentDataProgramImageUri = null;
                 // Start loaded image
-                synchronized (computer) {
-                    if (startAddress < STACK_TOP_ADDRESS) {
-                        // Loaded autostarting image
-                        computer.getCpu().returnFromTrap(false);
-                    } else {
-                        // Loaded manually starting image
-                        computer.getCpu().writeRegister(false, Cpu.PC, startAddress);
-                    }
+                final Computer comp = computer;
+                if (startAddress < STACK_TOP_ADDRESS) {
+                    // Loaded autostarting image
+                    comp.getCpu().returnFromTrap(false);
+                } else {
+                    // Loaded manually starting image
+                    comp.getCpu().writeRegister(false, Cpu.PC, startAddress);
                 }
             } catch (Exception e) {
                 Log.e(TAG, "Can't load bootstrap emulator program image", e);
@@ -212,7 +209,7 @@ public class BkEmuActivity extends AppCompatActivity {
      */
     class TapeLoaderTask implements Runnable {
         private final String tapeFileName;
-        public TapeLoaderTask(String tapeFileName) {
+        TapeLoaderTask(String tapeFileName) {
             this.tapeFileName = tapeFileName;
         }
         @Override
@@ -246,7 +243,7 @@ public class BkEmuActivity extends AppCompatActivity {
      */
     class TapeSaverTask implements Runnable {
         private final String tapeFileName;
-        public TapeSaverTask(String tapeFileName) {
+        TapeSaverTask(String tapeFileName) {
             this.tapeFileName = tapeFileName;
         }
         @Override
@@ -458,8 +455,8 @@ public class BkEmuActivity extends AppCompatActivity {
         setContentView(R.layout.main);
         initToolbar();
         this.activityHandler = new Handler();
-        mainView = (ViewGroup) findViewById(R.id.main_view);
-        bkEmuView = (BkEmuView) findViewById(R.id.emu_view);
+        mainView = findViewById(R.id.main_view);
+        bkEmuView = findViewById(R.id.emu_view);
         bkEmuView.setGestureListener(new GestureListener());
 
         checkIntentData();
@@ -472,8 +469,8 @@ public class BkEmuActivity extends AppCompatActivity {
         ChangeBounds cbt = new ChangeBounds();
         ts.addTransition(cbt);
         ts.addTransition(new Fade(Fade.IN));
-        ts.setDuration(200l);
-        cbt.setDuration(0l);
+        ts.setDuration(200L);
+        cbt.setDuration(0);
         onScreenControlsTransition = ts;
 
         setupOnScreenControls(true);
@@ -492,14 +489,14 @@ public class BkEmuActivity extends AppCompatActivity {
 
     private void setupOnScreenControls(boolean hideAllControls) {
         KeyboardController keyboardController = this.computer.getKeyboardController();
-        ViewGroup keyboardView = (ViewGroup) findViewById(R.id.keyboard);
+        ViewGroup keyboardView = findViewById(R.id.keyboard);
         keyboardController.setOnScreenKeyboardView(keyboardView);
         View joystickView = findViewById(R.id.joystick);
         View joystickDpadView = findViewById(R.id.joystick_dpad);
         View joystickButtonsView = findViewById(R.id.joystick_buttons);
         PeripheralPort peripheralPort = computer.getPeripheralPort();
-        peripheralPort.setOnScreenJoystickViews(new View[] { joystickView,
-                joystickDpadView, joystickButtonsView });
+        peripheralPort.setOnScreenJoystickViews(joystickView, joystickDpadView,
+                joystickButtonsView);
         if (hideAllControls) {
             keyboardController.setOnScreenKeyboardVisibility(false);
             peripheralPort.setOnScreenJoystickVisibility(false);
@@ -537,7 +534,7 @@ public class BkEmuActivity extends AppCompatActivity {
     }
 
     private void initToolbar() {
-        final Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
+        final Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
         final ActionBar actionBar = getSupportActionBar();
         if (actionBar != null) {
@@ -689,38 +686,19 @@ public class BkEmuActivity extends AppCompatActivity {
                     .setIcon(android.R.drawable.ic_dialog_alert)
                     .setTitle(R.string.exit_confirm_title)
                     .setMessage(R.string.exit_confirm_message)
-                    .setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
-                                @Override
-                                public void onClick(DialogInterface dialog, int which) {
-                                    finish();
-                                }
-                            })
-                    .setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
-                                @Override
-                                public void onClick(DialogInterface dialog, int which) {
-                                    BkEmuActivity.this.computer.resume();
-                                }
-                            })
-                    .setOnKeyListener(new OnKeyListener() {
-                                @Override
-                                public boolean onKey(DialogInterface dialog, int keyCode,
-                                        KeyEvent event) {
-                                    if (keyCode == KeyEvent.KEYCODE_BACK &&
-                                            event.getAction() == KeyEvent.ACTION_UP &&
-                                            !event.isCanceled()) {
-                                        BkEmuActivity.this.computer.resume();
-                                    }
-                                    return false;
-                                }
-                            })
+                    .setPositiveButton(R.string.ok, (dialog, which) -> finish())
+                    .setNegativeButton(R.string.cancel, (dialog, which) -> BkEmuActivity.this.computer.resume())
+                    .setOnKeyListener((dialog, keyCode, event) -> {
+                        if (keyCode == KeyEvent.KEYCODE_BACK &&
+                                event.getAction() == KeyEvent.ACTION_UP &&
+                                !event.isCanceled()) {
+                            BkEmuActivity.this.computer.resume();
+                        }
+                        return false;
+                    })
                     .create();
             exitConfirmDialog.setCanceledOnTouchOutside(true);
-            exitConfirmDialog.setOnCancelListener(new OnCancelListener() {
-                @Override
-                public void onCancel(DialogInterface dialog) {
-                    BkEmuActivity.this.computer.resume();
-                }
-            });
+            exitConfirmDialog.setOnCancelListener(dialog -> BkEmuActivity.this.computer.resume());
             exitConfirmDialog.show();
         }
     }
@@ -783,45 +761,36 @@ public class BkEmuActivity extends AppCompatActivity {
         switch (id) {
             case DIALOG_COMPUTER_MODEL:
                 final CharSequence[] models;
-                List<String> modelList = new ArrayList<String>();
+                List<String> modelList = new ArrayList<>();
                 for (Configuration model: Configuration.values()) {
                     int modelNameId = getResources().getIdentifier(model.name().toLowerCase(),
                             "string", getPackageName());
                     modelList.add((modelNameId != 0) ? getString(modelNameId) : model.name());
                 }
-                models = modelList.toArray(new String[modelList.size()]);
+                models = modelList.toArray(new String[0]);
                 return new AlertDialog.Builder(this)
                     .setTitle(R.string.menu_select_model)
                     .setSingleChoiceItems(models, getComputerConfiguration().ordinal(),
-                            new DialogInterface.OnClickListener() {
-                        @Override
-                        public void onClick(DialogInterface dialog, int which) {
-                            // Mark selected item by tag
-                            ListView listView = ((AlertDialog) dialog).getListView();
-                            listView.setTag(Integer.valueOf(which));
-                        }
-                    })
-                    .setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
-                        @Override
-                        public void onClick(DialogInterface dialog, int whichButton) {
-                            // Get tagged selected item, if any
-                            ListView listView = ((AlertDialog) dialog).getListView();
-                            Integer selected = (Integer) listView.getTag();
-                            if (selected != null) {
-                                Configuration config = Configuration.values()[selected];
-                                if (computer.getConfiguration() != config) {
-                                    // Set new computer configuration and restart activity
-                                    setComputerConfiguration(config);
-                                    restartActivity(null);
-                                }
+                            (dialog, which) -> {
+                                // Mark selected item by tag
+                                ListView listView = ((AlertDialog) dialog).getListView();
+                                listView.setTag(which);
+                            })
+                    .setPositiveButton(R.string.ok, (dialog, whichButton) -> {
+                        // Get tagged selected item, if any
+                        ListView listView = ((AlertDialog) dialog).getListView();
+                        Integer selected = (Integer) listView.getTag();
+                        if (selected != null) {
+                            Configuration config = Configuration.values()[selected];
+                            if (computer.getConfiguration() != config) {
+                                // Set new computer configuration and restart activity
+                                setComputerConfiguration(config);
+                                restartActivity(null);
                             }
                         }
                     })
-                    .setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
-                        @Override
-                        public void onClick(DialogInterface dialog, int whichButton) {
-                            // Do nothing on cancel
-                        }
+                    .setNegativeButton(R.string.cancel, (dialog, whichButton) -> {
+                        // Do nothing on cancel
                     })
                    .create();
             case DIALOG_ABOUT:
@@ -831,7 +800,7 @@ public class BkEmuActivity extends AppCompatActivity {
                 aboutDialog.setContentView(R.layout.about_dialog);
                 aboutDialog.getWindow().setFeatureDrawableResource(Window.FEATURE_LEFT_ICON,
                         android.R.drawable.ic_dialog_info);
-                TextView versionTextView = (TextView) aboutDialog.findViewById(R.id.about_version);
+                TextView versionTextView = aboutDialog.findViewById(R.id.about_version);
                 try {
                     versionTextView.setText(getResources().getString(R.string.about_version,
                             getPackageManager().getPackageInfo(getPackageName(), 0).versionName));
@@ -881,19 +850,11 @@ public class BkEmuActivity extends AppCompatActivity {
     protected void prepareFloppyDriveView(final View fddView,
             final FloppyDriveIdentifier fddIdentifier) {
         updateFloppyDriveView(fddView, fddIdentifier);
-        fddView.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                showMountDiskImageFileDialog(fddIdentifier);
-            }
-        });
-        fddView.setOnLongClickListener(new View.OnLongClickListener() {
-            @Override
-            public boolean onLongClick(View v) {
-                unmountDiskImage(fddIdentifier);
-                updateFloppyDriveView(v, fddIdentifier);
-                return true;
-            }
+        fddView.setOnClickListener(v -> showMountDiskImageFileDialog(fddIdentifier));
+        fddView.setOnLongClickListener(v -> {
+            unmountDiskImage(fddIdentifier);
+            updateFloppyDriveView(v, fddIdentifier);
+            return true;
         });
     }
 
@@ -901,10 +862,10 @@ public class BkEmuActivity extends AppCompatActivity {
             final FloppyDriveIdentifier fddIdentifier) {
         FloppyController fddController = computer.getFloppyController();
         boolean isFddMounted = fddController.isFloppyDriveMounted(fddIdentifier);
-        ImageView fddImageView = (ImageView) fddView.findViewWithTag("fdd_image");
+        ImageView fddImageView = fddView.findViewWithTag("fdd_image");
         fddImageView.setImageResource(isFddMounted ? R.drawable.floppy_drive_loaded
                 : R.drawable.floppy_drive);
-        TextView fddFileTextView = (TextView) fddView.findViewWithTag("fdd_file");
+        TextView fddFileTextView = fddView.findViewWithTag("fdd_file");
         if (isFddMounted) {
             fddFileTextView.setTextColor(getResources().getColor(R.color.fdd_loaded));
             String fddImageFileName = Uri.parse(fddController.getFloppyDriveImageUri(
@@ -929,7 +890,7 @@ public class BkEmuActivity extends AppCompatActivity {
     }
 
     protected void prepareAboutDialog(Dialog aboutDialog) {
-        TextView perfTextView = (TextView) aboutDialog.findViewById(R.id.about_perf);
+        TextView perfTextView = aboutDialog.findViewById(R.id.about_perf);
         float effectiveClockFrequency = this.computer.getEffectiveClockFrequency();
         perfTextView.setText(getResources().getString(R.string.about_perf,
                 effectiveClockFrequency / 1000f, effectiveClockFrequency
@@ -968,10 +929,13 @@ public class BkEmuActivity extends AppCompatActivity {
         String directoryPath = Environment.getExternalStorageDirectory().getPath();
         if (fileUriString != null) {
             Uri fileUri = Uri.parse(fileUriString);
-            File filePath = new File(fileUri.getPath());
-            File fileDir = filePath.getParentFile();
-            if (fileDir.exists()) {
-                directoryPath = fileDir.getPath();
+            String filePathString = fileUri.getPath();
+            if (filePathString != null) {
+                File filePath = new File(filePathString);
+                File fileDir = filePath.getParentFile();
+                if (fileDir.exists()) {
+                    directoryPath = fileDir.getPath();
+                }
             }
         }
         return directoryPath;
@@ -1106,24 +1070,23 @@ public class BkEmuActivity extends AppCompatActivity {
 
     protected void doFinishBinImageSave(boolean isImageSavedSuccessfully) {
         // Set result in parameters block
-        synchronized (computer) {
-            if (!computer.getConfiguration().isMemoryManagerPresent()) { // BK0010
-                // Set result code
-                int resultCode = isImageSavedSuccessfully ? 0 : 3; // OK / STOP
-                computer.writeMemory(true, tapeParamsBlockAddr + 1, resultCode);
-                // Return from EMT 36
-                computer.getCpu().returnFromTrap(false);
-            } else { // BK0011
-                // Set result code
-                if (isImageSavedSuccessfully) {
-                    computer.getCpu().clearPswFlagC();
-                } else {
-                    computer.getCpu().setPswFlagC();
-                    computer.writeMemory(true, 052, 4); // STOP
-                }
-                // Return from tape save routine
-                computer.getCpu().writeRegister(false, Cpu.PC, computer.getCpu().pop());
+        final Computer comp = computer;
+        if (!comp.getConfiguration().isMemoryManagerPresent()) { // BK0010
+            // Set result code
+            int resultCode = isImageSavedSuccessfully ? 0 : 3; // OK / STOP
+            comp.writeMemory(true, tapeParamsBlockAddr + 1, resultCode);
+            // Return from EMT 36
+            comp.getCpu().returnFromTrap(false);
+        } else { // BK0011
+            // Set result code
+            if (isImageSavedSuccessfully) {
+                comp.getCpu().clearPswFlagC();
+            } else {
+                comp.getCpu().setPswFlagC();
+                comp.writeMemory(true, 052, 4); // STOP
             }
+            // Return from tape save routine
+            comp.getCpu().writeRegister(false, Cpu.PC, computer.getCpu().pop());
         }
     }
 
@@ -1160,46 +1123,45 @@ public class BkEmuActivity extends AppCompatActivity {
     protected void doFinishBinImageLoad(boolean isImageLoadedSuccessfully) {
         // Set result in parameters block
         if (isImageLoadedSuccessfully) {
-            synchronized (computer) {
-                int tapeParamsBlockAddrNameIdx;
-                if (!computer.getConfiguration().isMemoryManagerPresent()) { // BK0010
-                    tapeParamsBlockAddrNameIdx = 26;
-                    // Set "OK" result code
-                    computer.writeMemory(true, tapeParamsBlockAddr + 1, 0);
-                    // Write loaded image start address
-                    computer.writeMemory(false, tapeParamsBlockAddr + 22, lastBinImageAddress);
-                    // Write loaded image length
-                    computer.writeMemory(false, tapeParamsBlockAddr + 24, lastBinImageLength);
-                    // Return from EMT 36
-                    computer.getCpu().returnFromTrap(false);
-                } else { // BK0011
-                    tapeParamsBlockAddrNameIdx = 28;
-                    // Set "OK" result code
-                    computer.getCpu().clearPswFlagC();
-                    // Write loaded image start address
-                    computer.writeMemory(false, tapeParamsBlockAddr + 24, lastBinImageAddress);
-                    // Write loaded image length
-                    computer.writeMemory(false, tapeParamsBlockAddr + 26, lastBinImageLength);
-                    // Return from tape load routine
-                    computer.getCpu().writeRegister(false, Cpu.PC, computer.getCpu().pop());
-                }
-                // Write loaded image name
-                String tapeFileName = StringUtils.substringAfterLast(lastBinImageFileUri, "/");
-                tapeFileName = StringUtils.substring(tapeFileName, 0, MAX_TAPE_FILE_NAME_LENGTH);
-                byte[] tapeFileNameBuffer;
-                try {
-                    tapeFileNameBuffer = tapeFileName.getBytes("koi8-r");
-                } catch (UnsupportedEncodingException e) {
-                    tapeFileNameBuffer = tapeFileName.getBytes();
-                }
-                byte[] tapeFileNameData = new byte[MAX_TAPE_FILE_NAME_LENGTH];
-                Arrays.fill(tapeFileNameData, (byte) ' ');
-                System.arraycopy(tapeFileNameBuffer, 0, tapeFileNameData, 0,
-                        Math.min(tapeFileNameBuffer.length, MAX_TAPE_FILE_NAME_LENGTH));
-                for (int idx = 0; idx < tapeFileNameData.length; idx++) {
-                    computer.getCpu().writeMemory(true, tapeParamsBlockAddr +
-                            tapeParamsBlockAddrNameIdx + idx, tapeFileNameData[idx]);
-                }
+            final Computer comp = computer;
+            int tapeParamsBlockAddrNameIdx;
+            if (!comp.getConfiguration().isMemoryManagerPresent()) { // BK0010
+                tapeParamsBlockAddrNameIdx = 26;
+                // Set "OK" result code
+                comp.writeMemory(true, tapeParamsBlockAddr + 1, 0);
+                // Write loaded image start address
+                comp.writeMemory(false, tapeParamsBlockAddr + 22, lastBinImageAddress);
+                // Write loaded image length
+                comp.writeMemory(false, tapeParamsBlockAddr + 24, lastBinImageLength);
+                // Return from EMT 36
+                comp.getCpu().returnFromTrap(false);
+            } else { // BK0011
+                tapeParamsBlockAddrNameIdx = 28;
+                // Set "OK" result code
+                comp.getCpu().clearPswFlagC();
+                // Write loaded image start address
+                comp.writeMemory(false, tapeParamsBlockAddr + 24, lastBinImageAddress);
+                // Write loaded image length
+                comp.writeMemory(false, tapeParamsBlockAddr + 26, lastBinImageLength);
+                // Return from tape load routine
+                comp.getCpu().writeRegister(false, Cpu.PC, comp.getCpu().pop());
+            }
+            // Write loaded image name
+            String tapeFileName = StringUtils.substringAfterLast(lastBinImageFileUri, "/");
+            tapeFileName = StringUtils.substring(tapeFileName, 0, MAX_TAPE_FILE_NAME_LENGTH);
+            byte[] tapeFileNameBuffer;
+            try {
+                tapeFileNameBuffer = tapeFileName.getBytes("koi8-r");
+            } catch (UnsupportedEncodingException e) {
+                tapeFileNameBuffer = tapeFileName.getBytes();
+            }
+            byte[] tapeFileNameData = new byte[MAX_TAPE_FILE_NAME_LENGTH];
+            Arrays.fill(tapeFileNameData, (byte) ' ');
+            System.arraycopy(tapeFileNameBuffer, 0, tapeFileNameData, 0,
+                    Math.min(tapeFileNameBuffer.length, MAX_TAPE_FILE_NAME_LENGTH));
+            for (int idx = 0; idx < tapeFileNameData.length; idx++) {
+                comp.getCpu().writeMemory(true, tapeParamsBlockAddr +
+                        tapeParamsBlockAddrNameIdx + idx, tapeFileNameData[idx]);
             }
         }
     }
@@ -1234,7 +1196,7 @@ public class BkEmuActivity extends AppCompatActivity {
         SharedPreferences prefs = getPreferences(MODE_PRIVATE);
         SharedPreferences.Editor prefsEditor = prefs.edit();
         prefsEditor.putString(PREFS_KEY_COMPUTER_CONFIGURATION, configuration.name());
-        prefsEditor.commit();
+        prefsEditor.apply();
     }
 
     /**
@@ -1246,22 +1208,14 @@ public class BkEmuActivity extends AppCompatActivity {
     protected int loadBinImageFile(String binImageFileUri) throws Exception {
         Log.d(TAG, "loading image: " + binImageFileUri);
         ByteArrayOutputStream binImageOutput = new ByteArrayOutputStream();
-        BufferedInputStream binImageInput = null;
-        try {
-            binImageInput = new BufferedInputStream(new URL(binImageFileUri).openStream());
+        try (BufferedInputStream binImageInput = new BufferedInputStream(
+                new URL(binImageFileUri).openStream())) {
             int readByte;
             while ((readByte = binImageInput.read()) != -1) {
                 binImageOutput.write(readByte);
             }
-        } finally {
-            try {
-                if (binImageInput != null) {
-                    binImageInput.close();
-                }
-            } catch (Exception e) {
-                // Do nothing
-            }
         }
+        // Do nothing
         this.lastBinImageFileUri = binImageFileUri;
         return loadBinImage(binImageOutput.toByteArray());
     }
@@ -1283,12 +1237,11 @@ public class BkEmuActivity extends AppCompatActivity {
                 | ((imageDataInputStream.readByte() & 0377) << 8);
         lastBinImageLength = (imageDataInputStream.readByte() & 0377)
                 | ((imageDataInputStream.readByte() & 0377) << 8);
-        synchronized (computer) {
-            for (int imageIndex = 0; imageIndex < lastBinImageLength; imageIndex++) {
-                if (!computer.writeMemory(true, lastBinImageAddress + imageIndex, imageDataInputStream.read())) {
-                    throw new IllegalStateException("Can't write binary image data to address: 0" +
-                            Integer.toOctalString(lastBinImageAddress + imageIndex));
-                }
+        final Computer comp = computer;
+        for (int imageIndex = 0; imageIndex < lastBinImageLength; imageIndex++) {
+            if (!comp.writeMemory(true, lastBinImageAddress + imageIndex, imageDataInputStream.read())) {
+                throw new IllegalStateException("Can't write binary image data to address: 0" +
+                        Integer.toOctalString(lastBinImageAddress + imageIndex));
             }
         }
         Log.d(TAG, "loaded bin image file: address 0" + Integer.toOctalString(lastBinImageAddress) +
@@ -1308,15 +1261,14 @@ public class BkEmuActivity extends AppCompatActivity {
         binImageOutput.write((lastBinImageAddress >> 8) & 0377);
         binImageOutput.write(lastBinImageLength & 0377);
         binImageOutput.write((lastBinImageLength >> 8) & 0377);
-        synchronized (computer) {
-            for (int imageIndex = 0; imageIndex < lastBinImageLength; imageIndex++) {
-                int imageData = computer.readMemory(true, lastBinImageAddress + imageIndex);
-                if (imageData == Computer.BUS_ERROR) {
-                    throw new IllegalStateException("Can't read binary image data from address: 0" +
-                            Integer.toOctalString(lastBinImageAddress + imageIndex));
-                }
-                binImageOutput.write(imageData);
+        final Computer comp = computer;
+        for (int imageIndex = 0; imageIndex < lastBinImageLength; imageIndex++) {
+            int imageData = comp.readMemory(true, lastBinImageAddress + imageIndex);
+            if (imageData == Computer.BUS_ERROR) {
+                throw new IllegalStateException("Can't read binary image data from address: 0" +
+                        Integer.toOctalString(lastBinImageAddress + imageIndex));
             }
+            binImageOutput.write(imageData);
         }
         saveBinImage(binImageFilePath, binImageOutput.toByteArray());
         this.lastBinImageFileUri = "file:" + binImageFilePath;
@@ -1329,20 +1281,12 @@ public class BkEmuActivity extends AppCompatActivity {
      * @throws IOException in case of saving error
      */
     public void saveBinImage(String imagePath, byte[] imageData) throws IOException {
-        BufferedOutputStream binImageOutput = null;
-        try {
-            binImageOutput = new BufferedOutputStream(new FileOutputStream(imagePath));
+        try (BufferedOutputStream binImageOutput = new BufferedOutputStream(
+                new FileOutputStream(imagePath))) {
             binImageOutput.write(imageData);
             binImageOutput.flush();
-        } finally {
-            try {
-                if (binImageOutput != null) {
-                    binImageOutput.close();
-                }
-            } catch (Exception e) {
-                // Do nothing
-            }
         }
+        // Do nothing
         Log.d(TAG, "saved bin image file: address 0" + Integer.toOctalString(lastBinImageAddress) +
                 ", length: " + lastBinImageLength);
     }

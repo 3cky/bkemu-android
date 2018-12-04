@@ -90,7 +90,7 @@ public class Computer implements Runnable {
     /** I/O registers space max start address */
     public final static int IO_REGISTERS_MAX_ADDRESS = 0177600;
     // I/O devices list
-    private final List<Device> deviceList = new ArrayList<Device>();
+    private final List<Device> deviceList = new ArrayList<>();
     // I/O registers space addresses mapped to devices
     private final List<?>[] deviceTable = new List[2048];
     // Devices start address (depends from connected RAM/ROM)
@@ -143,15 +143,15 @@ public class Computer implements Runnable {
         private final boolean isFloppyControllerPresent;
         private final boolean isMemoryManagerPresent;
 
-        private Configuration() {
+        Configuration() {
             this(false, false);
         }
 
-        private Configuration(boolean isFloppyControllerPresent) {
+        Configuration(boolean isFloppyControllerPresent) {
             this(isFloppyControllerPresent, false);
         }
 
-        private Configuration(boolean isFloppyControllerPresent, boolean isMemoryManagerPresent) {
+        Configuration(boolean isFloppyControllerPresent, boolean isMemoryManagerPresent) {
             this.isFloppyControllerPresent = isFloppyControllerPresent;
             this.isMemoryManagerPresent = isMemoryManagerPresent;
         }
@@ -296,9 +296,8 @@ public class Computer implements Runnable {
     }
 
     private List<Memory> getStatefulMemoryList() {
-        List<Memory> statefulMemoryList = new ArrayList<Memory>();
-        for (int memoryBlockIdx = 0; memoryBlockIdx < memoryTable.length; memoryBlockIdx++) {
-            Memory memoryBlock = memoryTable[memoryBlockIdx];
+        List<Memory> statefulMemoryList = new ArrayList<>();
+        for (Memory memoryBlock : memoryTable) {
             if (!(memoryBlock instanceof ReadOnlyMemory)) {
                 if (memoryBlock instanceof RandomAccessMemory) {
                     if (!statefulMemoryList.contains(memoryBlock)) {
@@ -509,7 +508,7 @@ public class Computer implements Runnable {
             @SuppressWarnings("unchecked")
             List<Device> addressDevices = (List<Device>) deviceTable[deviceTableIndex];
             if (addressDevices == null) {
-                addressDevices = new ArrayList<Device>(1);
+                addressDevices = new ArrayList<>(1);
                 deviceTable[deviceTableIndex] = addressDevices;
             }
             addressDevices.add(device);

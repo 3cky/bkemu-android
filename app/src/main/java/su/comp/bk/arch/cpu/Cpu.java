@@ -464,9 +464,8 @@ public class Cpu {
     /**
      * Restore CPU state.
      * @param inState {@link Bundle} to restore state
-     * @throws Exception in case of error while state restoring
      */
-    public void restoreState(Bundle inState) throws Exception {
+    public void restoreState(Bundle inState) {
         // Restore PSW
         setPswState(inState.getInt(STATE_PSW));
         // Restore registers
@@ -491,7 +490,7 @@ public class Cpu {
 
     /**
      * Set CPU time (in clock ticks).
-     * @param CPU time to set
+     * @param timeToSet CPU time to set
      */
     public void setTime(long timeToSet) {
         time = timeToSet;

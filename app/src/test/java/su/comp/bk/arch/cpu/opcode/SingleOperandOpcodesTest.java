@@ -38,11 +38,8 @@ public class SingleOperandOpcodesTest {
 
     private Computer computer;
 
-    /**
-     * @throws java.lang.Exception
-     */
     @Before
-    public void setUp() throws Exception {
+    public void setUp() {
         computer = new Computer();
         computer.addDevice(new Sel1RegisterSystemBits(0100000));
     }

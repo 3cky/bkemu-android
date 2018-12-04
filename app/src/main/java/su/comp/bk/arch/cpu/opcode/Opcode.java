@@ -24,7 +24,7 @@ package su.comp.bk.arch.cpu.opcode;
 public interface Opcode {
 
     /** Opcode byte operation flag */
-    static int BYTE_OPERATION_FLAG = 0100000;
+    int BYTE_OPERATION_FLAG = 0100000;
 
     /**
      * Get opcode value.

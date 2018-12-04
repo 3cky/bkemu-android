@@ -53,7 +53,7 @@ public class PeripheralPort implements Device, OnTouchListener {
 
         private final int joystickButtonMask;
 
-        private JoystickButton(int joystickButtonMask) {
+        JoystickButton(int joystickButtonMask) {
             this.joystickButtonMask = joystickButtonMask;
         }
 

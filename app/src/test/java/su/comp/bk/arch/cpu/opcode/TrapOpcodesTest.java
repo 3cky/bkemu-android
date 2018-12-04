@@ -43,7 +43,7 @@ public class TrapOpcodesTest {
     private Computer computer;
 
     @Before
-    public void setUp() throws Exception {
+    public void setUp() {
         computer = new Computer();
         computer.addDevice(new Sel1RegisterSystemBits(0100000));
         computer.addMemory(new RandomAccessMemory("TestRam", 0, 01000));

@@ -28,7 +28,7 @@ import org.junit.Test;
 public class RandomAccessMemoryTest {
 
     /**
-     * Test method for {@link su.comp.bk.arch.memory.RandomAccessMemory#RandomAccessMemory(int, int)}.
+     * Test method for {@link su.comp.bk.arch.memory.RandomAccessMemory#RandomAccessMemory(String, int,int)}.
      */
     @Test
     public void testRandomAccessMemoryIntInt() {
@@ -38,7 +38,7 @@ public class RandomAccessMemoryTest {
     }
 
     /**
-     * Test method for {@link su.comp.bk.arch.memory.RandomAccessMemory#RandomAccessMemory(int, short[])}.
+     * Test method for {@link su.comp.bk.arch.memory.RandomAccessMemory#RandomAccessMemory(String, int, short[])}.
      */
     @Test
     public void testRandomAccessMemoryIntShortArray() {
@@ -50,7 +50,7 @@ public class RandomAccessMemoryTest {
     }
 
     /**
-     * Test method for {@link su.comp.bk.arch.memory.RandomAccessMemory#RandomAccessMemory(int, byte[])}.
+     * Test method for {@link su.comp.bk.arch.memory.RandomAccessMemory#RandomAccessMemory(String, int, byte[])}.
      */
     @Test
     public void testRandomAccessMemoryIntByteArray() {

@@ -67,7 +67,7 @@ public interface Device {
      * @param cpuTime current CPU time (in clock ticks)
      * @param address absolute address to write (from address list this device is mapped to)
      * @param value value to write to device
-     * @param isByteAddressing <code>true</code> to write byte value, <code>false</code> to write
+     * @param isByteMode <code>true</code> to write byte value, <code>false</code> to write
      * word value
      * @return <code>true</code> if value successfully written, <code>false</code> if not
      */

@@ -24,7 +24,7 @@ package su.comp.bk.util;
  */
 public class Crc16 {
     /** CRC initialization value */
-    public static short INIT_VALUE = (short) 0xffff;
+    public static final short INIT_VALUE = (short) 0xffff;
 
     /**
      * Calculate next CRC value.

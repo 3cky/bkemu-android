@@ -37,7 +37,6 @@ import su.comp.bk.R;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager.NameNotFoundException;
 import android.preference.PreferenceManager;
@@ -109,7 +108,7 @@ public class BkEmuChangeLog {
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
         SharedPreferences.Editor prefsEditor = prefs.edit();
         prefsEditor.putString(PREFS_KEY_LAST_VERSION_NAME, getCurrentVersionName());
-        prefsEditor.commit();
+        prefsEditor.apply();
     }
 
     public boolean isFirstRun() {
@@ -145,21 +144,14 @@ public class BkEmuChangeLog {
                     ? R.string.changelog_title_full : R.string.changelog_title))
                 .setView(dialogView)
                 .setCancelable(true)
-                .setPositiveButton(
-                        context.getResources().getString(R.string.ok),
-                        new DialogInterface.OnClickListener() {
-                    public void onClick(DialogInterface dialog, int id) {
-                        dialog.cancel();
-                    }
-                });
+                .setPositiveButton(context.getResources().getString(R.string.ok),
+                        (dialog, id) -> dialog.cancel());
         if (!isFullChangelog) {
             builder.setNegativeButton(R.string.changelog_show_full,
-                    new DialogInterface.OnClickListener() {
-                        public void onClick(DialogInterface dialog, int id) {
-                            dialog.cancel();
-                            getDialog(true).show();
-                    }
-            });
+                    (dialog, id) -> {
+                        dialog.cancel();
+                        getDialog(true).show();
+                    });
         }
         return builder.create();
     }
@@ -191,20 +183,20 @@ public class BkEmuChangeLog {
                 String tagName;
                 switch (eventType) {
                     case XmlPullParser.START_DOCUMENT:
-                        changelogTemplateData = new HashMap<String, Object>();
+                        changelogTemplateData = new HashMap<>();
                         break;
                     case XmlPullParser.START_TAG:
                         tagName = xmlParser.getName();
                         if (XML_TAG_RELEASES.equalsIgnoreCase(tagName)) {
-                            releasesList = new ArrayList<Map<String, Object>>();
+                            releasesList = new ArrayList<>();
                         } else if (XML_TAG_RELEASE.equalsIgnoreCase(tagName)) {
-                            releaseData = new HashMap<String, Object>();
+                            releaseData = new HashMap<>();
                             releaseData.put("version", xmlParser
                                     .getAttributeValue(null, XML_ATTR_VERSION));
                             releaseData.put("date", xmlParser
                                     .getAttributeValue(null, XML_ATTR_DATE));
                         } else if (XML_TAG_CHANGES.equalsIgnoreCase(tagName)) {
-                            releaseChangesList = new ArrayList<String>();
+                            releaseChangesList = new ArrayList<>();
                         } else if (XML_TAG_CHANGE.equalsIgnoreCase(tagName)) {
                             releaseChangesList.add(xmlParser.nextText());
                         } else {

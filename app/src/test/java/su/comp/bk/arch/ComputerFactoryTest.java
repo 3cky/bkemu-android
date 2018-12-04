@@ -21,10 +21,7 @@ package su.comp.bk.arch;
 
 import static org.junit.Assert.*;
 
-import java.io.File;
-
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.commons.lang.StringUtils;
 import org.junit.Before;
 import org.junit.Ignore;
@@ -62,7 +59,7 @@ public class ComputerFactoryTest extends ResourceFileTestBase {
 
         private static final int MAX_DATA_LENGTH = 16384;
 
-        private StringBuffer writtenData = new StringBuffer();
+        private final StringBuffer writtenData = new StringBuffer();
 
         private final  int[] ADDRESSES = {
             READ_CONTROL_REGISTER_ADDRESS, READ_DATA_REGISTER_ADDRESS,
@@ -121,11 +118,8 @@ public class ComputerFactoryTest extends ResourceFileTestBase {
         }
     }
 
-    /**
-     * @throws java.lang.Exception
-     */
     @Before
-    public void setUp() throws Exception {
+    public void setUp() {
         computer = new Computer();
         computer.setClockFrequency(Computer.CLOCK_FREQUENCY_BK0010);
         workMemory = new RandomAccessMemory("TestWorkMemory", 0, 020000);

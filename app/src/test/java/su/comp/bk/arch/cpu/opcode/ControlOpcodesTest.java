@@ -44,7 +44,7 @@ public class ControlOpcodesTest {
     private Computer computer;
 
     @Before
-    public void setUp() throws Exception {
+    public void setUp() {
         computer = new Computer();
         computer.addDevice(new Sel1RegisterSystemBits(0100000));
     }
@@ -153,7 +153,7 @@ public class ControlOpcodesTest {
         computer.addDevice(haltBitRegister);
 
         computer.reset();
-        assertTrue((computer.getCpu().readMemory(false, Cpu.REG_SEL1) & 014) == 0);
+        assertEquals(0, (computer.getCpu().readMemory(false, Cpu.REG_SEL1) & 014));
         // HALT
         computer.getCpu().executeSingleInstruction();
         assertEquals(0100010, computer.getCpu().readRegister(false, Cpu.PC));

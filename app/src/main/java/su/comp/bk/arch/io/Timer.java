@@ -248,8 +248,7 @@ public class Timer implements Device {
         if ((controlRegister & CONTROL_PRESCALER_16) != 0) {
             prescalerValue *= 16;
         }
-        long timerTicksElapsed = (cpuTime - settingsChangeTime) / prescalerValue;
-        return timerTicksElapsed;
+        return (cpuTime - settingsChangeTime) / prescalerValue;
     }
 
 }

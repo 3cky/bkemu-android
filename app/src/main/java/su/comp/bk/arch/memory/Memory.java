@@ -50,7 +50,7 @@ public interface Memory {
 
     /**
      * Read value from memory.
-     * @param isByteAddressing <code>true</code> to read byte value, <code>false</code> to read
+     * @param isByteMode <code>true</code> to read byte value, <code>false</code> to read
      * word value
      * @param address absolute address to read (0000000-0177777)
      * @return read value
@@ -59,7 +59,7 @@ public interface Memory {
 
     /**
      * Write value to memory.
-     * @param isByteAddressing <code>true</code> to write byte value, <code>false</code> to write
+     * @param isByteMode <code>true</code> to write byte value, <code>false</code> to write
      * word value
      * @param address absolute address to write (0000000-0177777)
      * @param value value to write to memory

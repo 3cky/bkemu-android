@@ -137,8 +137,8 @@ public class PagedMemory implements Memory {
 
     @Override
     public boolean write(boolean isByteMode, int address, int value) {
-        return (activePage != null) ? activePage.write(isByteMode,
-                address - startAddress, value) : false;
+        return (activePage != null) && activePage.write(isByteMode,
+                address - startAddress, value);
     }
 
     @Override

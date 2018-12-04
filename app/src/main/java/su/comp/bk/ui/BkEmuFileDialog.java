@@ -10,11 +10,11 @@ import su.comp.bk.R;
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.ListActivity;
-import android.content.DialogInterface;
 import android.content.pm.PackageManager;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.CountDownTimer;
+import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.ActivityCompat.OnRequestPermissionsResultCallback;
 import android.support.v4.content.ContextCompat;
@@ -27,7 +27,6 @@ import android.support.v7.widget.Toolbar;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
-import android.view.View.OnClickListener;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.EditText;
@@ -48,8 +47,6 @@ public class BkEmuFileDialog extends ListActivity implements AppCompatCallback,
     private static final String ITEM_IMAGE = "image";
 
     private static final String ROOT_PATH = "/";
-
-    private static final String DEFAULT_FILENAME = "SAVE.BIN";
 
     public enum Mode {
         LOAD,
@@ -83,12 +80,12 @@ public class BkEmuFileDialog extends ListActivity implements AppCompatCallback,
 
     private Mode mode;
 
-    protected HashMap<String, Integer> lastDirPositions = new HashMap<String, Integer>();
+    protected final HashMap<String, Integer> lastDirPositions = new HashMap<>();
 
     private AppCompatDelegate delegate;
 
     class DirListTask extends AsyncTask<String, Void, SimpleAdapter> {
-        public static final long PROGRESS_BAR_DELAY = 500l;
+        public static final long PROGRESS_BAR_DELAY = 500L;
         private CountDownTimer progressBarTimer;
         private String dirPath;
 
@@ -136,20 +133,20 @@ public class BkEmuFileDialog extends ListActivity implements AppCompatCallback,
         delegate = AppCompatDelegate.create(this, this);
         delegate.onCreate(savedInstanceState);
         delegate.setContentView(R.layout.file_dialog);
-        Toolbar toolbar= (Toolbar) findViewById(R.id.fd_toolbar);
+        Toolbar toolbar = findViewById(R.id.fd_toolbar);
         delegate.setSupportActionBar(toolbar);
 
         inputManager = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
 
         getListView().setFastScrollEnabled(true);
 
-        pathTextView = (TextView) findViewById(R.id.path);
-        fileNameEditText = (EditText) findViewById(R.id.fd_edit_text_filename);
-        progressBar = (ProgressBar) findViewById(R.id.fd_progress_bar);
+        pathTextView = findViewById(R.id.path);
+        fileNameEditText = findViewById(R.id.fd_edit_text_filename);
+        progressBar = findViewById(R.id.fd_progress_bar);
 
-        LinearLayout layoutFilename = (LinearLayout) findViewById(R.id.fd_layout_filename);
-        Button saveButton = (Button) findViewById(R.id.fd_btn_save);
-        Button createDirButton = (Button) findViewById(R.id.fd_btn_create_dir);
+        LinearLayout layoutFilename = findViewById(R.id.fd_layout_filename);
+        Button saveButton = findViewById(R.id.fd_btn_save);
+        Button createDirButton = findViewById(R.id.fd_btn_create_dir);
 
         startPath = getIntent().getStringExtra(INTENT_START_PATH);
         if (startPath == null) {
@@ -170,38 +167,22 @@ public class BkEmuFileDialog extends ListActivity implements AppCompatCallback,
         } else {
             layoutFilename.setVisibility(View.GONE); // FIXME probably file name editor should be deleted at all
             createDirButton.setVisibility(View.VISIBLE);
-            createDirButton.setOnClickListener(new OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    showCreateDirDialog();
-                }
-            });
+            createDirButton.setOnClickListener(v -> showCreateDirDialog());
             saveButton.setVisibility(View.VISIBLE);
-            saveButton.setOnClickListener(new OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    String resultPath = new File(currentPath, filename).getPath();
-                    getIntent().putExtra(INTENT_RESULT_PATH, resultPath);
-                    setResult(RESULT_OK, getIntent());
-                    finish();
-                }
+            saveButton.setOnClickListener(v -> {
+                String resultPath = new File(currentPath, filename).getPath();
+                getIntent().putExtra(INTENT_RESULT_PATH, resultPath);
+                setResult(RESULT_OK, getIntent());
+                finish();
             });
 
             filename = new File(startPath).getName();
-            if (filename == null) {
-                filename = DEFAULT_FILENAME;
-            }
             formatFilter = new String[] { filename };
             delegate.setTitle(getResources().getString(R.string.fd_title_save, filename));
         }
 
-        final Button cancelButton = (Button) findViewById(R.id.fd_btn_cancel);
-        cancelButton.setOnClickListener(new OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                finish();
-            }
-        });
+        final Button cancelButton = findViewById(R.id.fd_btn_cancel);
+        cancelButton.setOnClickListener(v -> finish());
 
         showStartPathWithPermissionsCheck();
     }
@@ -224,18 +205,8 @@ public class BkEmuFileDialog extends ListActivity implements AppCompatCallback,
     protected void showPermissionsRationaleDialog() {
         new AlertDialog.Builder(this)
             .setMessage(R.string.fd_permissions_rationale)
-            .setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
-                @Override
-                public void onClick(DialogInterface dialog, int which) {
-                    requestPermissions();
-                }
-            })
-            .setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
-                @Override
-                public void onClick(DialogInterface dialog, int which) {
-                    finish();
-                }
-            })
+            .setPositiveButton(R.string.ok, (dialog, which) -> requestPermissions())
+            .setNegativeButton(R.string.cancel, (dialog, which) -> finish())
             .setIcon(R.drawable.ic_folder_white_24dp)
             .show();
     }
@@ -247,7 +218,8 @@ public class BkEmuFileDialog extends ListActivity implements AppCompatCallback,
     }
 
     @Override
-    public void onRequestPermissionsResult(int requestCode, String permissions[], int[] grantResults) {
+    public void onRequestPermissionsResult(int requestCode, @NonNull String permissions[],
+                                           @NonNull int[] grantResults) {
         switch (requestCode) {
             case REQUEST_CODE_ASK_PERMISSIONS: {
                 // If request is cancelled, the result arrays are empty.
@@ -267,20 +239,31 @@ public class BkEmuFileDialog extends ListActivity implements AppCompatCallback,
         }
     }
 
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        // Save last accessed emulator image file parameters
+        //outState.putString(LAST_BIN_IMAGE_FILE_URI, lastBinImageFileUri);
+        super.onSaveInstanceState(outState);
+    }
+
+    @Override
+    protected void onRestoreInstanceState(Bundle inState) {
+        // Restore last accessed emulator image file parameters
+        //lastBinImageFileUri = inState.getString(LAST_BIN_IMAGE_FILE_URI);
+        super.onRestoreInstanceState(inState);
+    }
+
     @SuppressLint("InflateParams")
     protected void showCreateDirDialog() {
         AlertDialog.Builder dialogBuilder = new AlertDialog.Builder(this);
         dialogBuilder.setTitle(R.string.fd_create_dir_title);
         final View createDirView = LayoutInflater.from(this).inflate(R.layout.file_dialog_create_dir, null);
         dialogBuilder.setView(createDirView);
-        dialogBuilder.setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                EditText dirNameEditText = (EditText) createDirView.findViewById(R.id.fd_create_dir_name);
-                String dirName = dirNameEditText.getText().toString().trim();
-                if (!dirName.isEmpty()) {
-                    createDir(dirName);
-                }
+        dialogBuilder.setPositiveButton(R.string.ok, (dialog, which) -> {
+            EditText dirNameEditText = createDirView.findViewById(R.id.fd_create_dir_name);
+            String dirName = dirNameEditText.getText().toString().trim();
+            if (!dirName.isEmpty()) {
+                createDir(dirName);
             }
         });
         dialogBuilder.setNegativeButton(R.string.cancel, null);
@@ -295,29 +278,24 @@ public class BkEmuFileDialog extends ListActivity implements AppCompatCallback,
         } else {
             new AlertDialog.Builder(this).setIcon(R.drawable.ic_folder_white_24dp)
                 .setTitle("[" + dirName + "] " + getText(R.string.fd_cant_create_dir))
-                .setPositiveButton("OK", new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                }
-            }).show();
+                .setPositiveButton("OK", (dialog, which) -> {}).show();
         }
     }
 
     private static String getFormatFilterString(String[] formatFilterArray) {
-        StringBuffer formatFilterStringBuf = new StringBuffer();
+        StringBuilder formatFilterStringBuilder = new StringBuilder();
         for (int idx = 0; idx < formatFilterArray.length; idx++) {
-            formatFilterStringBuf.append(formatFilterArray[idx]);
+            formatFilterStringBuilder.append(formatFilterArray[idx]);
             if (idx < (formatFilterArray.length - 1)) {
-                formatFilterStringBuf.append(", ");
+                formatFilterStringBuilder.append(", ");
             }
         }
-        return formatFilterStringBuf.toString();
+        return formatFilterStringBuilder.toString();
     }
 
     protected SimpleAdapter getDirList(final String dirPath) {
-        final List<String> item = new ArrayList<String>();
-        path = new ArrayList<String>();
-        ArrayList<HashMap<String, Object>> mList = new ArrayList<HashMap<String, Object>>();
+        path = new ArrayList<>();
+        ArrayList<HashMap<String, Object>> mList = new ArrayList<>();
 
         File f = new File(dirPath);
         if (!f.isDirectory()) {
@@ -332,20 +310,18 @@ public class BkEmuFileDialog extends ListActivity implements AppCompatCallback,
         }
 
         if (!currentPath.equals(ROOT_PATH)) {
-            item.add(ROOT_PATH);
             addItem(mList, ROOT_PATH, R.drawable.ic_folder_white_24dp);
             path.add(ROOT_PATH);
 
-            item.add("../");
             addItem(mList, "../", R.drawable.ic_folder_white_24dp);
             path.add(f.getParent());
             parentPath = f.getParent();
         }
 
-        TreeMap<String, String> dirsMap = new TreeMap<String, String>();
-        TreeMap<String, String> dirsPathMap = new TreeMap<String, String>();
-        TreeMap<String, String> filesMap = new TreeMap<String, String>();
-        TreeMap<String, String> filesPathMap = new TreeMap<String, String>();
+        TreeMap<String, String> dirsMap = new TreeMap<>();
+        TreeMap<String, String> dirsPathMap = new TreeMap<>();
+        TreeMap<String, String> filesMap = new TreeMap<>();
+        TreeMap<String, String> filesPathMap = new TreeMap<>();
         for (File file : files) {
             if (file.isDirectory()) {
                 String dirName = file.getName();
@@ -365,8 +341,6 @@ public class BkEmuFileDialog extends ListActivity implements AppCompatCallback,
                 }
             }
         }
-        item.addAll(dirsMap.tailMap("").values());
-        item.addAll(filesMap.tailMap("").values());
         path.addAll(dirsPathMap.tailMap("").values());
         path.addAll(filesPathMap.tailMap("").values());
 
@@ -383,14 +357,13 @@ public class BkEmuFileDialog extends ListActivity implements AppCompatCallback,
         }
 
         return fileList;
-
     }
 
     public static boolean isFileNameFormatMatched(final String fileName, final String[] formatExtensions) {
         final String fileNameLwr = fileName.toLowerCase();
         boolean isMatched = false;
-        for (int i = 0; i < formatExtensions.length; i++) {
-            final String formatLwr = formatExtensions[i].toLowerCase();
+        for (String formatExtension : formatExtensions) {
+            final String formatLwr = formatExtension.toLowerCase();
             if (fileNameLwr.endsWith(formatLwr)) {
                 isMatched = true;
                 break;
@@ -400,7 +373,7 @@ public class BkEmuFileDialog extends ListActivity implements AppCompatCallback,
     }
 
     private void addItem(ArrayList<HashMap<String, Object>> mList, String fileName, int imageId) {
-        HashMap<String, Object> item = new HashMap<String, Object>();
+        HashMap<String, Object> item = new HashMap<>();
         item.put(ITEM_KEY, fileName);
         item.put(ITEM_IMAGE, imageId);
         mList.add(item);
@@ -417,11 +390,7 @@ public class BkEmuFileDialog extends ListActivity implements AppCompatCallback,
             } else {
                 new AlertDialog.Builder(this).setIcon(R.drawable.ic_folder_white_24dp)
                         .setTitle("[" + file.getName() + "] " + getText(R.string.fd_cant_read_dir))
-                        .setPositiveButton("OK", new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                    }
-                }).show();
+                        .setPositiveButton("OK", (dialog, which) -> {}).show();
             }
         } else {
             v.setSelected(true);

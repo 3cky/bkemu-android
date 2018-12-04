@@ -38,7 +38,7 @@ public class BgeOpcode extends BranchOpcode {
 
     @Override
     protected boolean isBranchCondition(int psw) {
-        return !(((psw & Cpu.PSW_FLAG_N)) != 0 ^ ((psw & Cpu.PSW_FLAG_V) != 0));
+        return (((psw & Cpu.PSW_FLAG_N)) != 0) == ((psw & Cpu.PSW_FLAG_V) != 0);
     }
 
 }

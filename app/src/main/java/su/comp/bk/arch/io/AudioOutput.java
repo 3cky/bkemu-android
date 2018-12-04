@@ -191,11 +191,11 @@ public class AudioOutput implements Device, Runnable {
         return pcmTimestamp;
     }
 
-    private final long pcmSamplesToCpuTime(long numPcmSamples) {
+    private long pcmSamplesToCpuTime(long numPcmSamples) {
         return computer.nanosToCpuTime(numPcmSamples * NANOSECS_IN_SECOND / OUTPUT_SAMPLE_RATE);
     }
 
-    private final long cpuTimeToPcmSamples(long cpuTime) {
+    private long cpuTimeToPcmSamples(long cpuTime) {
         return computer.cpuTimeToNanos(cpuTime) * OUTPUT_SAMPLE_RATE / NANOSECS_IN_SECOND;
     }
 

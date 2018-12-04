@@ -38,10 +38,10 @@ public class Sel1RegisterSystemBitsTest {
         // High byte defines startup address
         assertEquals(0100000, computer.readMemory(false, Cpu.REG_SEL1) & 0177400);
         // Bit 2 is set on write / clear on read
-        assertTrue((computer.readMemory(false, Cpu.REG_SEL1) & 004) == 0);
+        assertEquals(0, (computer.readMemory(false, Cpu.REG_SEL1) & 004));
         assertTrue(computer.writeMemory(false, Cpu.REG_SEL1, 0));
         assertTrue((computer.readMemory(false, Cpu.REG_SEL1) & 004) != 0);
-        assertTrue((computer.readMemory(false, Cpu.REG_SEL1) & 004) == 0);
+        assertEquals(0, (computer.readMemory(false, Cpu.REG_SEL1) & 004));
     }
 
 }

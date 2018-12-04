@@ -102,7 +102,7 @@ public class BkEmuView extends SurfaceView implements SurfaceHolder.Callback {
 
     private GestureDetector gestureDetector;
 
-    private AtomicBoolean isOnScreenControlsTransitionStarted = new AtomicBoolean();
+    private final AtomicBoolean isOnScreenControlsTransitionStarted = new AtomicBoolean();
 
     protected volatile Matrix videoBufferBitmapTransformMatrix;
 
@@ -118,11 +118,11 @@ public class BkEmuView extends SurfaceView implements SurfaceHolder.Callback {
 		private final SurfaceHolder surfaceHolder;
 		private boolean isRunning = true;
 
-		public BkEmuViewRenderingThread(SurfaceHolder holder) {
+		BkEmuViewRenderingThread(SurfaceHolder holder) {
 			this.surfaceHolder = holder;
 		}
 
-		public void stopRendering() {
+		void stopRendering() {
 			isRunning = false;
 		}
 
@@ -135,7 +135,8 @@ public class BkEmuView extends SurfaceView implements SurfaceHolder.Callback {
 	        int bgColor = ContextCompat.getColor(getContext(), R.color.theme_window_background);
 			while (isRunning) {
 				timeStamp = System.currentTimeMillis();
-				if (computer != null && !computer.isPaused()) {
+				Computer comp = computer;
+				if (comp != null && !comp.isPaused()) {
 				    // Repaint surface
 				    canvas = surfaceHolder.lockCanvas(null);
 				    if (canvas != null) {
@@ -163,8 +164,6 @@ public class BkEmuView extends SurfaceView implements SurfaceHolder.Callback {
                 } else {
                     Thread.yield();
                 }
-                // Calculate full elapsed time
-                timeDelta = (int) (System.currentTimeMillis() - timeStamp);
 			}
 		}
 	}
@@ -330,9 +329,9 @@ public class BkEmuView extends SurfaceView implements SurfaceHolder.Callback {
 	    updateVideoBufferBitmapTransformMatrix(getWidth(), getHeight());
         // Get FPS indicator resources
         this.fpsIndicatorString = getContext().getString(R.string.fps_string);
-        this.fpsIndicator = (TextView) ((FrameLayout) getParent())
+        this.fpsIndicator = ((FrameLayout) getParent())
         		.findViewById(R.id.fps_indicator);
-        this.floppyActivityIndicator = (ImageView) ((FrameLayout) getParent())
+        this.floppyActivityIndicator = ((FrameLayout) getParent())
                 .findViewById(R.id.floppy_indicator);
 		this.renderingThread = new BkEmuViewRenderingThread(holder);
 		this.renderingThread.start();

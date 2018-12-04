@@ -93,7 +93,7 @@ public class FloppyController implements Device {
             / DISK_ROTATIONS_PER_SECOND;
 
     /** Index hole length (in nanoseconds) */
-    public final static long NANOSECS_PER_INDEX_HOLE = 1L * NANOSECS_IN_MSEC;
+    public final static long NANOSECS_PER_INDEX_HOLE = NANOSECS_IN_MSEC;
 
     /** Tracks per floppy disk */
     public final static int TRACKS_PER_DISK = 80;
@@ -229,9 +229,9 @@ public class FloppyController implements Device {
 
         private FloppyDriveSide currentTrackSide;
 
-        private FloppyDriveTrackArea[] currentTrackData = new FloppyDriveTrackArea[WORDS_PER_TRACK];
+        private final FloppyDriveTrackArea[] currentTrackData = new FloppyDriveTrackArea[WORDS_PER_TRACK];
 
-        protected OnFloppyDriveTrackChanged[] trackChangedListeners =
+        protected final OnFloppyDriveTrackChanged[] trackChangedListeners =
                 new OnFloppyDriveTrackChanged[SECTORS_PER_TRACK * 2];
 
         /**
@@ -499,7 +499,7 @@ public class FloppyController implements Device {
 
             @Override
             protected int readInternal(int index) {
-                short data = 0;
+                short data;
                 if (index < SECTOR_DATA_AM_LENGTH) {
                     data = dataMarker[index];
                 } else if (index < SECTOR_CRC_INDEX) {

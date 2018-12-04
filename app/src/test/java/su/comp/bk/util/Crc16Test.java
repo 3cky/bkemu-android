@@ -30,7 +30,7 @@ public class Crc16Test {
 
     /**
      * Test method for {@link su.comp.bk.util.Crc16#calculate(byte[])}.
-     * @throws Exception
+     * @throws Exception in case of error
      */
     @Test
     public void testCalculateByteArray() throws Exception {

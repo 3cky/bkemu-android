@@ -22,7 +22,6 @@ package su.comp.bk.arch.io;
 import static org.junit.Assert.*;
 
 import java.io.File;
-import java.net.URL;
 
 import org.apache.commons.io.FileUtils;
 import org.junit.After;
@@ -78,12 +77,12 @@ public class FloppyControllerTest extends ResourceFileTestBase {
     }
 
     @After
-    public void tearDown() throws Exception {
+    public void tearDown() {
     }
 
     /**
      * Test method for {@link su.comp.bk.arch.io.FloppyController#FloppyController(su.comp.bk.arch.Computer)}.
-     * @throws Exception
+     * @throws Exception in case of error
      */
     @Test
     public void testFloppyController() throws Exception {

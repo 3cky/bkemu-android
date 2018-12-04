@@ -255,7 +255,7 @@ public class CellLayout extends ViewGroup {
 
     private int getChildMeasureSpecInternal(int spec, int childCellsSize, int childDimension, boolean isFillGravity) {
         int resultSize = 0;
-        int resultMode = 0;
+        int resultMode = MeasureSpec.UNSPECIFIED;
 
         if (isFillGravity) {
             // Child wants to be our size. So be it.
@@ -279,9 +279,6 @@ public class CellLayout extends ViewGroup {
                         if (clipChildrenToCellSize) {
                             resultSize = childCellsSize;
                             resultMode = MeasureSpec.AT_MOST;
-                        } else {
-                            resultSize = 0;
-                            resultMode = MeasureSpec.UNSPECIFIED;
                         }
                     }
                     break;
@@ -303,9 +300,6 @@ public class CellLayout extends ViewGroup {
                         if (clipChildrenToCellSize) {
                             resultSize = childCellsSize;
                             resultMode = MeasureSpec.AT_MOST;
-                        } else {
-                            resultSize = 0;
-                            resultMode = MeasureSpec.UNSPECIFIED;
                         }
                     }
                     break;
@@ -327,9 +321,6 @@ public class CellLayout extends ViewGroup {
                         if (clipChildrenToCellSize) {
                             resultSize = childCellsSize;
                             resultMode = MeasureSpec.AT_MOST;
-                        } else {
-                            resultSize = 0;
-                            resultMode = MeasureSpec.UNSPECIFIED;
                         }
                     }
                     break;
@@ -627,16 +618,6 @@ public class CellLayout extends ViewGroup {
             // Child wants a specific size... let him have it
             resultSize = childDimension;
             resultMode = MeasureSpec.EXACTLY;
-        } else if (childDimension == ViewGroup.LayoutParams.MATCH_PARENT) {
-            // Child wants to be our size... find out how big it should
-            // be
-            resultSize = 0;
-            resultMode = MeasureSpec.UNSPECIFIED;
-        } else if (childDimension == ViewGroup.LayoutParams.WRAP_CONTENT) {
-            // Child wants to determine its own size.... find out how
-            // big it should be
-            resultSize = 0;
-            resultMode = MeasureSpec.UNSPECIFIED;
         }
 
         return MeasureSpec.makeMeasureSpec(resultSize, resultMode);
