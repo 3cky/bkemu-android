@@ -505,6 +505,10 @@ public class BkEmuActivity extends AppCompatActivity {
 
     // Check intent data for program/disk image to mount
     private boolean checkIntentData() {
+        // Check for last accessed program/disk file paths
+        lastBinImageFileUri = getIntent().getStringExtra(LAST_BIN_IMAGE_FILE_URI);
+        lastDiskImageFileUri = getIntent().getStringExtra(LAST_DISK_IMAGE_FILE_URI);
+        // Check for program/disk image file to run
         String intentDataString = getIntent().getDataString();
         if (intentDataString != null) {
             if (BkEmuFileDialog.isFileNameFormatMatched(intentDataString,
@@ -1174,6 +1178,9 @@ public class BkEmuActivity extends AppCompatActivity {
     protected void restartActivity(Uri binImageFileUri) {
         Intent intent = getIntent();
         intent.setData(binImageFileUri);
+        // Pass last accessed program/disk image file paths to new activity
+        intent.putExtra(LAST_BIN_IMAGE_FILE_URI, lastBinImageFileUri);
+        intent.putExtra(LAST_DISK_IMAGE_FILE_URI, lastDiskImageFileUri);
         finish();
         startActivity(intent);
     }

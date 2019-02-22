@@ -1,8 +1,11 @@
 package su.comp.bk.ui;
 
 import java.io.File;
+import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.TreeMap;
 
@@ -14,6 +17,7 @@ import android.content.pm.PackageManager;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.CountDownTimer;
+import android.os.Environment;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.ActivityCompat.OnRequestPermissionsResultCallback;
@@ -59,7 +63,12 @@ public class BkEmuFileDialog extends ListActivity implements AppCompatCallback,
     public static final String INTENT_FORMAT_FILTER = INTENT_PREFIX + "#FORMAT_FILTER";
     public static final String INTENT_RESULT_PATH = INTENT_PREFIX + "#RESULT_PATH";
 
-    private List<String> path = null;
+    // State save/restore: File name
+    private static final String STATE_FILE_NAME = BkEmuFileDialog.class.getName() + "#file_name";
+    // State save/restore: Directory navigation history
+    private static final String STATE_DIR_HISTORY = BkEmuFileDialog.class.getName() + "#dir_history";
+    // State save/restore: Last navigated directory positions
+    private static final String STATE_LAST_DIR_POSITIONS = BkEmuFileDialog.class.getName() + "#last_dir_positions";
 
     protected TextView pathTextView;
     protected EditText fileNameEditText;
@@ -67,10 +76,12 @@ public class BkEmuFileDialog extends ListActivity implements AppCompatCallback,
 
     private InputMethodManager inputManager;
 
+    private final LinkedList<String> dirHistory = new LinkedList<>();
+    private List<String> currentDirElements = null;
     protected String startPath;
-    protected String parentPath;
-    protected String currentPath;
     protected String filename;
+
+    private final HashMap<String, Integer> lastDirPositions = new HashMap<>();
 
     public final static int REQUEST_CODE_ASK_PERMISSIONS = 0;
 
@@ -79,8 +90,6 @@ public class BkEmuFileDialog extends ListActivity implements AppCompatCallback,
     private String[] formatFilter = null;
 
     private Mode mode;
-
-    protected final HashMap<String, Integer> lastDirPositions = new HashMap<>();
 
     private AppCompatDelegate delegate;
 
@@ -114,12 +123,12 @@ public class BkEmuFileDialog extends ListActivity implements AppCompatCallback,
         protected void onPostExecute(SimpleAdapter fileList) {
             progressBarTimer.cancel();
             progressBar.setVisibility(View.INVISIBLE);
-            pathTextView.setText(getText(R.string.fd_location) + ": " + currentPath);
+            String currentDir = peekDirFromHistory();
+            pathTextView.setText(getText(R.string.fd_location) + ": " + currentDir);
             fileList.notifyDataSetChanged();
             setListAdapter(fileList);
-            boolean useAutoSelection = dirPath.length() < currentPath.length();
-            Integer position = lastDirPositions.get(parentPath);
-            if (position != null && useAutoSelection) {
+            Integer position = getLastDirPosition(currentDir);
+            if (position != null) {
                 getListView().setSelection(position);
             }
         }
@@ -148,9 +157,24 @@ public class BkEmuFileDialog extends ListActivity implements AppCompatCallback,
         Button saveButton = findViewById(R.id.fd_btn_save);
         Button createDirButton = findViewById(R.id.fd_btn_create_dir);
 
-        startPath = getIntent().getStringExtra(INTENT_START_PATH);
-        if (startPath == null) {
-            startPath = ROOT_PATH;
+        if (savedInstanceState != null) {
+            String[] values = savedInstanceState.getStringArray(STATE_DIR_HISTORY);
+            if (values != null) {
+                dirHistory.addAll(Arrays.asList(values));
+            }
+            Serializable data = savedInstanceState.getSerializable(STATE_LAST_DIR_POSITIONS);
+            if (data != null) {
+                lastDirPositions.putAll((HashMap<String, Integer>) data);
+            }
+        }
+
+        if (isDirHistoryNotEmpty()) {
+            startPath = popDirFromHistory();
+        } else {
+            startPath = getIntent().getStringExtra(INTENT_START_PATH);
+            if (startPath == null) {
+                startPath = Environment.getExternalStorageDirectory().getPath();
+            }
         }
 
         mode = (Mode) getIntent().getSerializableExtra(INTENT_MODE);
@@ -170,13 +194,18 @@ public class BkEmuFileDialog extends ListActivity implements AppCompatCallback,
             createDirButton.setOnClickListener(v -> showCreateDirDialog());
             saveButton.setVisibility(View.VISIBLE);
             saveButton.setOnClickListener(v -> {
-                String resultPath = new File(currentPath, filename).getPath();
+                String resultPath = new File(peekDirFromHistory(), filename).getPath();
                 getIntent().putExtra(INTENT_RESULT_PATH, resultPath);
                 setResult(RESULT_OK, getIntent());
                 finish();
             });
 
-            filename = new File(startPath).getName();
+            if (savedInstanceState != null) {
+                filename = savedInstanceState.getString(STATE_FILE_NAME);
+            }
+            if (filename == null)  {
+                filename = new File(startPath).getName();
+            }
             formatFilter = new String[] { filename };
             delegate.setTitle(getResources().getString(R.string.fd_title_save, filename));
         }
@@ -241,16 +270,34 @@ public class BkEmuFileDialog extends ListActivity implements AppCompatCallback,
 
     @Override
     protected void onSaveInstanceState(Bundle outState) {
-        // Save last accessed emulator image file parameters
-        //outState.putString(LAST_BIN_IMAGE_FILE_URI, lastBinImageFileUri);
+        outState.putString(STATE_FILE_NAME, filename);
+        outState.putStringArray(STATE_DIR_HISTORY, dirHistory.toArray(new String[0]));
+        outState.putSerializable(STATE_LAST_DIR_POSITIONS, lastDirPositions);
         super.onSaveInstanceState(outState);
     }
 
-    @Override
-    protected void onRestoreInstanceState(Bundle inState) {
-        // Restore last accessed emulator image file parameters
-        //lastBinImageFileUri = inState.getString(LAST_BIN_IMAGE_FILE_URI);
-        super.onRestoreInstanceState(inState);
+    protected void pushDirToHistory(String dir) {
+        dirHistory.push(dir);
+    }
+
+    protected String peekDirFromHistory() {
+        return dirHistory.peek();
+    }
+
+    protected String popDirFromHistory() {
+        return dirHistory.pop();
+    }
+
+    protected boolean isDirHistoryNotEmpty() {
+        return !dirHistory.isEmpty();
+    }
+
+    protected void setLastDirPosition(String dir, int position) {
+        lastDirPositions.put(dir, position);
+    }
+
+    protected Integer getLastDirPosition(String dir) {
+        return lastDirPositions.get(dir);
     }
 
     @SuppressLint("InflateParams")
@@ -272,7 +319,7 @@ public class BkEmuFileDialog extends ListActivity implements AppCompatCallback,
     }
 
     protected void createDir(String dirName) {
-        File dir = new File(currentPath, dirName);
+        File dir = new File(peekDirFromHistory(), dirName);
         if (dir.mkdir()) {
             new DirListTask().execute(dir.getPath());
         } else {
@@ -294,28 +341,31 @@ public class BkEmuFileDialog extends ListActivity implements AppCompatCallback,
     }
 
     protected SimpleAdapter getDirList(final String dirPath) {
-        path = new ArrayList<>();
-        ArrayList<HashMap<String, Object>> mList = new ArrayList<>();
+        currentDirElements = new ArrayList<>();
+        ArrayList<HashMap<String, Object>> dirItems = new ArrayList<>();
 
         File f = new File(dirPath);
         if (!f.isDirectory()) {
             f = f.getParentFile();
         }
-        currentPath = f.getPath();
+        String currentPath = f.getPath();
         File[] files = f.listFiles();
         if (files == null) {
-            currentPath = ROOT_PATH;
+            currentPath = Environment.getExternalStorageDirectory().getPath();
             f = new File(currentPath);
             files = f.listFiles();
         }
+        pushDirToHistory(currentPath);
 
         if (!currentPath.equals(ROOT_PATH)) {
-            addItem(mList, ROOT_PATH, R.drawable.ic_folder_white_24dp);
-            path.add(ROOT_PATH);
-
-            addItem(mList, "../", R.drawable.ic_folder_white_24dp);
-            path.add(f.getParent());
-            parentPath = f.getParent();
+            if (isDirectoryReadable(ROOT_PATH)) {
+                addDirItem(dirItems, ROOT_PATH, R.drawable.ic_folder_white_24dp);
+                currentDirElements.add(ROOT_PATH);
+            }
+            if (isDirectoryReadable(f.getParent())) {
+                addDirItem(dirItems, "../", R.drawable.ic_folder_white_24dp);
+                currentDirElements.add(f.getParent());
+            }
         }
 
         TreeMap<String, String> dirsMap = new TreeMap<>();
@@ -341,22 +391,37 @@ public class BkEmuFileDialog extends ListActivity implements AppCompatCallback,
                 }
             }
         }
-        path.addAll(dirsPathMap.tailMap("").values());
-        path.addAll(filesPathMap.tailMap("").values());
+        currentDirElements.addAll(dirsPathMap.tailMap("").values());
+        currentDirElements.addAll(filesPathMap.tailMap("").values());
 
-        SimpleAdapter fileList = new SimpleAdapter(this, mList, R.layout.file_dialog_row,
+        SimpleAdapter fileList = new SimpleAdapter(this, dirItems, R.layout.file_dialog_row,
                 new String[] { ITEM_KEY, ITEM_IMAGE },
                 new int[] { R.id.fd_row_text, R.id.fd_row_image });
 
         for (String dir : dirsMap.tailMap("").values()) {
-            addItem(mList, dir, R.drawable.ic_folder_white_24dp);
+            addDirItem(dirItems, dir, R.drawable.ic_folder_white_24dp);
         }
 
         for (String file : filesMap.tailMap("").values()) {
-            addItem(mList, file, R.drawable.ic_description_white_24dp);
+            addDirItem(dirItems, file, R.drawable.ic_description_white_24dp);
         }
 
         return fileList;
+    }
+
+    private void addDirItem(ArrayList<HashMap<String, Object>> dirItems, String itemName, int itemImageId) {
+        HashMap<String, Object> item = new HashMap<>();
+        item.put(ITEM_KEY, itemName);
+        item.put(ITEM_IMAGE, itemImageId);
+        dirItems.add(item);
+    }
+
+    private static boolean isDirectoryReadable(String dirName) {
+        if (dirName == null) {
+            return false;
+        }
+        File dir = new File(dirName);
+        return dir.exists() && dir.listFiles() != null;
     }
 
     public static boolean isFileNameFormatMatched(final String fileName, final String[] formatExtensions) {
@@ -372,24 +437,17 @@ public class BkEmuFileDialog extends ListActivity implements AppCompatCallback,
         return isMatched;
     }
 
-    private void addItem(ArrayList<HashMap<String, Object>> mList, String fileName, int imageId) {
-        HashMap<String, Object> item = new HashMap<>();
-        item.put(ITEM_KEY, fileName);
-        item.put(ITEM_IMAGE, imageId);
-        mList.add(item);
-    }
-
     @Override
     protected void onListItemClick(ListView l, View v, int position, long id) {
-        File file = new File(path.get(position));
+        File file = new File(currentDirElements.get(position));
         setCreateVisibility(v, false);
         if (file.isDirectory()) {
             if (file.canRead()) {
-                lastDirPositions.put(currentPath, position);
-                new DirListTask().execute((path.get(position)));
+                setLastDirPosition(peekDirFromHistory(), position);
+                new DirListTask().execute((currentDirElements.get(position)));
             } else {
                 new AlertDialog.Builder(this).setIcon(R.drawable.ic_folder_white_24dp)
-                        .setTitle("[" + file.getName() + "] " + getText(R.string.fd_cant_read_dir))
+                        .setTitle("[" + file.getPath() + "] " + getText(R.string.fd_cant_read_dir))
                         .setPositiveButton("OK", (dialog, which) -> {}).show();
             }
         } else {
@@ -402,11 +460,12 @@ public class BkEmuFileDialog extends ListActivity implements AppCompatCallback,
 
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
-        if (keyCode == KeyEvent.KEYCODE_BACK
-                && currentPath != null
-                && !currentPath.equals(ROOT_PATH)) {
-            new DirListTask().execute(parentPath);
-            return true;
+        if (keyCode == KeyEvent.KEYCODE_BACK && isDirHistoryNotEmpty()) {
+            popDirFromHistory();
+            if (isDirHistoryNotEmpty()) {
+                new DirListTask().execute(popDirFromHistory());
+                return true;
+            }
         }
         return super.onKeyDown(keyCode, event);
     }
