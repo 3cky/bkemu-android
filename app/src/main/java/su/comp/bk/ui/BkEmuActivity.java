@@ -590,6 +590,24 @@ public class BkEmuActivity extends AppCompatActivity {
     }
 
     @Override
+    public void onConfigurationChanged(android.content.res.Configuration newConfig) {
+        Log.d(TAG, "onConfigurationChanged()");
+        // Remove emulator view from current layout
+        ((ViewGroup)bkEmuView.getParent()).removeView(bkEmuView);
+        super.onConfigurationChanged(newConfig);
+        // Set updated (portrait/landscape) layout
+        setContentView(R.layout.main);
+        initToolbar();
+        // Insert emulator view into updated layout
+        ((ViewGroup)findViewById(R.id.emu_frame)).addView(bkEmuView, 0);
+        mainView = findViewById(R.id.main_view);
+        // Restore on-screen controls
+        setupOnScreenControls(false);
+        switchOnScreenJoystickVisibility(isOnScreenJoystickVisible());
+        switchOnScreenKeyboardVisibility(isOnScreenKeyboardVisible());
+    }
+
+    @Override
     protected void onStart() {
         Log.d(TAG, "onStart()");
         this.computer.start();
