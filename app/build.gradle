@@ -84,12 +84,12 @@ android {
 }
 
 dependencies {
-    api 'com.android.support:support-v4:28.0.0'
-    implementation 'com.android.support:appcompat-v7:28.0.0'
+    api 'androidx.legacy:legacy-support-v4:1.0.0'
+    implementation 'androidx.appcompat:appcompat:1.1.0-alpha02'
 
     implementation 'commons-lang:commons-lang:2.6'
     implementation 'com.samskivert:jmustache:1.9'
-    implementation 'com.andkulikov:transitionseverywhere:1.8.1'
+    implementation 'com.andkulikov:transitionseverywhere:2.0.0-alpha01'
 
     testImplementation 'junit:junit:4.12'
     testImplementation 'commons-io:commons-io:2.4'

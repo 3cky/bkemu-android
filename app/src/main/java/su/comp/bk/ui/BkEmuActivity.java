@@ -29,9 +29,9 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
-import android.support.v7.app.ActionBar;
-import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.Toolbar;
+import androidx.appcompat.app.ActionBar;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
 import android.util.Log;
 import android.view.GestureDetector;
 import android.view.KeyEvent;
@@ -47,11 +47,11 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.transitionseverywhere.ChangeBounds;
-import com.transitionseverywhere.Fade;
-import com.transitionseverywhere.Transition;
-import com.transitionseverywhere.TransitionManager;
-import com.transitionseverywhere.TransitionSet;
+import androidx.transition.ChangeBounds;
+import androidx.transition.Fade;
+import androidx.transition.Transition;
+import androidx.transition.TransitionManager;
+import androidx.transition.TransitionSet;
 
 import org.apache.commons.lang.StringUtils;
 

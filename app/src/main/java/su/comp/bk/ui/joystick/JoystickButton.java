@@ -20,7 +20,7 @@
 package su.comp.bk.ui.joystick;
 
 import android.content.Context;
-import android.support.v7.widget.AppCompatImageButton;
+import androidx.appcompat.widget.AppCompatImageButton;
 import android.util.AttributeSet;
 
 /**
