@@ -18,34 +18,33 @@
  */
 package su.comp.bk.ui;
 
-import java.util.concurrent.atomic.AtomicBoolean;
-
-import su.comp.bk.R;
-import su.comp.bk.arch.Computer;
-import su.comp.bk.arch.io.FloppyController;
-import su.comp.bk.arch.io.VideoController;
-import su.comp.bk.ui.BkEmuActivity.GestureListener;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Matrix;
+import android.graphics.SurfaceTexture;
 import android.os.Handler;
-import androidx.core.content.ContextCompat;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
-import android.view.SurfaceHolder;
-import android.view.SurfaceView;
+import android.view.TextureView;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import androidx.core.content.ContextCompat;
+import su.comp.bk.R;
+import su.comp.bk.arch.Computer;
+import su.comp.bk.arch.io.FloppyController;
+import su.comp.bk.arch.io.VideoController;
+import su.comp.bk.ui.BkEmuActivity.GestureListener;
+
 /**
  * Emulator screen view.
  */
-public class BkEmuView extends SurfaceView implements SurfaceHolder.Callback {
+public class BkEmuView extends TextureView implements TextureView.SurfaceTextureListener {
 
     private static final String TAG = BkEmuView.class.getName();
 
@@ -102,8 +101,6 @@ public class BkEmuView extends SurfaceView implements SurfaceHolder.Callback {
 
     private GestureDetector gestureDetector;
 
-    private final AtomicBoolean isOnScreenControlsTransitionStarted = new AtomicBoolean();
-
     protected volatile Matrix videoBufferBitmapTransformMatrix;
 
     protected Computer computer;
@@ -111,15 +108,15 @@ public class BkEmuView extends SurfaceView implements SurfaceHolder.Callback {
     private int lastViewHeight;
     private int lastViewWidth;
 
-	/*
+    /*
 	 * Surface view rendering thread
 	 */
 	class BkEmuViewRenderingThread extends Thread {
-		private final SurfaceHolder surfaceHolder;
+		private final BkEmuView bkEmuView;
 		private boolean isRunning = true;
 
-		BkEmuViewRenderingThread(SurfaceHolder holder) {
-			this.surfaceHolder = holder;
+		BkEmuViewRenderingThread(BkEmuView bkEmuView) {
+			this.bkEmuView = bkEmuView;
 		}
 
 		void stopRendering() {
@@ -138,16 +135,16 @@ public class BkEmuView extends SurfaceView implements SurfaceHolder.Callback {
 				Computer comp = computer;
 				if (comp != null && !comp.isPaused()) {
 				    // Repaint surface
-				    canvas = surfaceHolder.lockCanvas(null);
+				    canvas = bkEmuView.lockCanvas(null);
 				    if (canvas != null) {
 				        try {
-				            synchronized (surfaceHolder) {
+				            synchronized (bkEmuView) {
 				                canvas.drawColor(bgColor);
 				                canvas.drawBitmap(videoController.renderVideoBuffer(),
 				                        videoBufferBitmapTransformMatrix, null);
 				            }
 				        } finally {
-				            surfaceHolder.unlockCanvasAndPost(canvas);
+				            bkEmuView.unlockCanvasAndPost(canvas);
 				        }
 				    }
 				}
@@ -215,8 +212,7 @@ public class BkEmuView extends SurfaceView implements SurfaceHolder.Callback {
         this.setFocusable(true);
         this.setFocusableInTouchMode(true);
         // Set surface events listener
-        SurfaceHolder surfaceHolder = getHolder();
-        surfaceHolder.addCallback(this);
+        this.setSurfaceTextureListener(this);
 	}
 
 	public void setGestureListener(GestureListener listener) {
@@ -240,10 +236,6 @@ public class BkEmuView extends SurfaceView implements SurfaceHolder.Callback {
 
     public synchronized boolean isFpsDrawingEnabled() {
         return isFpsDrawingEnabled;
-    }
-
-    public void setOnScreenControlsTransitionStarted() {
-        this.isOnScreenControlsTransitionStarted.set(true);
     }
 
     protected void updateFpsCounters(long currentTime) {
@@ -277,8 +269,7 @@ public class BkEmuView extends SurfaceView implements SurfaceHolder.Callback {
         }
     }
 
-    private void updateVideoBufferBitmapTransformMatrix(int viewWidth, int viewHeight) {
-        Log.d(TAG, "update transform matrix, w:" + viewWidth + ", h:" + viewHeight);
+    public void updateVideoBufferBitmapTransformMatrix(int viewWidth, int viewHeight) {
         lastViewWidth = viewWidth;
         lastViewHeight = viewHeight;
         Bitmap videoBufferBitmap = computer.getVideoController().getVideoBuffer();
@@ -306,52 +297,62 @@ public class BkEmuView extends SurfaceView implements SurfaceHolder.Callback {
         videoBufferBitmapTransformMatrix = m;
     }
 
-	/* (non-Javadoc)
-	 * @see android.view.SurfaceHolder.Callback#surfaceChanged(android.view.SurfaceHolder, int, int, int)
-	 */
-	@Override
-	public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
-	    Log.d(TAG, "surface changed");
-	    if (!isOnScreenControlsTransitionStarted.getAndSet(false) // dirty fix for first invalid view size when transition is started
-	            && (width != lastViewWidth || height != lastViewHeight) ) {
-            // Update emulator screen bitmap scale matrix
-            updateVideoBufferBitmapTransformMatrix(width, height);
-	    }
-	}
+    @Override
+    protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+        int originalWidth = MeasureSpec.getSize(widthMeasureSpec);
+        int originalHeight = MeasureSpec.getSize(heightMeasureSpec);
+        int calculatedHeight = (int) (originalWidth / COMPUTER_SCREEN_ASPECT_RATIO);
+        int finalWidth = originalWidth;
+        int finalHeight = calculatedHeight;
+        if (calculatedHeight > originalHeight) {
+            finalWidth = (int) (originalHeight * COMPUTER_SCREEN_ASPECT_RATIO);
+            finalHeight = originalHeight;
+        }
+        super.onMeasure(MeasureSpec.makeMeasureSpec(finalWidth, MeasureSpec.EXACTLY),
+                MeasureSpec.makeMeasureSpec(finalHeight, MeasureSpec.EXACTLY));
+    }
 
-	/* (non-Javadoc)
-	 * @see android.view.SurfaceHolder.Callback#surfaceCreated(android.view.SurfaceHolder)
-	 */
-	@Override
-	public void surfaceCreated(SurfaceHolder holder) {
-	    Log.d(TAG, "surface created");
-	    // Update emulator screen bitmap scale matrix
-	    updateVideoBufferBitmapTransformMatrix(getWidth(), getHeight());
+    @Override
+    public void onSurfaceTextureAvailable(SurfaceTexture surface, int width, int height) {
+        Log.d(TAG, "onSurfaceTextureAvailable");
+        // Update emulator screen bitmap scale matrix
+        updateVideoBufferBitmapTransformMatrix(getWidth(), getHeight());
         // Get FPS indicator resources
         this.fpsIndicatorString = getContext().getString(R.string.fps_string);
         this.fpsIndicator = ((FrameLayout) getParent())
-        		.findViewById(R.id.fps_indicator);
+                .findViewById(R.id.fps_indicator);
         this.floppyActivityIndicator = ((FrameLayout) getParent())
                 .findViewById(R.id.floppy_indicator);
-		this.renderingThread = new BkEmuViewRenderingThread(holder);
-		this.renderingThread.start();
-	}
+        this.renderingThread = new BkEmuViewRenderingThread(this);
+        this.renderingThread.start();
+    }
 
-	/* (non-Javadoc)
-	 * @see android.view.SurfaceHolder.Callback#surfaceDestroyed(android.view.SurfaceHolder)
-	 */
-	@Override
-	public void surfaceDestroyed(SurfaceHolder holder) {
-        Log.d(TAG, "surface destroyed");
-		this.renderingThread.stopRendering();
-		while (renderingThread.isAlive()) {
-			try {
-				this.renderingThread.join();
-			} catch (InterruptedException e) {
-			}
-		}
+    @Override
+    public void onSurfaceTextureSizeChanged(SurfaceTexture surface, int width, int height) {
+        Log.d(TAG, "onSurfaceTextureSizeChanged");
+        if (width != lastViewWidth || height != lastViewHeight) {
+            // Update emulator screen bitmap scale matrix
+            updateVideoBufferBitmapTransformMatrix(width, height);
+        }
+    }
+
+    @Override
+    public boolean onSurfaceTextureDestroyed(SurfaceTexture surface) {
+        Log.d(TAG, "onSurfaceTextureDestroyed");
+        this.renderingThread.stopRendering();
+        while (renderingThread.isAlive()) {
+            try {
+                this.renderingThread.join();
+            } catch (InterruptedException e) {
+            }
+        }
         Log.d(TAG, "rendering stopped");
-	}
+        return true;
+    }
+
+    @Override
+    public void onSurfaceTextureUpdated(SurfaceTexture surface) {
+    }
 
     /* (non-Javadoc)
      * @see android.view.View#onTouchEvent(android.view.MotionEvent)

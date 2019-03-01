@@ -19,7 +19,8 @@
         <su.comp.bk.ui.BkEmuView
             android:id="@+id/emu_view"
             android:layout_width="fill_parent"
-            android:layout_height="fill_parent" />
+            android:layout_height="fill_parent"
+            android:layout_gravity="center_horizontal" />
 
         <RelativeLayout
             android:id="@+id/fps_layout"

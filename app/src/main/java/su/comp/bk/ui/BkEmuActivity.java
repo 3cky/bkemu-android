@@ -25,13 +25,11 @@ import android.app.Dialog;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager.NameNotFoundException;
+import android.graphics.Rect;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
-import androidx.appcompat.app.ActionBar;
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.widget.Toolbar;
 import android.util.Log;
 import android.view.GestureDetector;
 import android.view.KeyEvent;
@@ -46,12 +44,6 @@ import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
-
-import androidx.transition.ChangeBounds;
-import androidx.transition.Fade;
-import androidx.transition.Transition;
-import androidx.transition.TransitionManager;
-import androidx.transition.TransitionSet;
 
 import org.apache.commons.lang.StringUtils;
 
@@ -69,6 +61,15 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import androidx.annotation.NonNull;
+import androidx.appcompat.app.ActionBar;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
+import androidx.transition.ChangeBounds;
+import androidx.transition.Explode;
+import androidx.transition.Transition;
+import androidx.transition.TransitionManager;
+import androidx.transition.TransitionSet;
 import su.comp.bk.R;
 import su.comp.bk.arch.Computer;
 import su.comp.bk.arch.Computer.Configuration;
@@ -464,13 +465,24 @@ public class BkEmuActivity extends AppCompatActivity {
         mountIntentDataDiskImage();
 
         TransitionSet ts = new TransitionSet();
-        ts.setOrdering(TransitionSet.ORDERING_SEQUENTIAL);
-        ts.addTransition(new Fade(Fade.OUT));
+        ts.setOrdering(TransitionSet.ORDERING_TOGETHER);
+
         ChangeBounds cbt = new ChangeBounds();
         ts.addTransition(cbt);
-        ts.addTransition(new Fade(Fade.IN));
-        ts.setDuration(200L);
-        cbt.setDuration(0);
+
+        final Rect bkEmuViewRect = new Rect();
+        Transition et = new Explode();
+        et.setEpicenterCallback(new Transition.EpicenterCallback() {
+            @Override
+            public Rect onGetEpicenter(@NonNull Transition transition) {
+                bkEmuView.getGlobalVisibleRect(bkEmuViewRect);
+                return bkEmuViewRect;
+            }
+        });
+        ts.addTransition(et);
+
+        ts.setDuration(250L);
+
         onScreenControlsTransition = ts;
 
         setupOnScreenControls(true);
@@ -590,24 +602,6 @@ public class BkEmuActivity extends AppCompatActivity {
     }
 
     @Override
-    public void onConfigurationChanged(android.content.res.Configuration newConfig) {
-        Log.d(TAG, "onConfigurationChanged()");
-        // Remove emulator view from current layout
-        ((ViewGroup)bkEmuView.getParent()).removeView(bkEmuView);
-        super.onConfigurationChanged(newConfig);
-        // Set updated (portrait/landscape) layout
-        setContentView(R.layout.main);
-        initToolbar();
-        // Insert emulator view into updated layout
-        ((ViewGroup)findViewById(R.id.emu_frame)).addView(bkEmuView, 0);
-        mainView = findViewById(R.id.main_view);
-        // Restore on-screen controls
-        setupOnScreenControls(false);
-        switchOnScreenJoystickVisibility(isOnScreenJoystickVisible());
-        switchOnScreenKeyboardVisibility(isOnScreenKeyboardVisible());
-    }
-
-    @Override
     protected void onStart() {
         Log.d(TAG, "onStart()");
         this.computer.start();
@@ -649,7 +643,7 @@ public class BkEmuActivity extends AppCompatActivity {
     }
 
     @Override
-    protected void onSaveInstanceState(Bundle outState) {
+    protected void onSaveInstanceState(@NonNull Bundle outState) {
         Log.d(TAG, "onSaveInstanceState()");
         // Save last accessed emulator image file parameters
         outState.putString(LAST_BIN_IMAGE_FILE_URI, lastBinImageFileUri);
@@ -1377,7 +1371,6 @@ public class BkEmuActivity extends AppCompatActivity {
 
     protected void startOnScreenControlsTransition() {
         TransitionManager.beginDelayedTransition(mainView, onScreenControlsTransition);
-        bkEmuView.setOnScreenControlsTransitionStarted();
     }
 
     private void toggleScreenMode() {
