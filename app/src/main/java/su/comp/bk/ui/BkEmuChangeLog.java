@@ -193,8 +193,13 @@ public class BkEmuChangeLog {
                             releaseData = new HashMap<>();
                             releaseData.put("version", xmlParser
                                     .getAttributeValue(null, XML_ATTR_VERSION));
-                            releaseData.put("date", xmlParser
-                                    .getAttributeValue(null, XML_ATTR_DATE));
+                            String date = xmlParser
+                                    .getAttributeValue(null, XML_ATTR_DATE);
+                            boolean hasDate = (date != null);
+                            releaseData.put("hasDate", hasDate);
+                            if (hasDate) {
+                                releaseData.put("date", date);
+                            }
                         } else if (XML_TAG_CHANGES.equalsIgnoreCase(tagName)) {
                             releaseChangesList = new ArrayList<>();
                         } else if (XML_TAG_CHANGE.equalsIgnoreCase(tagName)) {

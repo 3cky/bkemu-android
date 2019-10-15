@@ -25,7 +25,7 @@ div.changes {
 <body>
 {{#releases}}
 <div class='version'>v. {{version}}</div>
-<div class='date'>{{date}}</div>
+{{#hasDate}}<div class='date'>{{date}}</div>{{/hasDate}}
 <div class='changes'><ul>
 {{#changes}}
 <li>{{this}}</li>
