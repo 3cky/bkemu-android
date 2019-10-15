@@ -1001,6 +1001,7 @@ public class BkEmuActivity extends AppCompatActivity {
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
         Log.d(TAG, "onActivityResult()");
         switch (requestCode) {
             case REQUEST_MENU_BIN_IMAGE_FILE_LOAD:
