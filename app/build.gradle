@@ -10,14 +10,14 @@ ext {
 project.version = "${versionMajor}.${versionMinor}.${versionPatch}"
 
 android {
-    compileSdkVersion 28
-    buildToolsVersion '28.0.3'
+    compileSdkVersion 29
+    buildToolsVersion '29.0.2'
 
     defaultConfig {
         applicationId "su.comp.bk"
 
         minSdkVersion 14
-        targetSdkVersion 28
+        targetSdkVersion 29
 
         compileOptions {
             sourceCompatibility JavaVersion.VERSION_1_8
@@ -58,6 +58,7 @@ android {
         }
         release {
             minifyEnabled true
+            shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard.cfg'
             signingConfig signingConfigs.release
         }
@@ -85,7 +86,7 @@ android {
 
 dependencies {
     api 'androidx.legacy:legacy-support-v4:1.0.0'
-    implementation 'androidx.appcompat:appcompat:1.1.0-alpha02'
+    implementation 'androidx.appcompat:appcompat:1.1.0'
 
     implementation 'commons-lang:commons-lang:2.6'
     implementation 'com.samskivert:jmustache:1.9'
@@ -93,5 +94,5 @@ dependencies {
 
     testImplementation 'junit:junit:4.12'
     testImplementation 'commons-io:commons-io:2.4'
-    testImplementation 'org.robolectric:robolectric:3.8'
+    testImplementation 'org.robolectric:robolectric:4.3'
 }
