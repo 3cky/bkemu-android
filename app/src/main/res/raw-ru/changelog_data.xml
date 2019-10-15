@@ -1,5 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <releases>
+    <release version="0.4.3" date="??.??.2019">
+        <changes>
+            <change>Исправлена обработка команды WAIT.</change>
+        </changes>
+    </release>
     <release version="0.4.2" date="01.03.2019">
         <changes>
             <change>Исправления и доработки поведения диалога выбора файла.</change>

@@ -1165,7 +1165,7 @@ public class Cpu {
             }
         }
         if (isInterruptWaitMode()) {
-            time += Computer.SYNC_UPTIME_THRESHOLD; // FIXME
+            time += computer.getUptimeSyncThresholdTicks(); // TODO improve time granularity?
         }
     }
 

@@ -384,6 +384,14 @@ public class Computer implements Runnable {
         this.syncUptimeThresholdCpuTicks = nanosToCpuTime(SYNC_UPTIME_THRESHOLD);
     }
 
+    /**
+     * Get uptime sync threshold (in CPU clock ticks)
+     * @return uptime sync threshold
+     */
+    public long getUptimeSyncThresholdTicks() {
+        return syncUptimeThresholdCpuTicks;
+    }
+
     private void addReadOnlyMemory(Resources resources, int romDataResId, String romId, int address)
             throws IOException {
         byte[] romData = loadReadOnlyMemoryData(resources, romDataResId);
