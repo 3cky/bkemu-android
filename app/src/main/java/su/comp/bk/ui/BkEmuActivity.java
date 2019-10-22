@@ -1038,7 +1038,10 @@ public class BkEmuActivity extends AppCompatActivity {
                 FloppyController floppyController = computer.getFloppyController();
                 if (resultCode == Activity.RESULT_OK && floppyController != null) {
                     String diskImageFilePath = data.getStringExtra(BkEmuFileDialog.INTENT_RESULT_PATH);
-                    String diskImageFileUri = "file:" + diskImageFilePath;
+                    if (diskImageFilePath == null) {
+                        break;
+                    }
+                    String diskImageFileUri = new File(diskImageFilePath).toURI().toString();
                     try {
                         FloppyDriveIdentifier driveIdentifier = FloppyDriveIdentifier
                             .valueOf(data.getStringExtra(FloppyDriveIdentifier.class.getName()));

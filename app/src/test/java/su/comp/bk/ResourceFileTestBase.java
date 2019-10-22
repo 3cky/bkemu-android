@@ -31,9 +31,9 @@ public class ResourceFileTestBase {
      * @param resourceName resource name to get as file
      * @return resource file
      */
-    public File getTestResourceFile(String resourceName) {
+    public File getTestResourceFile(String resourceName) throws Exception {
         ClassLoader classLoader = this.getClass().getClassLoader();
         URL resource = classLoader.getResource(resourceName);
-        return new File(resource.getPath());
+        return new File(resource.toURI());
     }
 }

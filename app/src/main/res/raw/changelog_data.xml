@@ -3,6 +3,7 @@
     <release version="0.4.3-dev">
         <changes>
             <change>Fixed WAIT opcode handling.</change>
+            <change>Fixed loading of disk images with file name containing spaces.</change>
         </changes>
     </release>
     <release version="0.4.2" date="2019-03-01">

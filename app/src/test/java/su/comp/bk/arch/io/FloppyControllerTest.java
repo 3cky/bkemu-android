@@ -44,7 +44,7 @@ import su.comp.bk.util.Crc16;
  */
 public class FloppyControllerTest extends ResourceFileTestBase {
 
-    private final static String TEST_DISK_IMAGE_FILE_NAME = "test.img";
+    private final static String TEST_DISK_IMAGE_FILE_NAME = "test disk.img";
     private final static String FDD_ROM_FILE_NAME = "disk_327.rom";
     private final static String MONITOR_ROM_FILE_NAME = "monit10.rom";
 
