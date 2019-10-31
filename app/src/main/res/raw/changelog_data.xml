@@ -4,6 +4,8 @@
         <changes>
             <change>Fixed WAIT opcode handling.</change>
             <change>Fixed loading of disk images with file name containing spaces.</change>
+            <change>Fixed EMT36 syscall handling with non-zero file loading address.</change>
+            <change>Added support for 81-track floppy disk images.</change>
         </changes>
     </release>
     <release version="0.4.2" date="2019-03-01">
