@@ -44,6 +44,7 @@ import su.comp.bk.util.Crc16;
  */
 public class FloppyControllerTest extends ResourceFileTestBase {
 
+    private final static int TEST_DISK_NUM_TRACKS = 80;
     private final static String TEST_DISK_IMAGE_FILE_NAME = "test disk.img";
     private final static String FDD_ROM_FILE_NAME = "disk_327.rom";
     private final static String MONITOR_ROM_FILE_NAME = "monit10.rom";
@@ -109,7 +110,8 @@ public class FloppyControllerTest extends ResourceFileTestBase {
         byte[] testDiskImageData = mountTestDiskImage();
         int testDiskImageDataIndex = 0;
         // Check mounted disk image data reading
-        for (int trackNumber = 0; trackNumber < FloppyController.TRACKS_PER_DISK; trackNumber++) {
+        for (int trackNumber = 0; trackNumber < TEST_DISK_NUM_TRACKS; trackNumber++) {
+            System.out.println("Track: " + trackNumber);
             for (FloppyDriveSide trackSide : FloppyDriveSide.values()) {
                 drive.setCurrentTrack(trackNumber, trackSide);
                 int trackPosition = 0;
@@ -218,7 +220,7 @@ public class FloppyControllerTest extends ResourceFileTestBase {
         // Single sector read
         int dataIndex = 0;
         cpu.writeMemory(true, FDD_BLOCK_DRIVE_NUM, FloppyDriveIdentifier.A.ordinal()); // Select drive
-        for (int blockNumber = 0; blockNumber < FloppyController.BYTES_PER_DISK
+        for (int blockNumber = 0; blockNumber < testDiskImageData.length
                 / FloppyController.BYTES_PER_SECTOR; blockNumber++) {
             cpu.writeRegister(false, Cpu.R0, blockNumber); // Sector number
             cpu.writeRegister(false, Cpu.R1, 0400); // Data length

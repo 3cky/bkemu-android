@@ -96,7 +96,7 @@ public class FloppyController implements Device {
     public final static long NANOSECS_PER_INDEX_HOLE = NANOSECS_IN_MSEC;
 
     /** Tracks per floppy disk */
-    public final static int TRACKS_PER_DISK = 80;
+    public final static int TRACKS_PER_DISK = 81;
     /** Sectors per track */
     public final static int SECTORS_PER_TRACK = 10;
     /** Bytes per sector */
@@ -221,7 +221,7 @@ public class FloppyController implements Device {
         private String mountedDiskImageFileUri;
 
         private RandomAccessFile mountedDiskImageFile;
-        private MappedByteBuffer mountedDiskImageBuffer;
+        private ByteBuffer mountedDiskImageBuffer;
 
         private boolean isMountedDiskImageReadOnly;
 
@@ -541,6 +541,7 @@ public class FloppyController implements Device {
         }
 
         FloppyDrive(FloppyDriveIdentifier driveIdentifier) {
+            this.mountedDiskImageBuffer = ByteBuffer.allocate(BYTES_PER_DISK);
             this.driveIdentifier = driveIdentifier;
             setCurrentTrack(0, FloppyDriveSide.DOWN);
             initializeCurrentTrackData();
@@ -708,7 +709,7 @@ public class FloppyController implements Device {
         void mountDiskImage(String diskImageFileUri, boolean isReadOnly) throws Exception {
             File diskImageFile = new File(new URI(diskImageFileUri));
             // Check disk image size
-            if (diskImageFile.length() != BYTES_PER_DISK) {
+            if (diskImageFile.length() > BYTES_PER_DISK) {
                 throw new IllegalArgumentException("Invalid disk image size: " +
                             diskImageFile.length());
             }
@@ -717,9 +718,12 @@ public class FloppyController implements Device {
             }
             isMountedDiskImageReadOnly = isReadOnly;
             mountedDiskImageFile = new RandomAccessFile(diskImageFile, isReadOnly ? "r" : "rw");
-            mountedDiskImageBuffer = mountedDiskImageFile.getChannel().map(isReadOnly
-                    ? FileChannel.MapMode.READ_ONLY : FileChannel.MapMode.READ_WRITE,
-                            0, BYTES_PER_DISK);
+            FileChannel mountedDiskImageFileChannel = mountedDiskImageFile.getChannel();
+            mountedDiskImageBuffer.clear();
+            mountedDiskImageFileChannel.read(mountedDiskImageBuffer);
+            mountedDiskImageBuffer.flip();
+            mountedDiskImageBuffer.limit(BYTES_PER_DISK);
+            mountedDiskImageFileChannel.close();
             this.mountedDiskImageFileUri = diskImageFileUri;
             // Reload track data
             setCurrentTrack(getCurrentTrackNumber(), getCurrentTrackSide());
@@ -731,9 +735,6 @@ public class FloppyController implements Device {
          */
         void unmountDiskImage() throws Exception {
             mountedDiskImageFileUri = null;
-            if (!isMountedDiskImageReadOnly) {
-                mountedDiskImageBuffer.force();
-            }
             mountedDiskImageFile.close();
         }
 
