@@ -374,14 +374,16 @@ public class BkEmuActivity extends AppCompatActivity {
                                 tapeParamsBlockAddr + idx + 6);
                     }
                     String tapeFileName = getFileName(tapeFileNameData);
+                    lastBinImageAddress = cpu.readMemory(false, tapeParamsBlockAddr + 2);
                     if (tapeCmdCode == 0) {
-                        lastBinImageAddress = cpu.readMemory(false, tapeParamsBlockAddr + 2);
                         lastBinImageLength = cpu.readMemory(false, tapeParamsBlockAddr + 4);
-                        Log.d(TAG, "BK0011 tape save file: '" + tapeFileName + "', address: " +
-                                lastBinImageAddress + ", length: " + lastBinImageLength);
+                        Log.d(TAG, "BK0011 tape save file: '" + tapeFileName + "', address: 0" +
+                                (lastBinImageAddress > 0 ? Integer.toOctalString(lastBinImageAddress) : "") +
+                                ", length: " + lastBinImageLength);
                         activityHandler.post(new TapeSaverTask(tapeFileName));
                     } else {
-                        Log.d(TAG, "BK0011 tape load file: '" + tapeFileName + "'");
+                        Log.d(TAG, "BK0011 tape load file: '" + tapeFileName + "', address: 0" +
+                                (lastBinImageAddress > 0 ? Integer.toOctalString(lastBinImageAddress) : ""));
                         activityHandler.post(new TapeLoaderTask(tapeFileName));
                     }
                     break;
@@ -1257,9 +1259,10 @@ public class BkEmuActivity extends AppCompatActivity {
         }
         DataInputStream imageDataInputStream = new DataInputStream(
                 new ByteArrayInputStream(imageData, 0, imageData.length));
+        int binImageAddress = (imageDataInputStream.readByte() & 0377)
+                | ((imageDataInputStream.readByte() & 0377) << 8);
         if (lastBinImageAddress == 0) {
-            lastBinImageAddress = (imageDataInputStream.readByte() & 0377)
-                    | ((imageDataInputStream.readByte() & 0377) << 8);
+            lastBinImageAddress = binImageAddress;
         }
         lastBinImageLength = (imageDataInputStream.readByte() & 0377)
                 | ((imageDataInputStream.readByte() & 0377) << 8);
