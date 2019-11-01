@@ -19,8 +19,9 @@
 package su.comp.bk.arch.io;
 
 import su.comp.bk.arch.Computer;
+import timber.log.Timber;
+
 import android.os.Bundle;
-import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.View.OnTouchListener;
@@ -29,8 +30,6 @@ import android.view.View.OnTouchListener;
  * BK-0010 peripheral port.
  */
 public class PeripheralPort implements Device, OnTouchListener {
-
-    private static final String TAG = PeripheralPort.class.getName();
 
     public final static int DATA_REGISTER_ADDRESS = 0177714;
 
@@ -146,7 +145,7 @@ public class PeripheralPort implements Device, OnTouchListener {
                 }
             }
             if (!isJoystickButtonFound) {
-                Log.w(TAG, "Can't find view for button: " + joystickButton.name());
+                Timber.w("Can't find view for button: %s", joystickButton.name());
             }
         }
     }

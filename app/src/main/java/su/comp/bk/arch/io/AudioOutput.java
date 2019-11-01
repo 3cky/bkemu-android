@@ -21,18 +21,17 @@ package su.comp.bk.arch.io;
 import su.comp.bk.arch.Computer;
 import su.comp.bk.arch.cpu.Cpu;
 import su.comp.bk.arch.cpu.opcode.BaseOpcode;
+import timber.log.Timber;
+
 import android.media.AudioFormat;
 import android.media.AudioManager;
 import android.media.AudioTrack;
 import android.os.Bundle;
-import android.util.Log;
 
 /**
  * Audio output (one bit PCM, bit 6 in SEL1 register).
  */
 public class AudioOutput implements Device, Runnable {
-
-    private static final String TAG = AudioOutput.class.getName();
 
     // Audio output bit
     public final static int OUTPUT_BIT = (1 << 6);
@@ -91,7 +90,7 @@ public class AudioOutput implements Device, Runnable {
                 * 1000L / (OUTPUT_SAMPLE_RATE * BaseOpcode.getBaseExecutionTime()));
         pcmTimestamps = new long[pcmTimestampsBufferSize];
         pcmTimestampsCapacity = pcmTimestamps.length;
-        Log.d(TAG, "created audio output, player buffer size: " + minBufferSize +
+        Timber.d("created audio output, player buffer size: " + minBufferSize +
                 ", PCM buffer size: " + pcmTimestampsCapacity);
     }
 
@@ -110,14 +109,14 @@ public class AudioOutput implements Device, Runnable {
     }
 
     public void start() {
-        Log.d(TAG, "starting audio output");
+        Timber.d("starting audio output");
         isRunning = true;
         audioOutputThread = new Thread(this, "AudioOutputThread");
         audioOutputThread.start();
     }
 
     public void stop() {
-        Log.d(TAG, "stopping audio output");
+        Timber.d("stopping audio output");
         isRunning = false;
         player.stop();
         while (audioOutputThread.isAlive()) {
@@ -129,17 +128,17 @@ public class AudioOutput implements Device, Runnable {
     }
 
     public void pause() {
-        Log.d(TAG, "pausing audio output");
+        Timber.d("pausing audio output");
         player.pause();
     }
 
     public void resume() {
-        Log.d(TAG, "resuming audio output");
+        Timber.d("resuming audio output");
         player.play();
     }
 
     public void release() {
-        Log.d(TAG, "releasing audio output");
+        Timber.d("releasing audio output");
         player.release();
     }
 
@@ -177,7 +176,7 @@ public class AudioOutput implements Device, Runnable {
             putPcmTimestampIndex %= pcmTimestamps.length;
             pcmTimestampsCapacity--;
         } else {
-            Log.w(TAG, "PCM buffer overflow!");
+            Timber.w("PCM buffer overflow!");
         }
     }
 
@@ -201,7 +200,7 @@ public class AudioOutput implements Device, Runnable {
 
     @Override
     public void run() {
-        Log.d(TAG, "audio output started");
+        Timber.d("audio output started");
         long pcmTimestamp;
         int numPcmSamples = 0;
         lastPcmTimestamp = computer.getCpu().getTime() - pcmSamplesToCpuTime(samplesBuffer.length);
@@ -228,7 +227,7 @@ public class AudioOutput implements Device, Runnable {
             }
             player.write(samplesBuffer, 0, samplesBuffer.length);
         }
-        Log.d(TAG, "audio output stopped");
+        Timber.d("audio output stopped");
     }
 
 }

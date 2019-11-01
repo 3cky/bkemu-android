@@ -26,7 +26,6 @@ import android.graphics.Matrix;
 import android.graphics.SurfaceTexture;
 import android.os.Handler;
 import android.util.AttributeSet;
-import android.util.Log;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.TextureView;
@@ -40,13 +39,12 @@ import su.comp.bk.arch.Computer;
 import su.comp.bk.arch.io.FloppyController;
 import su.comp.bk.arch.io.VideoController;
 import su.comp.bk.ui.BkEmuActivity.GestureListener;
+import timber.log.Timber;
 
 /**
  * Emulator screen view.
  */
 public class BkEmuView extends TextureView implements TextureView.SurfaceTextureListener {
-
-    private static final String TAG = BkEmuView.class.getName();
 
     // Rendering framerate, in frames per second
     private static final int RENDERING_FRAMERATE = 15;
@@ -314,7 +312,7 @@ public class BkEmuView extends TextureView implements TextureView.SurfaceTexture
 
     @Override
     public void onSurfaceTextureAvailable(SurfaceTexture surface, int width, int height) {
-        Log.d(TAG, "onSurfaceTextureAvailable");
+        Timber.d("onSurfaceTextureAvailable");
         // Update emulator screen bitmap scale matrix
         updateVideoBufferBitmapTransformMatrix(getWidth(), getHeight());
         // Get FPS indicator resources
@@ -329,7 +327,7 @@ public class BkEmuView extends TextureView implements TextureView.SurfaceTexture
 
     @Override
     public void onSurfaceTextureSizeChanged(SurfaceTexture surface, int width, int height) {
-        Log.d(TAG, "onSurfaceTextureSizeChanged");
+        Timber.d("onSurfaceTextureSizeChanged");
         if (width != lastViewWidth || height != lastViewHeight) {
             // Update emulator screen bitmap scale matrix
             updateVideoBufferBitmapTransformMatrix(width, height);
@@ -338,7 +336,7 @@ public class BkEmuView extends TextureView implements TextureView.SurfaceTexture
 
     @Override
     public boolean onSurfaceTextureDestroyed(SurfaceTexture surface) {
-        Log.d(TAG, "onSurfaceTextureDestroyed");
+        Timber.d("onSurfaceTextureDestroyed");
         this.renderingThread.stopRendering();
         while (renderingThread.isAlive()) {
             try {
@@ -346,7 +344,7 @@ public class BkEmuView extends TextureView implements TextureView.SurfaceTexture
             } catch (InterruptedException e) {
             }
         }
-        Log.d(TAG, "rendering stopped");
+        Timber.d("rendering stopped");
         return true;
     }
 

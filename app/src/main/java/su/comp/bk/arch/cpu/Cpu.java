@@ -19,7 +19,7 @@
 package su.comp.bk.arch.cpu;
 
 import android.os.Bundle;
-import android.util.Log;
+
 import su.comp.bk.arch.Computer;
 import su.comp.bk.arch.cpu.addressing.AddressingMode;
 import su.comp.bk.arch.cpu.addressing.AutodecrementAddressingMode;
@@ -85,13 +85,12 @@ import su.comp.bk.arch.cpu.opcode.TrapOpcode;
 import su.comp.bk.arch.cpu.opcode.TstOpcode;
 import su.comp.bk.arch.cpu.opcode.WaitOpcode;
 import su.comp.bk.arch.cpu.opcode.XorOpcode;
+import timber.log.Timber;
 
 /**
  * PDP-11 compatible 1801VM1 CPU implementation.
  */
 public class Cpu {
-
-    private static final String TAG = Cpu.class.getName();
 
     /** SEL1 I/O register address */
     public final static int REG_SEL1 = 0177716;
@@ -786,7 +785,7 @@ public class Cpu {
      * Set interrupt wait mode flag state.
      */
     public void setInterruptWaitMode() {
-        Log.d(TAG, "entering WAIT mode, PC: 0" + Integer.toOctalString(readRegister(false, PC)));
+        Timber.d("entering WAIT mode, PC: 0%s", Integer.toOctalString(readRegister(false, PC)));
         setInterruptWaitMode(true);
     }
 
@@ -795,7 +794,7 @@ public class Cpu {
      */
     public void clearInterruptWaitMode() {
         if (isInterruptWaitMode()) {
-            Log.d(TAG, "leaving WAIT mode, PC: 0" + Integer.toOctalString(readRegister(false, PC)));
+            Timber.d("leaving WAIT mode, PC: 0%s", Integer.toOctalString(readRegister(false, PC)));
         }
         setInterruptWaitMode(false);
     }
@@ -866,7 +865,7 @@ public class Cpu {
      * Execute 1801VM1-specific halt mode entering sequence
      */
     public void enterHaltMode() {
-        Log.d(TAG, "entering HALT mode, PC: 0" + Integer.toOctalString(readRegister(false, PC)));
+        Timber.d("entering HALT mode, PC: 0%s", Integer.toOctalString(readRegister(false, PC)));
         // Set bit 3 in SEL1 register
         int sel1 = readMemory(false, REG_SEL1);
         if (sel1 != Computer.BUS_ERROR) {

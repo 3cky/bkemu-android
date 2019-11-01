@@ -34,21 +34,20 @@ import com.samskivert.mustache.Mustache;
 import com.samskivert.mustache.Template;
 
 import su.comp.bk.R;
+import timber.log.Timber;
+
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager.NameNotFoundException;
 import android.preference.PreferenceManager;
-import android.util.Log;
 import android.webkit.WebView;
 
 /**
  * Provides change log dialog (with last changes information or full change log).
  */
 public class BkEmuChangeLog {
-
-    protected static final String TAG = BkEmuChangeLog.class.getName();
 
     private static final String XML_TAG_RELEASES = "releases";
     private static final String XML_TAG_RELEASE = "release";
@@ -76,16 +75,16 @@ public class BkEmuChangeLog {
         // Get current version name from manifest
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
         setLastVersionName(prefs.getString(PREFS_KEY_LAST_VERSION_NAME, ""));
-        Log.d(TAG, "BkEmu last version: " + getLastVersionName());
+        Timber.d("BkEmu last version: %s", getLastVersionName());
         // Get stored last version name
         try {
             setCurrentVersionName(context.getPackageManager().getPackageInfo(
                     context.getPackageName(), 0).versionName);
         } catch (NameNotFoundException e) {
-            Log.e(TAG, "can't get version name", e);
+            Timber.e(e, "can't get version name");
             setCurrentVersionName("");
         }
-        Log.d(TAG, "BkEmu current version: " + getCurrentVersionName());
+        Timber.d("BkEmu current version: %s", getCurrentVersionName());
     }
 
     public String getLastVersionName() {
@@ -205,7 +204,7 @@ public class BkEmuChangeLog {
                         } else if (XML_TAG_CHANGE.equalsIgnoreCase(tagName)) {
                             releaseChangesList.add(xmlParser.nextText());
                         } else {
-                            Log.w(TAG, "unknown changelog XML start tag: '" + tagName + "'");
+                            Timber.w("unknown changelog XML start tag: '" + tagName + "'");
                         }
                         break;
                     case XmlPullParser.END_TAG:
@@ -223,7 +222,7 @@ public class BkEmuChangeLog {
                         } else if (XML_TAG_CHANGE.equalsIgnoreCase(tagName)) {
                             // Do nothing
                         } else {
-                            Log.w(TAG, "unknown changelog XML end tag: '" + tagName + "'");
+                            Timber.w("unknown changelog XML end tag: '" + tagName + "'");
                         }
                         break;
                     default:
@@ -232,7 +231,7 @@ public class BkEmuChangeLog {
                 eventType = xmlParser.next();
             }
         } catch (Exception e) {
-            Log.e(TAG, "can't parse changelog XML data", e);
+            Timber.e(e, "can't parse changelog XML data");
         }
         return changelogTemplateData;
     }

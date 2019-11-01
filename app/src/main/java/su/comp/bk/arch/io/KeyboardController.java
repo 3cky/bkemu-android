@@ -22,9 +22,10 @@ import su.comp.bk.R;
 import su.comp.bk.arch.Computer;
 import su.comp.bk.arch.cpu.Cpu;
 import su.comp.bk.ui.keyboard.ModifierButton;
+import timber.log.Timber;
+
 import android.annotation.SuppressLint;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
@@ -37,8 +38,6 @@ import android.widget.ImageButton;
  */
 @SuppressLint({ "InlinedApi", "RtlHardcoded" })
 public class KeyboardController implements Device, OnTouchListener {
-
-    private static final String TAG = KeyboardController.class.getName();
 
     /** Keyboard status register address */
     public final static int STATUS_REGISTER_ADDRESS = 0177660;
@@ -285,7 +284,7 @@ public class KeyboardController implements Device, OnTouchListener {
             if (buttonView != null) {
                 buttonView.setOnTouchListener(this);
             } else {
-                Log.w(TAG, "Can't find view for button: " + bkButton.name());
+                Timber.w("Can't find view for button: %s", bkButton.name());
             }
         }
         this.ctrlSymbolButton = onScreenKeyboardView.findViewById(R.id.btn_ctrl_symbol);
@@ -309,7 +308,7 @@ public class KeyboardController implements Device, OnTouchListener {
                 || event.getAction() == MotionEvent.ACTION_DOWN) {
             BkButton bkButton = BkButton.valueOf(v.getTag().toString());
             boolean isPressed = event.getAction() == MotionEvent.ACTION_DOWN;
-            Log.d(TAG, "handle button touch event " + (isPressed ? "press" : "release") +
+            Timber.d("handle button touch event " + (isPressed ? "press" : "release") +
                     ", button: " + bkButton);
             handleBkButton(bkButton, isPressed);
         }
@@ -498,7 +497,7 @@ public class KeyboardController implements Device, OnTouchListener {
      * <code>false</code> otherwise
      */
     public boolean handleKeyCode(int keyCode, boolean isKeyPress) {
-        Log.d(TAG, "handle key " + (isKeyPress ? "press" : "release") + ", code: " + keyCode);
+        Timber.d("handle key " + (isKeyPress ? "press" : "release") + ", code: " + keyCode);
         // Handle special cases
         if (keyCode == KeyEvent.KEYCODE_AT) {
             // Some hardware keyboards (i.e. emulator) translate SHIFT + 2 in KEYCODE_AT

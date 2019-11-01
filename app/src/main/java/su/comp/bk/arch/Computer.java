@@ -27,7 +27,6 @@ import org.apache.commons.lang.ArrayUtils;
 
 import android.content.res.Resources;
 import android.os.Bundle;
-import android.util.Log;
 
 import su.comp.bk.R;
 import su.comp.bk.arch.cpu.Cpu;
@@ -47,13 +46,12 @@ import su.comp.bk.arch.memory.PagedMemory;
 import su.comp.bk.arch.memory.RandomAccessMemory;
 import su.comp.bk.arch.memory.RandomAccessMemory.Type;
 import su.comp.bk.arch.memory.ReadOnlyMemory;
+import timber.log.Timber;
 
 /**
  * BK001x computer implementation.
  */
 public class Computer implements Runnable {
-
-    private static final String TAG = Computer.class.getName();
 
     // State save/restore: Computer uptime (in nanoseconds)
     private static final String STATE_UPTIME = Computer.class.getName() + "#uptime";
@@ -648,7 +646,7 @@ public class Computer implements Runnable {
      */
     public synchronized void start() {
         if (!isRunning) {
-            Log.d(TAG, "starting computer");
+            Timber.d("starting computer");
             this.clockThread = new Thread(this, "ComputerClockThread");
             isRunning = true;
             clockThread.start();
@@ -668,7 +666,7 @@ public class Computer implements Runnable {
      */
     public void stop() {
         if (isRunning) {
-            Log.d(TAG, "stopping computer");
+            Timber.d("stopping computer");
             audioOutput.stop();
             synchronized (this) {
                 isRunning = false;
@@ -693,7 +691,7 @@ public class Computer implements Runnable {
      * Pause computer.
      */
     public synchronized void pause() {
-        Log.d(TAG, "pausing computer");
+        Timber.d("pausing computer");
         isPaused = true;
         this.notifyAll();
         audioOutput.pause();
@@ -703,7 +701,7 @@ public class Computer implements Runnable {
      * Resume computer.
      */
     public synchronized void resume() {
-        Log.d(TAG, "resuming computer");
+        Timber.d("resuming computer");
         lastUptimeSyncTimestamp = System.nanoTime();
         lastCpuTimeSyncTimestamp = cpu.getTime();
         isPaused = false;
@@ -715,7 +713,7 @@ public class Computer implements Runnable {
      * Release computer resources.
      */
     public void release() {
-        Log.d(TAG, "releasing computer");
+        Timber.d("releasing computer");
         audioOutput.release();
         if (floppyController != null) {
             floppyController.unmountDiskImages();
@@ -796,24 +794,24 @@ public class Computer implements Runnable {
 
     @Override
     public void run() {
-        Log.d(TAG, "computer started");
+        Timber.d("computer started");
         synchronized (this) {
             this.notifyAll();
             while (isRunning) {
                 if (isPaused) {
                     try {
-                        Log.d(TAG, "computer paused");
+                        Timber.d("computer paused");
                         this.wait();
                     } catch (InterruptedException e) {
                     }
-                    Log.d(TAG, "computer resumed");
+                    Timber.d("computer resumed");
                 } else {
                     cpu.executeNextOperation();
                     checkSyncUptime();
                 }
             }
         }
-        Log.d(TAG, "computer stopped");
+        Timber.d("computer stopped");
     }
 
 }

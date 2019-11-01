@@ -25,20 +25,18 @@ import java.io.File;
 import java.io.RandomAccessFile;
 import java.net.URI;
 import java.nio.ByteBuffer;
-import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 
 import su.comp.bk.arch.Computer;
 import su.comp.bk.util.Crc16;
+import timber.log.Timber;
+
 import android.os.Bundle;
-import android.util.Log;
 
 /**
  * Floppy drive controller (К1801ВП1-128).
  */
 public class FloppyController implements Device {
-
-    protected static final String TAG = FloppyController.class.getName();
 
     protected boolean isDebugEnabled = false;
 
@@ -646,7 +644,7 @@ public class FloppyController implements Device {
          */
         void setCurrentTrack(int trackNumber, FloppyDriveSide trackSide) {
             if (isDebugEnabled) {
-                d(TAG, "set track: " + trackNumber + ", side: " + trackSide);
+                d("set track: " + trackNumber + ", side: " + trackSide);
             }
             this.currentTrackNumber = trackNumber;
             this.currentTrackSide = trackSide;
@@ -757,8 +755,8 @@ public class FloppyController implements Device {
         isDebugEnabled = state;
     }
 
-    protected static void d(String tag, String message) {
-        System.out.println("FDD: " + message);
+    protected static void d(String message) {
+        Timber.d(message);
     }
 
     protected FloppyDrive getFloppyDrive(FloppyDriveIdentifier drive) {
@@ -829,7 +827,7 @@ public class FloppyController implements Device {
                     drive.mountDiskImage(diskImageFileUri, inState.getBoolean(
                             getFloppyDriveStateKey(STATE_DRIVE_IMAGE_READ_ONLY,driveIdentifier)));
                 } catch (Exception e) {
-                    Log.e(TAG, "can't remount disk file image: " + diskImageFileUri, e);
+                    Timber.e(e, "can't remount disk file image: %s", diskImageFileUri);
                     try {
                         drive.unmountDiskImage();
                     } catch (Exception e1) {
@@ -855,7 +853,7 @@ public class FloppyController implements Device {
     @Override
     public synchronized boolean write(long cpuTime, boolean isByteMode, int address, int value) {
         if (isDebugEnabled) {
-            d(TAG, "write: " + Integer.toOctalString(address) +
+            d("write: " + Integer.toOctalString(address) +
                     ", value: " + Integer.toOctalString(value) + ", isByteMode: " + isByteMode);
         }
         setLastAccessCpuTime(cpuTime);
@@ -905,7 +903,7 @@ public class FloppyController implements Device {
                     // Check for data marker position
                     if (drive.isCurrentTrackDataMarkerPosition(trackPosition)) {
                         if (isDebugEnabled) {
-                            d(TAG, "marker found, position: " + trackPosition);
+                            d("marker found, position: " + trackPosition);
                         }
                         setMarkerFound(true);
                         setDataReady(true);
@@ -919,7 +917,7 @@ public class FloppyController implements Device {
                         // Check was CRC read as last data word
                         setCrcCorrect(drive.isCurrentTrackDataCrcPosition(getDataReadyReadPosition()));
                         if (isDebugEnabled) {
-                            d(TAG, "synchronous read completed, position: " + trackPosition +
+                            d("synchronous read completed, position: " + trackPosition +
                                     ", dataReadyReadPosition: " + getDataReadyReadPosition() +
                                     ", readDataWords: " + numReadDataWords + ", isCrcCorrect: " + isCrcCorrect());
                         }
@@ -1118,7 +1116,7 @@ public class FloppyController implements Device {
                     unmountDiskImage(drive);
                 }
             } catch (Exception e) {
-                Log.e(TAG, "Error while unmounting disk image from drive " + drive, e);
+                Timber.e(e, "Error while unmounting disk image from drive %s", drive);
             }
         }
     }
@@ -1148,7 +1146,7 @@ public class FloppyController implements Device {
      */
     protected void selectFloppyDrive(FloppyDriveIdentifier floppyDriveIdentifier) {
         if (isDebugEnabled) {
-            d(TAG, "selected drive: " + floppyDriveIdentifier);
+            d("selected drive: " + floppyDriveIdentifier);
         }
         if (selectedFloppyDriveIdentifier != floppyDriveIdentifier) {
             // Cancel synchronous data read
@@ -1173,7 +1171,7 @@ public class FloppyController implements Device {
      */
     protected void setMotorStarted(boolean isStarted) {
         if (isDebugEnabled) {
-            d(TAG, "set floppy drives motor state: " + (isStarted ? "STARTED" : "STOPPED"));
+            d("set floppy drives motor state: " + (isStarted ? "STARTED" : "STOPPED"));
         }
         this.isMotorStarted = isStarted;
     }

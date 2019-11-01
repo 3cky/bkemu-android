@@ -30,7 +30,6 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
-import android.util.Log;
 import android.view.GestureDetector;
 import android.view.KeyEvent;
 import android.view.Menu;
@@ -70,6 +69,8 @@ import androidx.transition.Explode;
 import androidx.transition.Transition;
 import androidx.transition.TransitionManager;
 import androidx.transition.TransitionSet;
+
+import su.comp.bk.BuildConfig;
 import su.comp.bk.R;
 import su.comp.bk.arch.Computer;
 import su.comp.bk.arch.Computer.Configuration;
@@ -82,13 +83,12 @@ import su.comp.bk.arch.io.FloppyController.FloppyDriveIdentifier;
 import su.comp.bk.arch.io.KeyboardController;
 import su.comp.bk.arch.io.PeripheralPort;
 import su.comp.bk.arch.io.VideoController;
+import timber.log.Timber;
 
 /**
  * Main application activity.
  */
 public class BkEmuActivity extends AppCompatActivity {
-
-    protected static final String TAG = BkEmuActivity.class.getName();
 
     // State save/restore: Last accessed emulator binary image file URI
     private static final String LAST_BIN_IMAGE_FILE_URI = BkEmuActivity.class.getName() +
@@ -200,7 +200,7 @@ public class BkEmuActivity extends AppCompatActivity {
                     comp.getCpu().writeRegister(false, Cpu.PC, startAddress);
                 }
             } catch (Exception e) {
-                Log.e(TAG, "Can't load bootstrap emulator program image", e);
+                Timber.e(e, "Can't load bootstrap emulator program image");
             }
         }
     }
@@ -225,7 +225,7 @@ public class BkEmuActivity extends AppCompatActivity {
                     loadBinImageFile(binImageFilePath);
                     isBinImageLoaded = true;
                 } catch (Exception e) {
-                    Log.d(TAG, "Can't load image from '" + binImageFilePath +
+                    Timber.d("Can't load image from '" + binImageFilePath +
                             "': " + e.getMessage());
                 }
             }
@@ -293,12 +293,12 @@ public class BkEmuActivity extends AppCompatActivity {
                     int emtHandlerAddress = cpu.readMemory(false, Cpu.TRAP_VECTOR_EMT);
                     if (computer.isReadOnlyMemoryAddress(emtHandlerAddress)) {
                         tapeParamsBlockAddr = cpu.readRegister(false, Cpu.R1);
-                        Log.d(TAG, "EMT 36, R1=0" + Integer.toOctalString(tapeParamsBlockAddr));
+                        Timber.d("EMT 36, R1=0%s", Integer.toOctalString(tapeParamsBlockAddr));
                         handleTapeOperation(cpu);
                     }
                     break;
                 case Computer.BUS_ERROR:
-                    Log.w(TAG, "Can't get EMT number");
+                    Timber.w("Can't get EMT number");
                     break;
                 default:
                     break;
@@ -326,12 +326,12 @@ public class BkEmuActivity extends AppCompatActivity {
                     lastBinImageAddress = cpu.readMemory(false, tapeParamsBlockAddr + 2);
                     if (tapeCmdCode == 2) {
                         lastBinImageLength = cpu.readMemory(false, tapeParamsBlockAddr + 4);
-                        Log.d(TAG, "BK0010 tape save file: '" + tapeFileName + "', address: 0" +
+                        Timber.d("BK0010 tape save file: '" + tapeFileName + "', address: 0" +
                                 (lastBinImageAddress > 0 ? Integer.toOctalString(lastBinImageAddress) : "") +
                                 ", length: " + lastBinImageLength);
                         activityHandler.post(new TapeSaverTask(tapeFileName));
                     } else {
-                        Log.d(TAG, "BK0010 tape load file: '" + tapeFileName + "', address: 0" +
+                        Timber.d("BK0010 tape load file: '" + tapeFileName + "', address: 0" +
                                 (lastBinImageAddress > 0 ? Integer.toOctalString(lastBinImageAddress) : ""));
                         activityHandler.post(new TapeLoaderTask(tapeFileName));
                     }
@@ -377,12 +377,12 @@ public class BkEmuActivity extends AppCompatActivity {
                     lastBinImageAddress = cpu.readMemory(false, tapeParamsBlockAddr + 2);
                     if (tapeCmdCode == 0) {
                         lastBinImageLength = cpu.readMemory(false, tapeParamsBlockAddr + 4);
-                        Log.d(TAG, "BK0011 tape save file: '" + tapeFileName + "', address: 0" +
+                        Timber.d("BK0011 tape save file: '" + tapeFileName + "', address: 0" +
                                 (lastBinImageAddress > 0 ? Integer.toOctalString(lastBinImageAddress) : "") +
                                 ", length: " + lastBinImageLength);
                         activityHandler.post(new TapeSaverTask(tapeFileName));
                     } else {
-                        Log.d(TAG, "BK0011 tape load file: '" + tapeFileName + "', address: 0" +
+                        Timber.d("BK0011 tape load file: '" + tapeFileName + "', address: 0" +
                                 (lastBinImageAddress > 0 ? Integer.toOctalString(lastBinImageAddress) : ""));
                         activityHandler.post(new TapeLoaderTask(tapeFileName));
                     }
@@ -441,7 +441,7 @@ public class BkEmuActivity extends AppCompatActivity {
 
     @Override
     protected void onNewIntent(Intent intent) {
-        Log.d(TAG, "onNewIntent(), Intent: " + intent);
+        Timber.d("onNewIntent(), Intent: %s", intent);
         super.onNewIntent(intent);
         setIntent(intent);
         if (checkIntentData()) {
@@ -454,7 +454,10 @@ public class BkEmuActivity extends AppCompatActivity {
     /** Called when the activity is first created. */
     @Override
     public void onCreate(Bundle savedInstanceState) {
-        Log.d(TAG, "onCreate(), Intent: " + getIntent());
+        if (BuildConfig.DEBUG) {
+            Timber.plant(new Timber.DebugTree());
+        }
+        Timber.d("onCreate(), Intent: %s", getIntent());
         super.onCreate(savedInstanceState);
         setContentView(R.layout.main);
         initToolbar();
@@ -546,7 +549,7 @@ public class BkEmuActivity extends AppCompatActivity {
                 computer.getFloppyController().mountDiskImage(intentDataDiskImagePath,
                         FloppyDriveIdentifier.A, true);
             } catch (Exception e) {
-                Log.e(TAG, "Can't mount bootstrap emulator disk image", e);
+                Timber.e(e, "Can't mount bootstrap emulator disk image");
                 this.intentDataDiskImagePath = null;
             }
         }
@@ -571,7 +574,7 @@ public class BkEmuActivity extends AppCompatActivity {
                 this.computer.restoreState(getResources(), savedInstanceState);
                 isComputerInitialized = true;
             } catch (Exception e) {
-                Log.d(TAG, "Can't restore computer state", e);
+                Timber.e(e, "Can't restore computer state");
             }
         }
         if (!isComputerInitialized) {
@@ -587,7 +590,7 @@ public class BkEmuActivity extends AppCompatActivity {
                 this.computer.reset();
                 isComputerInitialized = true;
             } catch (Exception e) {
-                Log.e(TAG, "Error while computer configuring", e);
+                Timber.e(e, "Error while computer configuring");
             }
         }
         if (isComputerInitialized) {
@@ -606,48 +609,48 @@ public class BkEmuActivity extends AppCompatActivity {
 
     @Override
     protected void onStart() {
-        Log.d(TAG, "onStart()");
+        Timber.d("onStart()");
         this.computer.start();
         super.onStart();
     }
 
     @Override
     protected void onRestart() {
-        Log.d(TAG, "onRestart()");
+        Timber.d("onRestart()");
         super.onRestart();
     }
 
     @Override
     protected void onResume() {
-        Log.d(TAG, "onResume()");
+        Timber.d("onResume()");
         this.computer.resume();
         super.onResume();
     }
 
     @Override
     protected void onPause() {
-        Log.d(TAG, "onPause()");
+        Timber.d("onPause()");
         this.computer.pause();
         super.onPause();
     }
 
     @Override
     protected void onStop() {
-        Log.d(TAG, "onStop()");
+        Timber.d("onStop()");
         this.computer.stop();
         super.onStop();
     }
 
     @Override
     protected void onDestroy() {
-        Log.d(TAG, "onDestroy()");
+        Timber.d("onDestroy()");
         this.computer.release();
         super.onDestroy();
     }
 
     @Override
     protected void onSaveInstanceState(@NonNull Bundle outState) {
-        Log.d(TAG, "onSaveInstanceState()");
+        Timber.d("onSaveInstanceState()");
         // Save last accessed emulator image file parameters
         outState.putString(LAST_BIN_IMAGE_FILE_URI, lastBinImageFileUri);
         outState.putInt(LAST_BIN_IMAGE_FILE_ADDRESS, lastBinImageAddress);
@@ -664,7 +667,7 @@ public class BkEmuActivity extends AppCompatActivity {
 
     @Override
     protected void onRestoreInstanceState(Bundle inState) {
-        Log.d(TAG, "onRestoreInstanceState()");
+        Timber.d("onRestoreInstanceState()");
         // Restore last accessed emulator image file parameters
         lastBinImageFileUri = inState.getString(LAST_BIN_IMAGE_FILE_URI);
         lastBinImageAddress = inState.getInt(LAST_BIN_IMAGE_FILE_ADDRESS);
@@ -927,7 +930,7 @@ public class BkEmuActivity extends AppCompatActivity {
                 fddController.unmountDiskImage(fddIdentifier);
             }
         } catch (Exception e) {
-            Log.e(TAG, "Floppy drive " + fddIdentifier + " unmounting error", e);
+            Timber.e(e, "Floppy drive " + fddIdentifier + " unmounting error");
         }
     }
 
@@ -1005,7 +1008,7 @@ public class BkEmuActivity extends AppCompatActivity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        Log.d(TAG, "onActivityResult()");
+        Timber.d("onActivityResult()");
         switch (requestCode) {
             case REQUEST_MENU_BIN_IMAGE_FILE_LOAD:
                 if (resultCode == Activity.RESULT_OK) {
@@ -1053,7 +1056,7 @@ public class BkEmuActivity extends AppCompatActivity {
                         showDialog(DIALOG_DISK_MANAGER);
                     } catch (Exception e) {
                         showDialog(DIALOG_DISK_MOUNT_ERROR);
-                        Log.e(TAG, "can't mount disk image '" + diskImageFileUri + "'", e);
+                        Timber.e(e, "can't mount disk image '" + diskImageFileUri + "'");
                     }
                 }
                 break;
@@ -1086,7 +1089,7 @@ public class BkEmuActivity extends AppCompatActivity {
             saveBinImageFile(binImageFilePath);
             isImageSaved = true;
         } catch (Exception e) {
-            Log.e(TAG, "Can't save emulator image", e);
+            Timber.e(e, "Can't save emulator image");
         }
         return isImageSaved;
     }
@@ -1138,7 +1141,7 @@ public class BkEmuActivity extends AppCompatActivity {
             loadBinImageFile(binImageFileUri);
             isImageLoaded = true;
         } catch (Exception e) {
-            Log.e(TAG, "Can't load emulator image", e);
+            Timber.e(e, "Can't load emulator image");
         }
         return isImageLoaded;
     }
@@ -1232,7 +1235,7 @@ public class BkEmuActivity extends AppCompatActivity {
      * @throws Exception in case of loading error
      */
     protected int loadBinImageFile(String binImageFileUri) throws Exception {
-        Log.d(TAG, "loading image: " + binImageFileUri);
+        Timber.d("loading image: %s", binImageFileUri);
         ByteArrayOutputStream binImageOutput = new ByteArrayOutputStream();
         try (BufferedInputStream binImageInput = new BufferedInputStream(
                 new URL(binImageFileUri).openStream())) {
@@ -1273,7 +1276,7 @@ public class BkEmuActivity extends AppCompatActivity {
                         Integer.toOctalString(lastBinImageAddress + imageIndex));
             }
         }
-        Log.d(TAG, "loaded bin image file: address 0" + Integer.toOctalString(lastBinImageAddress) +
+        Timber.d("loaded bin image file: address 0" + Integer.toOctalString(lastBinImageAddress) +
                 ", length: " + lastBinImageLength);
         return lastBinImageAddress;
     }
@@ -1284,7 +1287,7 @@ public class BkEmuActivity extends AppCompatActivity {
      * @throws Exception in case of saving error
      */
     protected void saveBinImageFile(String binImageFilePath) throws Exception {
-        Log.d(TAG, "saving image: " + binImageFilePath);
+        Timber.d("saving image: %s", binImageFilePath);
         ByteArrayOutputStream binImageOutput = new ByteArrayOutputStream();
         binImageOutput.write(lastBinImageAddress & 0377);
         binImageOutput.write((lastBinImageAddress >> 8) & 0377);
@@ -1316,7 +1319,7 @@ public class BkEmuActivity extends AppCompatActivity {
             binImageOutput.flush();
         }
         // Do nothing
-        Log.d(TAG, "saved bin image file: address 0" + Integer.toOctalString(lastBinImageAddress) +
+        Timber.d("saved bin image file: address 0" + Integer.toOctalString(lastBinImageAddress) +
                 ", length: " + lastBinImageLength);
     }
 
@@ -1336,13 +1339,13 @@ public class BkEmuActivity extends AppCompatActivity {
     }
 
     private void switchOnScreenKeyboardVisibility(boolean isVisible) {
-        Log.d(TAG, "switch on-screen keyboard visibility state: " + (isVisible ? "ON" : "OFF"));
+        Timber.d("switch on-screen keyboard visibility state: %s", (isVisible ? "ON" : "OFF"));
         KeyboardController keyboardController = computer.getKeyboardController();
         keyboardController.setOnScreenKeyboardVisibility(isVisible);
     }
 
     private void switchOnScreenJoystickVisibility(boolean isVisible) {
-        Log.d(TAG, "switch on-screen joystick visibility state: " + (isVisible ? "ON" : "OFF"));
+        Timber.d("switch on-screen joystick visibility state: %s", (isVisible ? "ON" : "OFF"));
         PeripheralPort peripheralPort = computer.getPeripheralPort();
         peripheralPort.setOnScreenJoystickVisibility(isVisible);
     }
@@ -1384,13 +1387,13 @@ public class BkEmuActivity extends AppCompatActivity {
     }
 
     private void toggleScreenMode() {
-        Log.d(TAG, "toggling screen mode");
+        Timber.d("toggling screen mode");
         VideoController videoController = computer.getVideoController();
         videoController.setColorMode(!videoController.isColorMode());
     }
 
     private void resetComputer() {
-        Log.d(TAG, "resetting computer");
+        Timber.d("resetting computer");
         Configuration config = getComputerConfiguration();
         if (computer.getConfiguration() != config) {
             // Set new computer configuration and restart activity
