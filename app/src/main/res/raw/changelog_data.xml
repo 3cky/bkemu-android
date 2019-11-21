@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <releases>
-    <release version="0.4.3-dev">
+    <release version="0.4.3" date="2019-11-21">
         <changes>
             <change>Fixed WAIT opcode handling.</change>
             <change>Fixed loading of disk images with file name containing spaces.</change>
