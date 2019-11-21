@@ -82,6 +82,7 @@ android {
         archives file: apk, name: "bkemu-release"
         archives file: mapping, name: "bkemu-release-mapping"
     }
+    task archiveBuild(dependsOn:uploadArchives)
 }
 
 dependencies {
