@@ -1,5 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <releases>
+    <release version="0.4.4" date="2020-02-05">
+        <changes>
+            <change>Fixed open BIN file dialog error on Android 10.</change>
+        </changes>
+    </release>
     <release version="0.4.3" date="2019-11-21">
         <changes>
             <change>Fixed WAIT opcode handling.</change>

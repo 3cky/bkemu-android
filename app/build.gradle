@@ -4,7 +4,7 @@ ext {
     // App version in semver format (https://semver.org/)
     versionMajor = 0
     versionMinor = 4
-    versionPatch = 3
+    versionPatch = 4
 }
 
 project.version = "${versionMajor}.${versionMinor}.${versionPatch}"

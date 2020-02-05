@@ -341,6 +341,7 @@ public class BkEmuFileDialog extends ListActivity implements AppCompatCallback,
     }
 
     protected SimpleAdapter getDirList(final String dirPath) {
+        File[] files = null;
         currentDirElements = new ArrayList<>();
         ArrayList<HashMap<String, Object>> dirItems = new ArrayList<>();
 
@@ -348,23 +349,26 @@ public class BkEmuFileDialog extends ListActivity implements AppCompatCallback,
         if (!f.isDirectory()) {
             f = f.getParentFile();
         }
-        String currentPath = f.getPath();
-        File[] files = f.listFiles();
-        if (files == null) {
-            currentPath = Environment.getExternalStorageDirectory().getPath();
-            f = new File(currentPath);
-            files = f.listFiles();
+        if (!isDirectoryReadable(f)) {
+            f = Environment.getExternalStorageDirectory();
         }
-        pushDirToHistory(currentPath);
+        if (!isDirectoryReadable(f)) {
+            f = getApplicationContext().getExternalFilesDir(null);
+        }
 
-        if (!currentPath.equals(ROOT_PATH)) {
-            if (isDirectoryReadable(ROOT_PATH)) {
-                addDirItem(dirItems, ROOT_PATH, R.drawable.ic_folder_white_24dp);
-                currentDirElements.add(ROOT_PATH);
-            }
-            if (isDirectoryReadable(f.getParent())) {
-                addDirItem(dirItems, "../", R.drawable.ic_folder_white_24dp);
-                currentDirElements.add(f.getParent());
+        if (f != null) {
+            files = f.listFiles();
+            String currentPath = f.getPath();
+            pushDirToHistory(currentPath);
+            if (!currentPath.equals(ROOT_PATH)) {
+                if (isDirectoryReadable(ROOT_PATH)) {
+                    addDirItem(dirItems, ROOT_PATH, R.drawable.ic_folder_white_24dp);
+                    currentDirElements.add(ROOT_PATH);
+                }
+                if (isDirectoryReadable(f.getParent())) {
+                    addDirItem(dirItems, "../", R.drawable.ic_folder_white_24dp);
+                    currentDirElements.add(f.getParent());
+                }
             }
         }
 
@@ -372,22 +376,24 @@ public class BkEmuFileDialog extends ListActivity implements AppCompatCallback,
         TreeMap<String, String> dirsPathMap = new TreeMap<>();
         TreeMap<String, String> filesMap = new TreeMap<>();
         TreeMap<String, String> filesPathMap = new TreeMap<>();
-        for (File file : files) {
-            if (file.isDirectory()) {
-                String dirName = file.getName();
-                dirsMap.put(dirName, dirName);
-                dirsPathMap.put(dirName, file.getPath());
-            } else {
-                final String fileName = file.getName();
-                if (formatFilter != null) {
-                    boolean isFormatMatched = isFileNameFormatMatched(fileName, formatFilter);
-                    if (isFormatMatched) {
+        if (files != null) {
+            for (File file : files) {
+                if (file.isDirectory()) {
+                    String dirName = file.getName();
+                    dirsMap.put(dirName, dirName);
+                    dirsPathMap.put(dirName, file.getPath());
+                } else {
+                    final String fileName = file.getName();
+                    if (formatFilter != null) {
+                        boolean isFormatMatched = isFileNameFormatMatched(fileName, formatFilter);
+                        if (isFormatMatched) {
+                            filesMap.put(fileName, fileName);
+                            filesPathMap.put(fileName, file.getPath());
+                        }
+                    } else {
                         filesMap.put(fileName, fileName);
                         filesPathMap.put(fileName, file.getPath());
                     }
-                } else {
-                    filesMap.put(fileName, fileName);
-                    filesPathMap.put(fileName, file.getPath());
                 }
             }
         }
@@ -420,7 +426,13 @@ public class BkEmuFileDialog extends ListActivity implements AppCompatCallback,
         if (dirName == null) {
             return false;
         }
-        File dir = new File(dirName);
+        return isDirectoryReadable(new File(dirName));
+    }
+
+    private static boolean isDirectoryReadable(File dir) {
+        if (dir == null) {
+            return false;
+        }
         return dir.exists() && dir.listFiles() != null;
     }
 
