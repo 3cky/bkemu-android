@@ -126,7 +126,7 @@ public class BkEmuActivity extends AppCompatActivity {
 
     // Google Play application URL to share
     private static final String APPLICATION_SHARE_URL = "https://play.google.com" +
-    		"/store/apps/details?id=su.comp.bk";
+            "/store/apps/details?id=su.comp.bk";
 
     public static final int MAX_TAPE_FILE_NAME_LENGTH = 16;
 

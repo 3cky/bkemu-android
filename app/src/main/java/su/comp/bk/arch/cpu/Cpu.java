@@ -414,9 +414,9 @@ public class Cpu {
         for (int opcodeTableIdx = startOpcode; opcodeTableIdx <= endOpcode; opcodeTableIdx++ ) {
             if (opcodesTable[opcodeTableIdx] != null) {
                 throw new IllegalArgumentException(String.format("Opcodes table conflict: " +
-                		"trying to set %s for instruction code 0%o while it already set to %s",
-                		opcode.getClass().getName(), opcodeTableIdx,
-                		opcodesTable[opcodeTableIdx].getClass().getName()));
+                        "trying to set %s for instruction code 0%o while it already set to %s",
+                        opcode.getClass().getName(), opcodeTableIdx,
+                        opcodesTable[opcodeTableIdx].getClass().getName()));
             }
             opcodesTable[opcodeTableIdx] = opcode;
         }

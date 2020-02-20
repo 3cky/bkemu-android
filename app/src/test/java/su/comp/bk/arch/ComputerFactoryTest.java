@@ -183,8 +183,8 @@ public class ComputerFactoryTest extends ResourceFileTestBase {
     public void test791323() throws Exception {
         setupTestData("791323");
         assertTrue(execute(0200, "\r\npAMqTx\r\n000000-077776\r\nTCT13 bAHK   00\r\n" +
-                		"TCT13 bAHK   01\r\nTCT13 bAHK   02\r\nTCT13 bAHK   03\r\n" +
-                		"pEPEM\r\nTCT13 bAHK   00\r\nK pPOXOd #   01"));
+                        "TCT13 bAHK   01\r\nTCT13 bAHK   02\r\nTCT13 bAHK   03\r\n" +
+                        "pEPEM\r\nTCT13 bAHK   00\r\nK pPOXOd #   01"));
     }
 
 }

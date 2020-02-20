@@ -76,7 +76,7 @@ public class BkEmuView extends TextureView implements TextureView.SurfaceTexture
     private final static float COMPUTER_SCREEN_ASPECT_RATIO = (4f / 3f);
 
     private final FpsIndicatorUpdateRunnable fpsIndicatorUpdateRunnable =
-    			new FpsIndicatorUpdateRunnable();
+                new FpsIndicatorUpdateRunnable();
     protected TextView fpsIndicator;
     protected String fpsIndicatorString;
 
@@ -107,49 +107,49 @@ public class BkEmuView extends TextureView implements TextureView.SurfaceTexture
     private int lastViewWidth;
 
     /*
-	 * Surface view rendering thread
-	 */
-	class BkEmuViewRenderingThread extends Thread {
-		private final BkEmuView bkEmuView;
-		private boolean isRunning = true;
+     * Surface view rendering thread
+     */
+    class BkEmuViewRenderingThread extends Thread {
+        private final BkEmuView bkEmuView;
+        private boolean isRunning = true;
 
-		BkEmuViewRenderingThread(BkEmuView bkEmuView) {
-			this.bkEmuView = bkEmuView;
-		}
+        BkEmuViewRenderingThread(BkEmuView bkEmuView) {
+            this.bkEmuView = bkEmuView;
+        }
 
-		void stopRendering() {
-			isRunning = false;
-		}
+        void stopRendering() {
+            isRunning = false;
+        }
 
-		@Override
-		public void run() {
-	        long timeStamp;
-	        long timeDelta;
-	        Canvas canvas;
-	        VideoController videoController = computer.getVideoController();
-	        int bgColor = ContextCompat.getColor(getContext(), R.color.theme_window_background);
-			while (isRunning) {
-				timeStamp = System.currentTimeMillis();
-				Computer comp = computer;
-				if (comp != null && !comp.isPaused()) {
-				    // Repaint surface
-				    canvas = bkEmuView.lockCanvas(null);
-				    if (canvas != null) {
-				        try {
-				            synchronized (bkEmuView) {
-				                canvas.drawColor(bgColor);
-				                canvas.drawBitmap(videoController.renderVideoBuffer(),
-				                        videoBufferBitmapTransformMatrix, null);
-				            }
-				        } finally {
-				            bkEmuView.unlockCanvasAndPost(canvas);
-				        }
-				    }
-				}
-	            long currentTime = System.currentTimeMillis();
-	            updateFpsCounters(currentTime);
-	            updateFloppyActivityIndicator(currentTime);
-	            // Calculate time spent to canvas repaint
+        @Override
+        public void run() {
+            long timeStamp;
+            long timeDelta;
+            Canvas canvas;
+            VideoController videoController = computer.getVideoController();
+            int bgColor = ContextCompat.getColor(getContext(), R.color.theme_window_background);
+            while (isRunning) {
+                timeStamp = System.currentTimeMillis();
+                Computer comp = computer;
+                if (comp != null && !comp.isPaused()) {
+                    // Repaint surface
+                    canvas = bkEmuView.lockCanvas(null);
+                    if (canvas != null) {
+                        try {
+                            synchronized (bkEmuView) {
+                                canvas.drawColor(bgColor);
+                                canvas.drawBitmap(videoController.renderVideoBuffer(),
+                                        videoBufferBitmapTransformMatrix, null);
+                            }
+                        } finally {
+                            bkEmuView.unlockCanvasAndPost(canvas);
+                        }
+                    }
+                }
+                long currentTime = System.currentTimeMillis();
+                updateFpsCounters(currentTime);
+                updateFloppyActivityIndicator(currentTime);
+                // Calculate time spent to canvas repaint
                 timeDelta = currentTime - timeStamp;
                 if (timeDelta < RENDERING_PERIOD) {
                     try {
@@ -159,51 +159,51 @@ public class BkEmuView extends TextureView implements TextureView.SurfaceTexture
                 } else {
                     Thread.yield();
                 }
-			}
-		}
-	}
+            }
+        }
+    }
 
-	/**
-	 * FPS indicator update task (scheduled via UI update handler)
-	 */
-	class FpsIndicatorUpdateRunnable implements Runnable {
-	    @Override
-	    public void run() {
-	        // Set indicator color based on FPS value
-	        fpsIndicator.setTextColor((fpsValue > FPS_LOW_VALUE) ?
-	                FPS_COLOR_NORMAL : FPS_COLOR_LOW);
-	        // Set indicator FPS value text
-	        fpsIndicator.setText(String.format(fpsIndicatorString, fpsValue));
-	        // Set FPS indicator visibility
-	        if (isFpsDrawingEnabled()) {
-	            fpsIndicator.setVisibility(VISIBLE);
-	        }
-	    }
-	}
+    /**
+     * FPS indicator update task (scheduled via UI update handler)
+     */
+    class FpsIndicatorUpdateRunnable implements Runnable {
+        @Override
+        public void run() {
+            // Set indicator color based on FPS value
+            fpsIndicator.setTextColor((fpsValue > FPS_LOW_VALUE) ?
+                    FPS_COLOR_NORMAL : FPS_COLOR_LOW);
+            // Set indicator FPS value text
+            fpsIndicator.setText(String.format(fpsIndicatorString, fpsValue));
+            // Set FPS indicator visibility
+            if (isFpsDrawingEnabled()) {
+                fpsIndicator.setVisibility(VISIBLE);
+            }
+        }
+    }
 
-	/**
-	 * Floppy drive activity indicator update task (scheduled via UI update handler)
-	 */
-	class FloppyActivityIndicatorUpdateRunnable implements Runnable {
-		@Override
-		public void run() {
-			// Set floppy drive activity indicator visibility
-		    boolean isFloppyActive = false;
-		    FloppyController floppyController = computer.getFloppyController();
-		    if (floppyController != null && floppyController.isMotorStarted()) {
-		        long lastFloppyAccessCpuTimeElapsed = computer.getCpu().getTime() -
-		                floppyController.getLastAccessCpuTime();
-		        isFloppyActive = (lastFloppyAccessCpuTimeElapsed <
-		                floppyActivityIndicatorTimeoutCpuTicks);
-		    }
-		    floppyActivityIndicator.setVisibility(isFloppyActive ? VISIBLE : INVISIBLE);
-		    if (isFloppyActive) {
-		        floppyActivityIndicator.requestLayout();
-		    }
-		}
-	}
+    /**
+     * Floppy drive activity indicator update task (scheduled via UI update handler)
+     */
+    class FloppyActivityIndicatorUpdateRunnable implements Runnable {
+        @Override
+        public void run() {
+            // Set floppy drive activity indicator visibility
+            boolean isFloppyActive = false;
+            FloppyController floppyController = computer.getFloppyController();
+            if (floppyController != null && floppyController.isMotorStarted()) {
+                long lastFloppyAccessCpuTimeElapsed = computer.getCpu().getTime() -
+                        floppyController.getLastAccessCpuTime();
+                isFloppyActive = (lastFloppyAccessCpuTimeElapsed <
+                        floppyActivityIndicatorTimeoutCpuTicks);
+            }
+            floppyActivityIndicator.setVisibility(isFloppyActive ? VISIBLE : INVISIBLE);
+            if (isFloppyActive) {
+                floppyActivityIndicator.requestLayout();
+            }
+        }
+    }
 
-	public BkEmuView(Context context, AttributeSet attrs) {
+    public BkEmuView(Context context, AttributeSet attrs) {
         super(context, attrs);
         this.uiUpdateHandler = new Handler();
         // Enable focus grabbing by view
@@ -211,12 +211,12 @@ public class BkEmuView extends TextureView implements TextureView.SurfaceTexture
         this.setFocusableInTouchMode(true);
         // Set surface events listener
         this.setSurfaceTextureListener(this);
-	}
+    }
 
-	public void setGestureListener(GestureListener listener) {
-	    gestureDetector = new GestureDetector(getContext(), listener);
+    public void setGestureListener(GestureListener listener) {
+        gestureDetector = new GestureDetector(getContext(), listener);
         gestureDetector.setIsLongpressEnabled(true);
-	}
+    }
 
     public void setComputer(Computer computer) {
         this.computer = computer;
@@ -238,7 +238,7 @@ public class BkEmuView extends TextureView implements TextureView.SurfaceTexture
 
     protected void updateFpsCounters(long currentTime) {
         if (fpsCountersUpdateTimestamp > 0) {
-        	fpsFrameCounter++;
+            fpsFrameCounter++;
             // Calculate time elapsed from last FPS counters update
             int timeDelta = (int) (currentTime - fpsCountersUpdateTimestamp);
             // Calculate FPS value
@@ -250,8 +250,8 @@ public class BkEmuView extends TextureView implements TextureView.SurfaceTexture
                 fpsFrameCounter = 0;
                 fpsAccumulatedTime = 0;
                 if (isFpsDrawingEnabled()) {
-                	// Update FPS indicator
-                	uiUpdateHandler.post(fpsIndicatorUpdateRunnable);
+                    // Update FPS indicator
+                    uiUpdateHandler.post(fpsIndicatorUpdateRunnable);
                 }
             }
         }
