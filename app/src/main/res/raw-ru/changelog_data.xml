@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <releases>
+    <release version="0.4.5-dev">
+        <changes>
+        </changes>
+    </release>
     <release version="0.4.4" date="05.02.2020">
         <changes>
             <change>Исправлена ошибка в диалоге выбора BIN-файла на Android 10.</change>
