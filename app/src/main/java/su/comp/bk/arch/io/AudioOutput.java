@@ -104,7 +104,7 @@ public class AudioOutput implements Device, Runnable {
     }
 
     @Override
-    public void timer(long cpuTime) {
+    public void timer(long uptime) {
         // Do nothing
     }
 

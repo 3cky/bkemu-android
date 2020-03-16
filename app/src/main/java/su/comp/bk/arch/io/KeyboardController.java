@@ -331,7 +331,7 @@ public class KeyboardController implements Device, OnTouchListener {
     }
 
     @Override
-    public void timer(long cpuTime) {
+    public void timer(long uptime) {
         // Do nothing
     }
 

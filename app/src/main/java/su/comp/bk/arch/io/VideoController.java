@@ -23,6 +23,9 @@ import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.os.Bundle;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * BK-0010 video output controller (К1801ВП1-037).
  */
@@ -107,6 +110,14 @@ public class VideoController implements Device {
     private static final String STATE_PALETTE_INDEX =
             VideoController.class.getName() + "#palette_index";
 
+    // State save/restore: current rendered frame number
+    private static final String STATE_CURRENT_FRAME =
+            VideoController.class.getName() + "#frame_num";
+
+    // State save/restore: current rendered line number
+    private static final String STATE_CURRENT_LINE =
+            VideoController.class.getName() + "#line_num";
+
     // Screen mode flag: true for color mode, false for black and white mode
     private boolean isColorMode;
 
@@ -125,12 +136,43 @@ public class VideoController implements Device {
     // Video buffer bitmap object
     private final Bitmap videoBuffer;
 
+    // Total lines per frame (including vertical sync)
+    private final static int FRAME_LINES_TOTAL = 320;
+    // Visible lines per frame
+    private final static int FRAME_LINES_VISIBLE = 256;
+    // Frame horizontal sync period (64 uS, in nanoseconds)
+    private final static long FRAME_SYNC_PERIOD_HORIZONTAL = 64 * 1000L;
+    // Frame vertical sync period
+    private final static long FRAME_SYNC_PERIOD_VERTICAL =
+            FRAME_SYNC_PERIOD_HORIZONTAL * FRAME_LINES_TOTAL;
+    // Current rendered line number
+    private long currentLine;
+    // Current rendered frame number
+    private long currentFrame;
+    // List of frame horizontal/vertical sync listeners
+    private final List<FrameSyncListener> frameSyncListeners = new ArrayList<>();
+
+    /**
+     * Frame sync events listener interface
+     */
+    public interface FrameSyncListener {
+        void verticalSync(long frameNumber);
+    }
+
     public VideoController(Memory videoMemory) {
         this.videoMemory = videoMemory;
         this.videoBuffer = Bitmap.createBitmap(VIDEO_BUFFER_WIDTH, VIDEO_BUFFER_HEIGHT,
                 Bitmap.Config.ARGB_8888);
         writeScrollRegister(SCROLL_EXTMEM_VALUE);
         setColorMode(true);
+    }
+
+    public void addFrameSyncListener(FrameSyncListener frameSyncListener) {
+        frameSyncListeners.add(frameSyncListener);
+    }
+
+    public List<FrameSyncListener> getFrameSyncListeners() {
+        return frameSyncListeners;
     }
 
     public int getColorPaletteIndex() {
@@ -232,12 +274,26 @@ public class VideoController implements Device {
     }
 
     @Override
-    public void timer(long cpuTime) {
-        // Do nothing
+    public void timer(long uptime) {
+        currentLine = uptime / FRAME_SYNC_PERIOD_HORIZONTAL;
+        long currentLineFrame = currentLine / FRAME_LINES_TOTAL;
+        long currentLineFrameLine = currentLine % FRAME_LINES_TOTAL;
+        if (currentLineFrame >= currentFrame && currentLineFrameLine > FRAME_LINES_VISIBLE) {
+            notifyFrameSyncListenersVerticalSync();
+            currentFrame = currentLineFrame + 1;
+        }
+    }
+
+    private void notifyFrameSyncListenersVerticalSync() {
+        for (FrameSyncListener l : frameSyncListeners) {
+            l.verticalSync(currentFrame);
+        }
     }
 
     @Override
     public void saveState(Bundle outState) {
+        outState.putLong(STATE_CURRENT_FRAME, currentFrame);
+        outState.putLong(STATE_CURRENT_LINE, currentLine);
         outState.putInt(STATE_SCROLL_REGISTER, scrollRegister);
         outState.putInt(STATE_PALETTE_INDEX, getColorPaletteIndex());
         outState.putBoolean(STATE_COLOR_MODE, isColorMode());
@@ -245,6 +301,8 @@ public class VideoController implements Device {
 
     @Override
     public void restoreState(Bundle inState) {
+        currentFrame = inState.getLong(STATE_CURRENT_FRAME);
+        currentLine = inState.getLong(STATE_CURRENT_LINE);
         scrollRegister = inState.getInt(STATE_SCROLL_REGISTER);
         setColorPaletteIndex(inState.getInt(STATE_PALETTE_INDEX));
         setColorMode(inState.getBoolean(STATE_COLOR_MODE));

@@ -34,6 +34,7 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.core.content.ContextCompat;
+
 import su.comp.bk.R;
 import su.comp.bk.arch.Computer;
 import su.comp.bk.arch.io.FloppyController;
@@ -44,14 +45,8 @@ import timber.log.Timber;
 /**
  * Emulator screen view.
  */
-public class BkEmuView extends TextureView implements TextureView.SurfaceTextureListener {
-
-    // Rendering framerate, in frames per second
-    private static final int RENDERING_FRAMERATE = 15;
-    // Rendering period, in milliseconds.
-    // RENDERING_FRAMERATE = 1000 / RENDERING_PERIOD
-    private static final int RENDERING_PERIOD = (1000 / RENDERING_FRAMERATE);
-
+public class BkEmuView extends TextureView implements TextureView.SurfaceTextureListener,
+        VideoController.FrameSyncListener {
     // FPS value averaging time, in milliseconds
     private static final int FPS_AVERAGING_TIME = 1000;
     // FPS counters last update timestamp
@@ -94,8 +89,8 @@ public class BkEmuView extends TextureView implements TextureView.SurfaceTexture
     // UI update handler
     private final Handler uiUpdateHandler;
 
-    // UI surface render thread
-    private BkEmuViewRenderingThread renderingThread;
+    // UI update thread
+    private BkEmuViewUpdateThread uiUpdateThread;
 
     private GestureDetector gestureDetector;
 
@@ -106,33 +101,44 @@ public class BkEmuView extends TextureView implements TextureView.SurfaceTexture
     private int lastViewHeight;
     private int lastViewWidth;
 
+    // Video controller frames per UI update
+    private static final int FRAMES_PER_UPDATE = 3;
+    private long lastUpdateFrameNumber;
+
     /*
-     * Surface view rendering thread
+     * Emulator view update thread
      */
-    class BkEmuViewRenderingThread extends Thread {
+    class BkEmuViewUpdateThread extends Thread {
         private final BkEmuView bkEmuView;
         private boolean isRunning = true;
+        private boolean isUpdateScheduled = false;
 
-        BkEmuViewRenderingThread(BkEmuView bkEmuView) {
+        BkEmuViewUpdateThread(BkEmuView bkEmuView) {
             this.bkEmuView = bkEmuView;
         }
 
-        void stopRendering() {
+        void scheduleStop() {
+            Timber.d("schedule update thread stop");
             isRunning = false;
+            scheduleUpdate();
+        }
+
+        public synchronized void scheduleUpdate() {
+            isUpdateScheduled = true;
+            this.notifyAll();
         }
 
         @Override
         public void run() {
-            long timeStamp;
-            long timeDelta;
+            Timber.d("update thread started");
+            boolean isWaitingForUpdate;
             Canvas canvas;
             VideoController videoController = computer.getVideoController();
             int bgColor = ContextCompat.getColor(getContext(), R.color.theme_window_background);
             while (isRunning) {
-                timeStamp = System.currentTimeMillis();
                 Computer comp = computer;
                 if (comp != null && !comp.isPaused()) {
-                    // Repaint surface
+                    // Repaint canvas
                     canvas = bkEmuView.lockCanvas(null);
                     if (canvas != null) {
                         try {
@@ -146,20 +152,27 @@ public class BkEmuView extends TextureView implements TextureView.SurfaceTexture
                         }
                     }
                 }
+
                 long currentTime = System.currentTimeMillis();
                 updateFpsCounters(currentTime);
                 updateFloppyActivityIndicator(currentTime);
-                // Calculate time spent to canvas repaint
-                timeDelta = currentTime - timeStamp;
-                if (timeDelta < RENDERING_PERIOD) {
-                    try {
-                        Thread.sleep(RENDERING_PERIOD - timeDelta);
-                    } catch (InterruptedException e) {
+
+                synchronized (this) {
+                    isWaitingForUpdate = !isUpdateScheduled;
+                    if (isWaitingForUpdate) {
+                        try {
+                            this.wait();
+                        } catch (InterruptedException e) {
+                            // Do nothing
+                        }
                     }
-                } else {
+                    isUpdateScheduled = false;
+                }
+                if (!isWaitingForUpdate) {
                     Thread.yield();
                 }
             }
+            Timber.d("update thread stopped");
         }
     }
 
@@ -222,6 +235,7 @@ public class BkEmuView extends TextureView implements TextureView.SurfaceTexture
         this.computer = computer;
         this.floppyActivityIndicatorTimeoutCpuTicks = computer.nanosToCpuTime(
                 FLOPPY_ACTIVITY_INDICATOR_TIMEOUT * Computer.NANOSECS_IN_MSEC);
+        computer.getVideoController().addFrameSyncListener(this);
     }
 
     public synchronized void setFpsDrawingEnabled(boolean isEnabled) {
@@ -321,8 +335,8 @@ public class BkEmuView extends TextureView implements TextureView.SurfaceTexture
                 .findViewById(R.id.fps_indicator);
         this.floppyActivityIndicator = ((FrameLayout) getParent())
                 .findViewById(R.id.floppy_indicator);
-        this.renderingThread = new BkEmuViewRenderingThread(this);
-        this.renderingThread.start();
+        this.uiUpdateThread = new BkEmuViewUpdateThread(this);
+        this.uiUpdateThread.start();
     }
 
     @Override
@@ -337,14 +351,13 @@ public class BkEmuView extends TextureView implements TextureView.SurfaceTexture
     @Override
     public boolean onSurfaceTextureDestroyed(SurfaceTexture surface) {
         Timber.d("onSurfaceTextureDestroyed");
-        this.renderingThread.stopRendering();
-        while (renderingThread.isAlive()) {
+        uiUpdateThread.scheduleStop();
+        while (uiUpdateThread.isAlive()) {
             try {
-                this.renderingThread.join();
+                uiUpdateThread.join();
             } catch (InterruptedException e) {
             }
         }
-        Timber.d("rendering stopped");
         return true;
     }
 
@@ -359,5 +372,13 @@ public class BkEmuView extends TextureView implements TextureView.SurfaceTexture
     public boolean onTouchEvent(MotionEvent event) {
         return (gestureDetector != null) ? gestureDetector.onTouchEvent(event)
                     : super.onTouchEvent(event);
+    }
+
+    @Override
+    public void verticalSync(long frameNumber) {
+        if (frameNumber - lastUpdateFrameNumber >= FRAMES_PER_UPDATE && uiUpdateThread != null) {
+            lastUpdateFrameNumber = frameNumber;
+            uiUpdateThread.scheduleUpdate();
+        }
     }
 }

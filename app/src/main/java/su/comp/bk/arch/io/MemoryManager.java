@@ -67,7 +67,7 @@ public class MemoryManager implements Device {
     }
 
     @Override
-    public void timer(long cpuTime) {
+    public void timer(long uptime) {
         // Do nothing
     }
 

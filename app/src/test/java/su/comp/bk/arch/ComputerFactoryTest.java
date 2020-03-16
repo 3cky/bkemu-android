@@ -81,7 +81,7 @@ public class ComputerFactoryTest extends ResourceFileTestBase {
         }
 
         @Override
-        public void timer(long cpuTime) {
+        public void timer(long uptime) {
             // Do nothing
         }
 

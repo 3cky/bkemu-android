@@ -110,7 +110,7 @@ public class ControlOpcodesTest {
             public void init(long cpuTime) {
             }
             @Override
-            public void timer(long cpuTime) {
+            public void timer(long uptime) {
             }
             @Override
             public void saveState(Bundle outState) {
@@ -139,7 +139,7 @@ public class ControlOpcodesTest {
             public void init(long cpuTime) {
             }
             @Override
-            public void timer(long cpuTime) {
+            public void timer(long uptime) {
             }
             @Override
             public void saveState(Bundle outState) {

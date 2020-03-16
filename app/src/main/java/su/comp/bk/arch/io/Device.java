@@ -50,9 +50,9 @@ public interface Device {
 
     /**
      * Do timer task.
-     * @param cpuTime current CPU time (in clock ticks)
+     * @param uptime current computer uptime (in nanoseconds)
      */
-    void timer(long cpuTime);
+    void timer(long uptime);
 
     /**
      * Read value from I/O device. Devices always read as word.

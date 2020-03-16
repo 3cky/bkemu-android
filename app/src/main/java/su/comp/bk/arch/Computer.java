@@ -74,13 +74,13 @@ public class Computer implements Runnable {
     // Keyboard controller reference
     private KeyboardController keyboardController;
 
-    // Periferal port reference
-    private PeripheralPort periferalPort;
+    // Peripheral port reference
+    private PeripheralPort peripheralPort;
 
     // Audio output reference
     private AudioOutput audioOutput;
 
-    // FLoppy controller reference (<code>null</code> if no floppy controller attached)
+    // Floppy controller reference (<code>null</code> if no floppy controller attached)
     private FloppyController floppyController;
 
     /** I/O registers space min start address */
@@ -100,6 +100,8 @@ public class Computer implements Runnable {
 
     private Thread clockThread;
 
+    /** Amount of nanoseconds in one microsecond */
+    public static final long NANOSECS_IN_USEC = 1000L;
     /** Amount of nanoseconds in one millisecond */
     public static final long NANOSECS_IN_MSEC = 1000000L;
 
@@ -112,16 +114,10 @@ public class Computer implements Runnable {
     private int clockFrequency;
 
     /** Uptime sync threshold (in nanoseconds) */
-    public static final long SYNC_UPTIME_THRESHOLD = (10L * NANOSECS_IN_MSEC);
-    // Uptime sync threshold (in CPU clock ticks, depends from CPU clock frequency)
-    private long syncUptimeThresholdCpuTicks;
-
-    // Last uptime sync timestamp (in nanoseconds, absolute value)
-    private long lastUptimeSyncTimestamp;
-    // Last CPU time sync timestamp (in ticks)
-    private long lastCpuTimeSyncTimestamp;
-
-    // Computer uptime (in nanoseconds)
+    public static final long UPTIME_SYNC_THRESHOLD = (10L * NANOSECS_IN_MSEC);
+    // Last computer uptime update timestamp (unix timestamp, in nanoseconds)
+    private long uptimeUpdateTimestamp;
+    // Computer uptime since start (in nanoseconds)
     private long uptime;
 
     public enum Configuration {
@@ -187,8 +183,8 @@ public class Computer implements Runnable {
         addDevice(new Sel1RegisterSystemBits(!config.isMemoryManagerPresent() ? 0100000 : 0140000));
         keyboardController = new KeyboardController(this);
         addDevice(keyboardController);
-        periferalPort = new PeripheralPort(this);
-        addDevice(periferalPort);
+        peripheralPort = new PeripheralPort(this);
+        addDevice(peripheralPort);
         addDevice(new Timer());
         // Apply computer specific configuration
         if (!config.isMemoryManagerPresent()) {
@@ -270,7 +266,9 @@ public class Computer implements Runnable {
             addDevice(videoController);
             addDevice(new VideoControllerManager(videoController, pagedVideoMemory));
             // Add system timer
-            addDevice(new SystemTimer(this));
+            SystemTimer systemTimer = new SystemTimer(this);
+            addDevice(systemTimer);
+            videoController.addFrameSyncListener(systemTimer);
         }
         // Add audio output
         audioOutput = new AudioOutput(this, config.isMemoryManagerPresent());
@@ -379,15 +377,6 @@ public class Computer implements Runnable {
      */
     public void setClockFrequency(int clockFrequency) {
         this.clockFrequency = clockFrequency;
-        this.syncUptimeThresholdCpuTicks = nanosToCpuTime(SYNC_UPTIME_THRESHOLD);
-    }
-
-    /**
-     * Get uptime sync threshold (in CPU clock ticks)
-     * @return uptime sync threshold
-     */
-    public long getUptimeSyncThresholdTicks() {
-        return syncUptimeThresholdCpuTicks;
     }
 
     private void addReadOnlyMemory(Resources resources, int romDataResId, String romId, int address)
@@ -455,7 +444,7 @@ public class Computer implements Runnable {
      * @return peripheral port reference
      */
     public PeripheralPort getPeripheralPort() {
-        return periferalPort;
+        return peripheralPort;
     }
 
     /**
@@ -702,8 +691,7 @@ public class Computer implements Runnable {
      */
     public synchronized void resume() {
         Timber.d("resuming computer");
-        lastUptimeSyncTimestamp = System.nanoTime();
-        lastCpuTimeSyncTimestamp = cpu.getTime();
+        uptimeUpdateTimestamp = System.nanoTime();
         isPaused = false;
         audioOutput.resume();
         this.notifyAll();
@@ -755,40 +743,31 @@ public class Computer implements Runnable {
     }
 
     /**
-     * Check is time to sync CPU time with computer uptime.
+     * Check computer uptime is in sync with system time.
      */
-    public void checkSyncUptime() {
-        long cpuTimeUptimeDifference = cpu.getTime() - lastCpuTimeSyncTimestamp;
-        if (cpuTimeUptimeDifference >= syncUptimeThresholdCpuTicks) {
-            doSyncUptime();
-            doTimerTasks();
+    protected void checkUptimeSync() {
+        long systemTime = System.nanoTime();
+        uptime += systemTime - uptimeUpdateTimestamp;
+        uptimeUpdateTimestamp = systemTime;
+        long uptimeDifference = getCpuTimeNanos() - uptime;
+        if (uptimeDifference >= UPTIME_SYNC_THRESHOLD) {
+            long uptimeDifferenceMillis = uptimeDifference / NANOSECS_IN_MSEC;
+            int uptimeDifferenceNanos = (int) (uptimeDifference % NANOSECS_IN_MSEC);
+            try {
+                this.wait(uptimeDifferenceMillis, uptimeDifferenceNanos);
+            } catch (InterruptedException e) {
+                // Do nothing
+            }
         }
     }
 
     /**
      * Do timer tasks.
      */
-    public void doTimerTasks() {
+    protected void doTimerTasks() {
+        long cpuTimeNanos = getCpuTimeNanos();
         for (Device device: deviceList) {
-            device.timer(uptime);
-        }
-    }
-
-    /**
-     * Sync CPU time with computer uptime.
-     */
-    public void doSyncUptime() {
-        long timestamp = System.nanoTime();
-        uptime += timestamp - lastUptimeSyncTimestamp;
-        lastUptimeSyncTimestamp = timestamp;
-        lastCpuTimeSyncTimestamp = cpu.getTime();
-        long uptimeCpuTimeDifference = getCpuTimeNanos() - uptime;
-        uptimeCpuTimeDifference = (uptimeCpuTimeDifference > 0) ? uptimeCpuTimeDifference : 1L;
-        long uptimeCpuTimeDifferenceMillis = uptimeCpuTimeDifference / NANOSECS_IN_MSEC;
-        int uptimeCpuTimeDifferenceNanos = (int) (uptimeCpuTimeDifference % NANOSECS_IN_MSEC);
-        try {
-            this.wait(uptimeCpuTimeDifferenceMillis, uptimeCpuTimeDifferenceNanos);
-        } catch (InterruptedException e) {
+            device.timer(cpuTimeNanos);
         }
     }
 
@@ -807,7 +786,8 @@ public class Computer implements Runnable {
                     Timber.d("computer resumed");
                 } else {
                     cpu.executeNextOperation();
-                    checkSyncUptime();
+                    checkUptimeSync();
+                    doTimerTasks();
                 }
             }
         }

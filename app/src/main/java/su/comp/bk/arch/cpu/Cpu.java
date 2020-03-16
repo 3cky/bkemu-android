@@ -21,70 +21,9 @@ package su.comp.bk.arch.cpu;
 import android.os.Bundle;
 
 import su.comp.bk.arch.Computer;
-import su.comp.bk.arch.cpu.addressing.AddressingMode;
-import su.comp.bk.arch.cpu.addressing.AutodecrementAddressingMode;
-import su.comp.bk.arch.cpu.addressing.AutodecrementDeferredAddressingMode;
-import su.comp.bk.arch.cpu.addressing.AutoincrementAddressingMode;
-import su.comp.bk.arch.cpu.addressing.AutoincrementDeferredAddressingMode;
-import su.comp.bk.arch.cpu.addressing.IndexAddressingMode;
-import su.comp.bk.arch.cpu.addressing.IndexDeferredAddressingMode;
-import su.comp.bk.arch.cpu.addressing.RegisterAddressingMode;
-import su.comp.bk.arch.cpu.addressing.RegisterDeferredAddressingMode;
-import su.comp.bk.arch.cpu.opcode.AdcOpcode;
-import su.comp.bk.arch.cpu.opcode.AddOpcode;
-import su.comp.bk.arch.cpu.opcode.AslOpcode;
-import su.comp.bk.arch.cpu.opcode.AsrOpcode;
-import su.comp.bk.arch.cpu.opcode.BccOpcode;
-import su.comp.bk.arch.cpu.opcode.BcsOpcode;
-import su.comp.bk.arch.cpu.opcode.BeqOpcode;
-import su.comp.bk.arch.cpu.opcode.BgeOpcode;
-import su.comp.bk.arch.cpu.opcode.BgtOpcode;
-import su.comp.bk.arch.cpu.opcode.BhiOpcode;
-import su.comp.bk.arch.cpu.opcode.BicOpcode;
-import su.comp.bk.arch.cpu.opcode.BisOpcode;
-import su.comp.bk.arch.cpu.opcode.BitOpcode;
-import su.comp.bk.arch.cpu.opcode.BleOpcode;
-import su.comp.bk.arch.cpu.opcode.BlosOpcode;
-import su.comp.bk.arch.cpu.opcode.BltOpcode;
-import su.comp.bk.arch.cpu.opcode.BmiOpcode;
-import su.comp.bk.arch.cpu.opcode.BneOpcode;
-import su.comp.bk.arch.cpu.opcode.BplOpcode;
-import su.comp.bk.arch.cpu.opcode.BptOpcode;
-import su.comp.bk.arch.cpu.opcode.BrOpcode;
-import su.comp.bk.arch.cpu.opcode.BvcOpcode;
-import su.comp.bk.arch.cpu.opcode.BvsOpcode;
-import su.comp.bk.arch.cpu.opcode.ClrOpcode;
-import su.comp.bk.arch.cpu.opcode.CmpOpcode;
-import su.comp.bk.arch.cpu.opcode.ComOpcode;
-import su.comp.bk.arch.cpu.opcode.ConditionCodeOpcodes;
-import su.comp.bk.arch.cpu.opcode.DecOpcode;
-import su.comp.bk.arch.cpu.opcode.EmtOpcode;
-import su.comp.bk.arch.cpu.opcode.HaltOpcode;
-import su.comp.bk.arch.cpu.opcode.IncOpcode;
-import su.comp.bk.arch.cpu.opcode.IotOpcode;
-import su.comp.bk.arch.cpu.opcode.JmpOpcode;
-import su.comp.bk.arch.cpu.opcode.JsrOpcode;
-import su.comp.bk.arch.cpu.opcode.MarkOpcode;
-import su.comp.bk.arch.cpu.opcode.MfpsOpcode;
-import su.comp.bk.arch.cpu.opcode.MovOpcode;
-import su.comp.bk.arch.cpu.opcode.MtpsOpcode;
-import su.comp.bk.arch.cpu.opcode.NegOpcode;
-import su.comp.bk.arch.cpu.opcode.Opcode;
-import su.comp.bk.arch.cpu.opcode.ResetOpcode;
-import su.comp.bk.arch.cpu.opcode.RolOpcode;
-import su.comp.bk.arch.cpu.opcode.RorOpcode;
-import su.comp.bk.arch.cpu.opcode.RtiOpcode;
-import su.comp.bk.arch.cpu.opcode.RtsOpcode;
-import su.comp.bk.arch.cpu.opcode.RttOpcode;
-import su.comp.bk.arch.cpu.opcode.SbcOpcode;
-import su.comp.bk.arch.cpu.opcode.SobOpcode;
-import su.comp.bk.arch.cpu.opcode.SubOpcode;
-import su.comp.bk.arch.cpu.opcode.SwabOpcode;
-import su.comp.bk.arch.cpu.opcode.SxtOpcode;
-import su.comp.bk.arch.cpu.opcode.TrapOpcode;
-import su.comp.bk.arch.cpu.opcode.TstOpcode;
-import su.comp.bk.arch.cpu.opcode.WaitOpcode;
-import su.comp.bk.arch.cpu.opcode.XorOpcode;
+import su.comp.bk.arch.cpu.addressing.*;
+import su.comp.bk.arch.cpu.opcode.*;
+
 import timber.log.Timber;
 
 /**
@@ -250,13 +189,13 @@ public class Cpu {
     }
 
     /**
-     * Opcode intercepter class.
+     * Opcode interceptor class.
      */
-    protected class OpcodeIntercepter implements Opcode {
+    protected class OpcodeInterceptor implements Opcode {
         private final Opcode interceptedOpcode;
         private final OnOpcodeListener opcodeListener;
 
-        OpcodeIntercepter(Opcode interceptedOpcode, OnOpcodeListener opcodeListener) {
+        OpcodeInterceptor(Opcode interceptedOpcode, OnOpcodeListener opcodeListener) {
             this.interceptedOpcode = interceptedOpcode;
             this.opcodeListener = opcodeListener;
         }
@@ -437,7 +376,7 @@ public class Cpu {
     public void setOnOpcodeListener(int instruction, OnOpcodeListener opcodeListener) {
         Opcode opcode = decodeInstruction(instruction);
         if (opcode != null) {
-            opcodesTable[instruction] = new OpcodeIntercepter(opcode, opcodeListener);
+            opcodesTable[instruction] = new OpcodeInterceptor(opcode, opcodeListener);
         }
     }
 
@@ -1164,7 +1103,7 @@ public class Cpu {
             }
         }
         if (isInterruptWaitMode()) {
-            time += computer.getUptimeSyncThresholdTicks(); // TODO improve time granularity?
+            time += BaseOpcode.getBaseExecutionTime();
         }
     }
 
