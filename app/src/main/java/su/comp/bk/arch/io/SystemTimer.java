@@ -75,11 +75,6 @@ public class SystemTimer implements Device, VideoController.FrameSyncListener {
     }
 
     @Override
-    public void timer(long uptime) {
-        // Do nothing
-    }
-
-    @Override
     public int read(long cpuTime, int address) {
         // write only device
         return 0;

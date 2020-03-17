@@ -53,8 +53,8 @@ import timber.log.Timber;
  */
 public class Computer implements Runnable {
 
-    // State save/restore: Computer uptime (in nanoseconds)
-    private static final String STATE_UPTIME = Computer.class.getName() + "#uptime";
+    // State save/restore: Computer system uptime (in nanoseconds)
+    private static final String STATE_SYSTEM_UPTIME = Computer.class.getName() + "#sys_uptime";
 
     /** Bus error constant */
     public final static int BUS_ERROR = -1;
@@ -115,10 +115,19 @@ public class Computer implements Runnable {
 
     /** Uptime sync threshold (in nanoseconds) */
     public static final long UPTIME_SYNC_THRESHOLD = (10L * NANOSECS_IN_MSEC);
-    // Last computer uptime update timestamp (unix timestamp, in nanoseconds)
-    private long uptimeUpdateTimestamp;
-    // Computer uptime since start (in nanoseconds)
-    private long uptime;
+    // Last computer system uptime update timestamp (unix timestamp, in nanoseconds)
+    private long systemUptimeUpdateTimestamp;
+    // Computer system uptime since start (in nanoseconds)
+    private long systemUptime;
+
+    private final List<UptimeListener> uptimeListeners = new ArrayList<>();
+
+    /**
+     * Computer uptime updates listener.
+     */
+    public interface UptimeListener {
+        void uptimeUpdated(long uptime);
+    }
 
     public enum Configuration {
         /** BK0010 - monitor only */
@@ -270,6 +279,8 @@ public class Computer implements Runnable {
             addDevice(systemTimer);
             videoController.addFrameSyncListener(systemTimer);
         }
+        // Notify video controller about computer time updates
+        addUptimeListener(videoController);
         // Add audio output
         audioOutput = new AudioOutput(this, config.isMemoryManagerPresent());
         addDevice(audioOutput);
@@ -322,8 +333,8 @@ public class Computer implements Runnable {
     public synchronized void saveState(Resources resources, Bundle outState) {
         // Save computer configuration
         outState.putString(Configuration.class.getName(), getConfiguration().name());
-        // Save computer uptime
-        outState.putLong(STATE_UPTIME, getUptime());
+        // Save computer system uptime
+        outState.putLong(STATE_SYSTEM_UPTIME, getSystemUptime());
         // Save RAM data
         for (Memory memory: getStatefulMemoryList()) {
             memory.saveState(outState);
@@ -347,8 +358,8 @@ public class Computer implements Runnable {
         Configuration config = Configuration.valueOf(inState
                 .getString(Configuration.class.getName()));
         configure(resources, config);
-        // Restore computer uptime
-        setUptime(inState.getLong(STATE_UPTIME));
+        // Restore computer system uptime
+        setSystemUptime(inState.getLong(STATE_SYSTEM_UPTIME));
         // Initialize CPU and devices
         cpu.initDevices();
         // Restore RAM data
@@ -456,19 +467,42 @@ public class Computer implements Runnable {
     }
 
     /**
-     * Set computer uptime (in nanoseconds).
-     * @param uptime computer uptime to set (in nanoseconds)
+     * Set computer system uptime (in nanoseconds).
+     * @param systemUptime computer system uptime to set (in nanoseconds)
      */
-    public void setUptime(long uptime) {
-        this.uptime = uptime;
+    public void setSystemUptime(long systemUptime) {
+        this.systemUptime = systemUptime;
     }
 
     /**
-     * Get this computer uptime (in nanoseconds).
-     * @return computer uptime (in nanoseconds)
+     * Get computer system uptime (in nanoseconds).
+     * @return computer system uptime (in nanoseconds)
+     */
+    public long getSystemUptime() {
+        return systemUptime;
+    }
+
+    /**
+     * Get computer time (in nanoseconds).
+     * @return current computer uptime
      */
     public long getUptime() {
-        return uptime;
+        return cpuTimeToNanos(cpu.getTime());
+    }
+
+    /**
+     * Add computer uptime updates listener.
+     * @param uptimeListener {@link UptimeListener} object reference to add
+     */
+    public void addUptimeListener(UptimeListener uptimeListener) {
+        uptimeListeners.add(uptimeListener);
+    }
+
+    private void notifyUptimeListeners() {
+        long uptime = getUptime();
+        for (UptimeListener uptimeListener : uptimeListeners) {
+            uptimeListener.uptimeUpdated(uptime);
+        }
     }
 
     /**
@@ -691,7 +725,7 @@ public class Computer implements Runnable {
      */
     public synchronized void resume() {
         Timber.d("resuming computer");
-        uptimeUpdateTimestamp = System.nanoTime();
+        systemUptimeUpdateTimestamp = System.nanoTime();
         isPaused = false;
         audioOutput.resume();
         this.notifyAll();
@@ -713,15 +747,7 @@ public class Computer implements Runnable {
      * @return effective emulation clock frequency (in kHz)
      */
     public float getEffectiveClockFrequency() {
-        return (float) getCpu().getTime() * NANOSECS_IN_MSEC / getUptime();
-    }
-
-    /**
-     * Get CPU time (converted from clock ticks to nanoseconds).
-     * @return current CPU time in nanoseconds
-     */
-    public long getCpuTimeNanos() {
-        return cpuTimeToNanos(cpu.getTime());
+        return (float) getCpu().getTime() * NANOSECS_IN_MSEC / getSystemUptime();
     }
 
     /**
@@ -747,27 +773,17 @@ public class Computer implements Runnable {
      */
     protected void checkUptimeSync() {
         long systemTime = System.nanoTime();
-        uptime += systemTime - uptimeUpdateTimestamp;
-        uptimeUpdateTimestamp = systemTime;
-        long uptimeDifference = getCpuTimeNanos() - uptime;
-        if (uptimeDifference >= UPTIME_SYNC_THRESHOLD) {
-            long uptimeDifferenceMillis = uptimeDifference / NANOSECS_IN_MSEC;
-            int uptimeDifferenceNanos = (int) (uptimeDifference % NANOSECS_IN_MSEC);
+        systemUptime += systemTime - systemUptimeUpdateTimestamp;
+        systemUptimeUpdateTimestamp = systemTime;
+        long uptimesDifference = getUptime() - systemUptime;
+        if (uptimesDifference >= UPTIME_SYNC_THRESHOLD) {
+            long uptimesDifferenceMillis = uptimesDifference / NANOSECS_IN_MSEC;
+            int uptimesDifferenceNanos = (int) (uptimesDifference % NANOSECS_IN_MSEC);
             try {
-                this.wait(uptimeDifferenceMillis, uptimeDifferenceNanos);
+                this.wait(uptimesDifferenceMillis, uptimesDifferenceNanos);
             } catch (InterruptedException e) {
                 // Do nothing
             }
-        }
-    }
-
-    /**
-     * Do timer tasks.
-     */
-    protected void doTimerTasks() {
-        long cpuTimeNanos = getCpuTimeNanos();
-        for (Device device: deviceList) {
-            device.timer(cpuTimeNanos);
         }
     }
 
@@ -786,12 +802,11 @@ public class Computer implements Runnable {
                     Timber.d("computer resumed");
                 } else {
                     cpu.executeNextOperation();
+                    notifyUptimeListeners();
                     checkUptimeSync();
-                    doTimerTasks();
                 }
             }
         }
         Timber.d("computer stopped");
     }
-
 }

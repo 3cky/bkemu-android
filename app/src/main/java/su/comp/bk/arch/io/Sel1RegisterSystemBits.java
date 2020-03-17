@@ -49,11 +49,6 @@ public class Sel1RegisterSystemBits implements Device {
         setWriteFlagState(false);
     }
 
-    @Override
-    public void timer(long uptime) {
-        // Do nothing
-    }
-
     private void setWriteFlagState(boolean flagState) {
         state = flagState ? (state | WRITE_FLAG) : (state & ~WRITE_FLAG);
     }

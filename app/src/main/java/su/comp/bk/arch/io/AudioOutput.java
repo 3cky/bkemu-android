@@ -103,11 +103,6 @@ public class AudioOutput implements Device, Runnable {
     public void init(long cpuTime) {
     }
 
-    @Override
-    public void timer(long uptime) {
-        // Do nothing
-    }
-
     public void start() {
         Timber.d("starting audio output");
         isRunning = true;

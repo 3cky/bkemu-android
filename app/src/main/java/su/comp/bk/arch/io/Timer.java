@@ -113,11 +113,6 @@ public class Timer implements Device {
     }
 
     @Override
-    public void timer(long uptime) {
-        // Do nothing
-    }
-
-    @Override
     public void saveState(Bundle outState) {
         outState.putInt(STATE_PRESET_REGISTER, presetRegister);
         outState.putInt(STATE_CONTROL_REGISTER, controlRegister);

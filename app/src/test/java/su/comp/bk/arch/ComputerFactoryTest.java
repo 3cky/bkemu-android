@@ -81,11 +81,6 @@ public class ComputerFactoryTest extends ResourceFileTestBase {
         }
 
         @Override
-        public void timer(long uptime) {
-            // Do nothing
-        }
-
-        @Override
         public void saveState(Bundle outState) {
             // Do nothing
         }

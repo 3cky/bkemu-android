@@ -93,11 +93,6 @@ public class PeripheralPort implements Device, OnTouchListener {
     }
 
     @Override
-    public void timer(long uptime) {
-        // Do nothing
-    }
-
-    @Override
     public int read(long cpuTime, int address) {
         return getState();
     }

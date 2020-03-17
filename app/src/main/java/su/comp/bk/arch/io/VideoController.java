@@ -18,6 +18,7 @@
  */
 package su.comp.bk.arch.io;
 
+import su.comp.bk.arch.Computer;
 import su.comp.bk.arch.memory.Memory;
 import android.graphics.Bitmap;
 import android.graphics.Color;
@@ -29,7 +30,7 @@ import java.util.List;
 /**
  * BK-0010 video output controller (К1801ВП1-037).
  */
-public class VideoController implements Device {
+public class VideoController implements Device, Computer.UptimeListener {
 
     /** Scroll/mode register address */
     public final static int CONTROL_REGISTER_ADDRESS = 0177664;
@@ -274,7 +275,7 @@ public class VideoController implements Device {
     }
 
     @Override
-    public void timer(long uptime) {
+    public void uptimeUpdated(long uptime) {
         currentLine = uptime / FRAME_SYNC_PERIOD_HORIZONTAL;
         long currentLineFrame = currentLine / FRAME_LINES_TOTAL;
         long currentLineFrameLine = currentLine % FRAME_LINES_TOTAL;
