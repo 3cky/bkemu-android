@@ -284,9 +284,8 @@ public class BkEmuView extends TextureView implements TextureView.SurfaceTexture
     public void updateVideoBufferBitmapTransformMatrix(int viewWidth, int viewHeight) {
         lastViewWidth = viewWidth;
         lastViewHeight = viewHeight;
-        Bitmap videoBufferBitmap = computer.getVideoController().getVideoBuffer();
-        int bitmapWidth = videoBufferBitmap.getWidth();
-        int bitmapHeight = videoBufferBitmap.getHeight();
+        int bitmapWidth = VideoController.VIDEO_BUFFER_WIDTH;
+        int bitmapHeight = VideoController.VIDEO_BUFFER_HEIGHT;
         float bitmapAspectRatio = (float) bitmapWidth / bitmapHeight;
         float bitmapTranslateX;
         float bitmapTranslateY;

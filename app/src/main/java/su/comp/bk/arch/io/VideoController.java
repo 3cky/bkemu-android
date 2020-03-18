@@ -111,11 +111,11 @@ public class VideoController implements Device, Computer.UptimeListener {
     private static final String STATE_PALETTE_INDEX =
             VideoController.class.getName() + "#palette_index";
 
-    // State save/restore: current rendered frame number
+    // State save/restore: current displayed frame number
     private static final String STATE_CURRENT_FRAME =
             VideoController.class.getName() + "#frame_num";
 
-    // State save/restore: current rendered line number
+    // State save/restore: current displayed line number
     private static final String STATE_CURRENT_LINE =
             VideoController.class.getName() + "#line_num";
 
@@ -129,9 +129,9 @@ public class VideoController implements Device, Computer.UptimeListener {
     private final Memory videoMemory;
 
     // Video buffer width (in pixels)
-    private final static int VIDEO_BUFFER_WIDTH = 512;
+    public final static int VIDEO_BUFFER_WIDTH = 512;
     // Video buffer height (in pixels)
-    private final static int VIDEO_BUFFER_HEIGHT = 256;
+    public final static int VIDEO_BUFFER_HEIGHT = 256;
     // Video buffer pixels per videoRAM word
     private final static int VIDEO_BUFFER_PIXELS_PER_WORD = Short.SIZE;
     // Video buffer bitmap object
@@ -146,18 +146,69 @@ public class VideoController implements Device, Computer.UptimeListener {
     // Frame vertical sync period
     private final static long FRAME_SYNC_PERIOD_VERTICAL =
             FRAME_SYNC_PERIOD_HORIZONTAL * FRAME_LINES_TOTAL;
-    // Current rendered line number
+    // Current displayed line number
     private long currentLine;
-    // Current rendered frame number
+    // Current displayed frame number
     private long currentFrame;
     // List of frame horizontal/vertical sync listeners
     private final List<FrameSyncListener> frameSyncListeners = new ArrayList<>();
+    // Last displayed frame data
+    private final FrameData lastDisplayedFrameData = new FrameData();
+    // Last rendered frame data
+    private final FrameData lastRenderedFrameData = new FrameData();
 
     /**
-     * Frame sync events listener interface
+     * Frame sync events listener interface.
      */
     public interface FrameSyncListener {
         void verticalSync(long frameNumber);
+    }
+
+    /**
+     * Frame data (pixel data, palette data, etc).
+     */
+    class FrameData {
+        private final short[] pixelData;
+        private int paletteIndex;
+        private boolean isFullScreenMode;
+
+        FrameData() {
+            pixelData = new short[VIDEO_BUFFER_HEIGHT * SCREEN_SCANLINE_LENGTH];
+        }
+
+        short[] getPixelData() {
+            return pixelData;
+        }
+
+        void setPixelData(short[] pixelData) {
+            System.arraycopy(pixelData, 0, this.pixelData, 0, pixelData.length);
+        }
+
+        int getPaletteIndex() {
+            return paletteIndex;
+        }
+
+        void setPaletteIndex(int paletteIndex) {
+            this.paletteIndex = paletteIndex;
+        }
+
+        boolean isFullScreenMode() {
+            return isFullScreenMode;
+        }
+
+        void setFullScreenMode(boolean isFullScreenMode) {
+            this.isFullScreenMode = isFullScreenMode;
+        }
+
+        void init(short[] pixelData, int paletteIndex, boolean isFullScreenMode) {
+            setPixelData(pixelData);
+            setPaletteIndex(paletteIndex);
+            setFullScreenMode(isFullScreenMode);
+        }
+
+        void copyFrom(FrameData frameData) {
+            init(frameData.getPixelData(), frameData.getPaletteIndex(), frameData.isFullScreenMode());
+        }
     }
 
     public VideoController(Memory videoMemory) {
@@ -218,36 +269,28 @@ public class VideoController implements Device, Computer.UptimeListener {
         }
     }
 
-    public Bitmap getVideoBuffer() {
-        return videoBuffer;
-    }
-
     public Bitmap renderVideoBuffer() {
-        short[] videoData;
-        synchronized (this) {
-            videoData = videoMemory.getData();
-            if (activeColorPaletteIndex != colorPaletteIndex) {
-                if (isColorMode) {
-                    activeColorPaletteIndex = colorPaletteIndex;
-                    updateVideoDataToPixelsTable();
-                }
-            }
+        synchronized (lastDisplayedFrameData) {
+            lastRenderedFrameData.copyFrom(lastDisplayedFrameData);
         }
         videoBuffer.eraseColor(Color.BLACK);
+        short[] videoData = lastRenderedFrameData.getPixelData();
+        if (isColorMode && activeColorPaletteIndex != lastRenderedFrameData.getPaletteIndex()) {
+            activeColorPaletteIndex = colorPaletteIndex;
+            updateVideoDataToPixelsTable();
+        }
         int videoDataOffset;
         int scrollShift;
-        if (isFullFrameMode()) {
+        if (lastRenderedFrameData.isFullScreenMode()) {
             videoDataOffset = 0;
             scrollShift = (readScrollRegister() - SCROLL_BASE_VALUE) & 0377;
         } else {
             videoDataOffset = videoData.length - SCREEN_HEIGHT_EXTMEM * SCREEN_SCANLINE_LENGTH;
             scrollShift = (SCROLL_EXTMEM_VALUE - SCROLL_BASE_VALUE) & 0377;
         }
-        int videoBufferX;
-        int videoBufferY;
+        int videoBufferX, videoBufferY;
         synchronized (videoDataToPixelsTable) {
-            for (int videoDataIdx = videoDataOffset; videoDataIdx < videoData.length;
-                    videoDataIdx++) {
+            for (int videoDataIdx = videoDataOffset; videoDataIdx < videoData.length; videoDataIdx++) {
                 int videoDataWord = videoData[videoDataIdx];
                 if (videoDataWord != 0) {
                     videoBufferX = (videoDataIdx % SCREEN_SCANLINE_LENGTH) * VIDEO_BUFFER_PIXELS_PER_WORD;
@@ -280,8 +323,15 @@ public class VideoController implements Device, Computer.UptimeListener {
         long currentLineFrame = currentLine / FRAME_LINES_TOTAL;
         long currentLineFrameLine = currentLine % FRAME_LINES_TOTAL;
         if (currentLineFrame >= currentFrame && currentLineFrameLine > FRAME_LINES_VISIBLE) {
+            storeLastFrameVideoData();
             notifyFrameSyncListenersVerticalSync();
             currentFrame = currentLineFrame + 1;
+        }
+    }
+
+    private void storeLastFrameVideoData() {
+        synchronized (lastDisplayedFrameData) {
+            lastDisplayedFrameData.init(videoMemory.getData(), colorPaletteIndex, isFullScreenMode());
         }
     }
 
@@ -309,7 +359,7 @@ public class VideoController implements Device, Computer.UptimeListener {
         setColorMode(inState.getBoolean(STATE_COLOR_MODE));
     }
 
-    private boolean isFullFrameMode() {
+    private boolean isFullScreenMode() {
         return (readScrollRegister() & EXTMEM_CONTROL_BIT) != 0;
     }
 
@@ -341,5 +391,4 @@ public class VideoController implements Device, Computer.UptimeListener {
         writeScrollRegister(registerValue);
         return true;
     }
-
 }
