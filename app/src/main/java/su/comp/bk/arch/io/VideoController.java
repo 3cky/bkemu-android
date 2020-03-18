@@ -93,6 +93,8 @@ public class VideoController implements Device, Computer.UptimeListener {
 
     // Current color palette index
     private int colorPaletteIndex = 0;
+    // Screen line color palette indexes
+    private final int[] lineColorPaletteIndexes = new int[FRAME_LINES_VISIBLE];
 
     // VideoRAM data byte to corresponding pixels lookup table (16 palettes * 8 pixels * 256 byte values)
     private final int[] videoDataToPixelsTable = new int[16 * 8 * 256];
@@ -167,11 +169,12 @@ public class VideoController implements Device, Computer.UptimeListener {
      */
     class FrameData {
         private final short[] pixelData;
-        private int paletteIndex;
+        private final int[] linePaletteIndexes;
         private boolean isFullScreenMode;
 
         FrameData() {
             pixelData = new short[VIDEO_BUFFER_HEIGHT * SCREEN_SCANLINE_LENGTH];
+            linePaletteIndexes = new int[FRAME_LINES_VISIBLE];
         }
 
         short[] getPixelData() {
@@ -182,12 +185,22 @@ public class VideoController implements Device, Computer.UptimeListener {
             System.arraycopy(pixelData, 0, this.pixelData, 0, pixelData.length);
         }
 
-        int getPaletteIndex() {
-            return paletteIndex;
+        int getPaletteIndex(int lineNum) {
+            return linePaletteIndexes[lineNum];
         }
 
-        void setPaletteIndex(int paletteIndex) {
-            this.paletteIndex = paletteIndex;
+        void setPaletteIndex(int lineNum, int paletteIndex) {
+            this.linePaletteIndexes[lineNum] = paletteIndex;
+        }
+
+        void setLinePaletteIndexes(int[] linePaletteIndexes) {
+            System.arraycopy(linePaletteIndexes, 0,
+                    this.linePaletteIndexes, 0,
+                    this.linePaletteIndexes.length);
+        }
+
+        int[] getLinePaletteIndexes() {
+            return this.linePaletteIndexes;
         }
 
         boolean isFullScreenMode() {
@@ -198,14 +211,15 @@ public class VideoController implements Device, Computer.UptimeListener {
             this.isFullScreenMode = isFullScreenMode;
         }
 
-        void init(short[] pixelData, int paletteIndex, boolean isFullScreenMode) {
+        void init(short[] pixelData, int[] linePaletteIndexes, boolean isFullScreenMode) {
             setPixelData(pixelData);
-            setPaletteIndex(paletteIndex);
+            setLinePaletteIndexes(linePaletteIndexes);
             setFullScreenMode(isFullScreenMode);
         }
 
         void copyFrom(FrameData frameData) {
-            init(frameData.getPixelData(), frameData.getPaletteIndex(), frameData.isFullScreenMode());
+            init(frameData.getPixelData(), frameData.getLinePaletteIndexes(),
+                    frameData.isFullScreenMode());
         }
     }
 
@@ -283,15 +297,16 @@ public class VideoController implements Device, Computer.UptimeListener {
             videoDataOffset = videoData.length - SCREEN_HEIGHT_EXTMEM * SCREEN_SCANLINE_LENGTH;
             scrollShift = (SCROLL_EXTMEM_VALUE - SCROLL_BASE_VALUE) & 0377;
         }
-        int paletteOffset = lastDisplayedFrameData.paletteIndex * (videoDataToPixelsTable.length >>> 4);
         int videoBufferX, videoBufferY;
         synchronized (videoDataToPixelsTable) {
             for (int videoDataIdx = videoDataOffset; videoDataIdx < videoData.length; videoDataIdx++) {
                 int videoDataWord = videoData[videoDataIdx];
                 if (videoDataWord != 0) {
+                    int lineNum = videoDataIdx / SCREEN_SCANLINE_LENGTH;
+                    int paletteOffset = lastDisplayedFrameData.getPaletteIndex(lineNum)
+                            * (videoDataToPixelsTable.length >>> 4);
                     videoBufferX = (videoDataIdx % SCREEN_SCANLINE_LENGTH) * VIDEO_BUFFER_PIXELS_PER_WORD;
-                    videoBufferY = (videoDataIdx / SCREEN_SCANLINE_LENGTH - scrollShift)
-                            & (VIDEO_BUFFER_HEIGHT - 1);
+                    videoBufferY = (lineNum - scrollShift) & (VIDEO_BUFFER_HEIGHT - 1);
                     videoBuffer.setPixels(videoDataToPixelsTable,
                             paletteOffset + ((videoDataWord & 0377) << 3),
                             VIDEO_BUFFER_WIDTH, videoBufferX, videoBufferY, 8, 1);
@@ -317,19 +332,36 @@ public class VideoController implements Device, Computer.UptimeListener {
 
     @Override
     public void uptimeUpdated(long uptime) {
-        currentLine = uptime / FRAME_SYNC_PERIOD_HORIZONTAL;
-        long currentLineFrame = currentLine / FRAME_LINES_TOTAL;
-        long currentLineFrameLine = currentLine % FRAME_LINES_TOTAL;
-        if (currentLineFrame >= currentFrame && currentLineFrameLine > FRAME_LINES_VISIBLE) {
-            storeLastFrameVideoData();
-            notifyFrameSyncListenersVerticalSync();
-            currentFrame = currentLineFrame + 1;
+        // Get current displayed screen line number since emulator start (numbered from 0)
+        long line = uptime / FRAME_SYNC_PERIOD_HORIZONTAL;
+        if (line > currentLine) {
+            // New screen line started
+            currentLine = line;
+            // Get screen line number inside displayed frame (numbered from 0)
+            int currentLineFrameLine = (int) (currentLine % FRAME_LINES_TOTAL);
+            // Check for HSync
+            if (currentLineFrameLine < FRAME_LINES_VISIBLE) {
+                // HSync
+                // Store color palette index for displayed screen line
+                lineColorPaletteIndexes[currentLineFrameLine] = colorPaletteIndex;
+            } else {
+                // Check for VSync
+                // Get displayed frame number (numbered from 0)
+                long currentLineFrame = currentLine / FRAME_LINES_TOTAL;
+                if (currentLineFrame >= currentFrame) {
+                    // VSync
+                    storeLastFrameVideoData();
+                    notifyFrameSyncListenersVerticalSync();
+                    currentFrame = currentLineFrame + 1;
+                }
+            }
         }
     }
 
     private void storeLastFrameVideoData() {
         synchronized (lastDisplayedFrameData) {
-            lastDisplayedFrameData.init(videoMemory.getData(), colorPaletteIndex, isFullScreenMode());
+            lastDisplayedFrameData.init(videoMemory.getData(), lineColorPaletteIndexes,
+                    isFullScreenMode());
         }
     }
 
