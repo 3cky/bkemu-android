@@ -1,7 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <releases>
-    <release version="0.4.5-dev">
+    <release version="0.5.0-dev">
         <changes>
+            <change>Реализована базовая эмуляция построчной развертки ЭЛТ.</change>
+            <change>Таймер 50Гц теперь тактируется кадровыми синхроимпульсами.</change>
+            <change>Поправлены цвета палитр БК0011.</change>
         </changes>
     </release>
     <release version="0.4.4" date="05.02.2020">

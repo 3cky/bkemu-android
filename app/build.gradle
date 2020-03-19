@@ -3,8 +3,8 @@ apply plugin: 'com.android.application'
 ext {
     // App version in semver format (https://semver.org/)
     versionMajor = 0
-    versionMinor = 4
-    versionPatch = 5
+    versionMinor = 5
+    versionPatch = 0
 }
 
 project.version = "${versionMajor}.${versionMinor}.${versionPatch}"

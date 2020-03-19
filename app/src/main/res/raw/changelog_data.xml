@@ -1,7 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <releases>
-    <release version="0.4.5-dev">
+    <release version="0.5.0-dev">
         <changes>
+            <change>Implemented base CRT output emulation functionality.</change>
+            <change>Timer 50 Hz now is clocked by the vertical sync.</change>
+            <change>Fixed BK0011 palettes.</change>
         </changes>
     </release>
     <release version="0.4.4" date="2020-02-05">
