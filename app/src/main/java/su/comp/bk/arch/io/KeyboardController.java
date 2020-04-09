@@ -528,7 +528,7 @@ public class KeyboardController implements Device, OnTouchListener {
                     }
                     // Check Low Register modifier and uppercase mode states
                     boolean isLowRegister = !isLetterButton(bkKeyCode) ? isLowRegisterPressed() :
-                            isLatinMode() != isUppercaseMode() || isLowRegisterPressed();
+                            isLatinMode() ^ (isUppercaseMode() || isLowRegisterPressed());
                     if (isLowRegister) {
                         bkKeyCode = getLowRegisterKeyCode(bkKeyCode);
                     }
