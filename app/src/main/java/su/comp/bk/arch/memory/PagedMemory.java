@@ -61,6 +61,14 @@ public class PagedMemory implements Memory {
     }
 
     /**
+     * Get number of pages.
+     * @return Number of pages
+     */
+    public int getNumPages() {
+        return pages.length;
+    }
+
+    /**
      * Get memory page for given page index.
      * @param pageIndex Memory page index to get
      * @return Memory page for given page index or <code>null</code>

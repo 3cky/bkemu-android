@@ -83,6 +83,11 @@ public class Computer implements Runnable {
     // Floppy controller reference (<code>null</code> if no floppy controller attached)
     private FloppyController floppyController;
 
+    /** BK0011 first paged memory block address */
+    public static final int BK0011_PAGED_MEMORY_0_ADDRESS = 040000;
+    /** BK0011 second paged memory block address */
+    public static final int BK0011_PAGED_MEMORY_1_ADDRESS = 0100000;
+
     /** I/O registers space min start address */
     public final static int IO_REGISTERS_MIN_ADDRESS = 0170000;
     /** I/O registers space max start address */
@@ -232,9 +237,9 @@ public class Computer implements Runnable {
             // BK-0011 configurations
             setClockFrequency(CLOCK_FREQUENCY_BK0011);
             // Set RAM configuration
-            PagedMemory firstPagedMemory = new PagedMemory("PagedMemory0", 040000, 020000,
+            PagedMemory firstPagedMemory = new PagedMemory("PagedMemory0", BK0011_PAGED_MEMORY_0_ADDRESS, 020000,
                     MemoryManager.NUM_RAM_PAGES);
-            PagedMemory secondPagedMemory = new PagedMemory("PagedMemory1", 0100000, 020000,
+            PagedMemory secondPagedMemory = new PagedMemory("PagedMemory1", BK0011_PAGED_MEMORY_1_ADDRESS, 020000,
                     MemoryManager.NUM_RAM_PAGES + MemoryManager.NUM_ROM_PAGES);
             for (int memoryPageIndex = 0; memoryPageIndex < MemoryManager.NUM_RAM_PAGES;
                     memoryPageIndex++) {
@@ -554,7 +559,7 @@ public class Computer implements Runnable {
         return (address >= 0) && (getMemory(address) instanceof ReadOnlyMemory);
     }
 
-    private Memory getMemory(int address) {
+    public Memory getMemory(int address) {
         Memory memory = memoryTable[address >> 13];
         return (memory != null && memory.isRelatedAddress(address)) ? memory : null;
     }
