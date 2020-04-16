@@ -994,6 +994,7 @@ public class Cpu {
     public void reset() {
         clearFlags();
         initDevices();
+        setPswState((short) 0340);
         int sel1RegisterValue = readMemory(false, REG_SEL1);
         if (sel1RegisterValue != Computer.BUS_ERROR) {
             writeRegister(false, PC, sel1RegisterValue & 0177400);
@@ -1022,7 +1023,6 @@ public class Cpu {
         clearIrq2Request();
         clearVirqRequest();
         computer.initDevices();
-        setPswState((short) 0340);
     }
 
     /**

@@ -55,10 +55,15 @@ public class ControlOpcodesTest {
                 ResetOpcode.OPCODE
         }));
         computer.reset();
+        // Check RESET opcode doesn't affect PSW
         computer.getCpu().setPswState((short) 0377);
         computer.getCpu().executeSingleInstruction();
         assertEquals(0100002, computer.getCpu().readRegister(false, Cpu.PC));
-        assertEquals(0340, computer.getCpu().getPswState());
+        assertEquals(0377, computer.getCpu().getPswState());
+        computer.reset();
+        computer.getCpu().setPswState(0);
+        computer.getCpu().executeSingleInstruction();
+        assertEquals(0, computer.getCpu().getPswState());
     }
 
     @Test
