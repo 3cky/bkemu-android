@@ -137,6 +137,8 @@ public class BkEmuActivity extends AppCompatActivity {
     private static final int FILE_NAME_DISPLAY_SUFFIX_LENGTH = 3;
 
     private static final String PREFS_KEY_COMPUTER_CONFIGURATION = "su.comp.bk.a.c";
+    private static final String PREFS_KEY_FLOPPY_DRIVE_IMAGE =
+            "su.comp.bk.arch.io.FloppyController.FloppyDrive/image:";
 
     // Last loaded emulator binary image address
     protected int lastBinImageAddress;
@@ -577,14 +579,11 @@ public class BkEmuActivity extends AppCompatActivity {
 
     // Mount intent disk image, if set
     private void mountIntentDataDiskImage() {
-        if (this.intentDataDiskImagePath != null) {
-            try {
-                computer.getFloppyController().mountDiskImage(intentDataDiskImagePath,
-                        FloppyDriveIdentifier.A, true);
-            } catch (Exception e) {
-                Timber.e(e, "Can't mount bootstrap emulator disk image");
-                this.intentDataDiskImagePath = null;
-            }
+        if (intentDataDiskImagePath == null) {
+            return;
+        }
+        if (!mountFddImage(FloppyDriveIdentifier.A, intentDataDiskImagePath)) {
+            intentDataDiskImagePath = null;
         }
     }
 
@@ -620,6 +619,9 @@ public class BkEmuActivity extends AppCompatActivity {
                     configuration = Configuration.BK_0010_KNGMD;
                 }
                 this.computer.configure(getResources(), configuration);
+                if (this.computer.getFloppyController() != null) {
+                    mountAvailableFddImages();
+                }
                 this.computer.reset();
                 isComputerInitialized = true;
             } catch (Exception e) {
@@ -911,7 +913,7 @@ public class BkEmuActivity extends AppCompatActivity {
         updateFloppyDriveView(fddView, fddIdentifier);
         fddView.setOnClickListener(v -> showMountDiskImageFileDialog(fddIdentifier));
         fddView.setOnLongClickListener(v -> {
-            unmountDiskImage(fddIdentifier);
+            unmountFddImage(fddIdentifier);
             updateFloppyDriveView(v, fddIdentifier);
             return true;
         });
@@ -957,18 +959,69 @@ public class BkEmuActivity extends AppCompatActivity {
     }
 
     /**
+     * Try to mount all available floppy drive disk images.
+     */
+    protected void mountAvailableFddImages() {
+        FloppyController fddController = computer.getFloppyController();
+        for (FloppyDriveIdentifier fddIdentifier : FloppyDriveIdentifier.values()) {
+            String fddImagePath = readFddImagePath(fddIdentifier);
+            if (fddImagePath != null) {
+                doMountFddImage(fddController, fddIdentifier, fddImagePath);
+            }
+        }
+    }
+
+    /**
+     * Try to mount disk image to given floppy drive.
+     * @param fddIdentifier floppy drive identifier to mount image
+     * @param fddImagePath disk image file path
+     * @return true if image successfully mounted, false otherwise
+     */
+    protected boolean mountFddImage(FloppyDriveIdentifier fddIdentifier, String fddImagePath) {
+        FloppyController fddController = computer.getFloppyController();
+        if (doMountFddImage(fddController, fddIdentifier, fddImagePath)) {
+            storeFddImagePath(fddIdentifier, fddImagePath);
+            return true;
+        }
+        return false;
+    }
+
+    private boolean doMountFddImage(FloppyController fddController,
+                                    FloppyDriveIdentifier fddIdentifier,
+                                    String fddImagePath) {
+        try {
+            if (fddController != null) {
+                fddController.mountDiskImage(fddImagePath, fddIdentifier, true);
+                return true;
+            }
+        } catch (Exception e) {
+            Timber.e(e, "Can't mount floppy disk image %s to drive %s", fddImagePath, fddIdentifier);
+        }
+        return false;
+    }
+
+    /**
      * Unmount disk image from given floppy drive.
      * @param fddIdentifier floppy drive identifier to unmount image
      */
-    protected void unmountDiskImage(FloppyDriveIdentifier fddIdentifier) {
+    protected void unmountFddImage(FloppyDriveIdentifier fddIdentifier) {
+        FloppyController fddController = computer.getFloppyController();
+        if (doUnmountFddImage(fddController, fddIdentifier)) {
+            storeFddImagePath(fddIdentifier, null);
+        }
+    }
+
+    private boolean doUnmountFddImage(FloppyController fddController,
+                                      FloppyDriveIdentifier fddIdentifier) {
         try {
-            FloppyController fddController = computer.getFloppyController();
             if (fddController != null && fddController.isFloppyDriveMounted(fddIdentifier)) {
                 fddController.unmountDiskImage(fddIdentifier);
+                return true;
             }
         } catch (Exception e) {
-            Timber.e(e, "Floppy drive " + fddIdentifier + " unmounting error");
+            Timber.e(e, "Can't unmount floppy disk image from drive %s", fddIdentifier);
         }
+        return false;
     }
 
     /**
@@ -1088,15 +1141,14 @@ public class BkEmuActivity extends AppCompatActivity {
                         break;
                     }
                     String diskImageFileUri = new File(diskImageFilePath).toURI().toString();
-                    try {
-                        FloppyDriveIdentifier driveIdentifier = FloppyDriveIdentifier
+                    FloppyDriveIdentifier driveIdentifier = FloppyDriveIdentifier
                             .valueOf(data.getStringExtra(FloppyDriveIdentifier.class.getName()));
-                        floppyController.mountDiskImage(diskImageFileUri, driveIdentifier, false);
+                    if (mountFddImage(driveIdentifier, diskImageFileUri)) {
                         lastDiskImageFileUri = diskImageFileUri;
                         showDialog(DIALOG_DISK_MANAGER);
-                    } catch (Exception e) {
+                    } else {
+                        Timber.e("can't mount disk image %s'", diskImageFileUri);
                         showDialog(DIALOG_DISK_MOUNT_ERROR);
-                        Timber.e(e, "can't mount disk image '" + diskImageFileUri + "'");
                     }
                 }
                 break;
@@ -1316,6 +1368,33 @@ public class BkEmuActivity extends AppCompatActivity {
         SharedPreferences prefs = getPreferences(MODE_PRIVATE);
         SharedPreferences.Editor prefsEditor = prefs.edit();
         prefsEditor.putString(PREFS_KEY_COMPUTER_CONFIGURATION, configuration.name());
+        prefsEditor.apply();
+    }
+
+    private String getPrefsFddImageKey(FloppyDriveIdentifier fddIdentifier) {
+        return PREFS_KEY_FLOPPY_DRIVE_IMAGE + fddIdentifier.name();
+    }
+
+    /**
+     * Read floppy drive image path from shared preferences.
+     * @param fddIdentifier floppy drive identifier
+     * @return stored floppy drive image path (null if no floppy drive image was mounted)
+     */
+    protected String readFddImagePath(FloppyDriveIdentifier fddIdentifier) {
+        SharedPreferences prefs = getPreferences(MODE_PRIVATE);
+        return prefs.getString(getPrefsFddImageKey(fddIdentifier), null);
+    }
+
+    /**
+     * Store floppy drive image path to shared preferences.
+     * @param fddIdentifier floppy drive identifier
+     * @param floppyDriveImagePath floppy drive image path
+     */
+    protected void storeFddImagePath(FloppyDriveIdentifier fddIdentifier,
+                                     String floppyDriveImagePath) {
+        SharedPreferences prefs = getPreferences(MODE_PRIVATE);
+        SharedPreferences.Editor prefsEditor = prefs.edit();
+        prefsEditor.putString(getPrefsFddImageKey(fddIdentifier), floppyDriveImagePath);
         prefsEditor.apply();
     }
 
