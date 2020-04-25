@@ -1,10 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <releases>
-    <release version="0.5.0-dev">
+    <release version="0.6.0-dev">
+    </release>
+    <release version="0.5.0" date="2020-04-22">
         <changes>
-            <change>Implemented base CRT output emulation functionality.</change>
+            <change>Implemented base CRT raster effects emulation functionality.</change>
             <change>Timer 50 Hz now is clocked by the vertical sync.</change>
-            <change>Fixed BK0011 palettes.</change>
+            <change>Fixed SHIFT+CAPS+RUS/LAT keyboard combinations handling.</change>
+            <change>Implemented BK0011 RAM pages mapping when BIN image is loaded.</change>
+            <change>Added recently used floppy disk images automounting on the emulator start.</change>
+            <change>Fixed RESET opcode handling.</change>
+            <change>Corrected colors for some BK0011 palettes.</change>
         </changes>
     </release>
     <release version="0.4.4" date="2020-02-05">
