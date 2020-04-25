@@ -612,13 +612,19 @@ public class BkEmuActivity extends AppCompatActivity {
         if (!isComputerInitialized) {
             // Computer state can't be restored, do startup initialization
             try {
-                Configuration configuration = getComputerConfiguration();
+                Configuration currentConfiguration = getComputerConfiguration();
+                Configuration startupConfiguration;
                 if (intentDataProgramImageUri != null) {
-                    configuration = Configuration.BK_0010_MONITOR;
+                    startupConfiguration = Configuration.BK_0010_MONITOR;
                 } else if (intentDataDiskImagePath != null) {
-                    configuration = Configuration.BK_0010_KNGMD;
+                    startupConfiguration = Configuration.BK_0010_KNGMD;
+                } else {
+                    startupConfiguration = currentConfiguration;
                 }
-                this.computer.configure(getResources(), configuration);
+                this.computer.configure(getResources(), startupConfiguration);
+                if (startupConfiguration != currentConfiguration) {
+                    setComputerConfiguration(startupConfiguration);
+                }
                 if (this.computer.getFloppyController() != null) {
                     mountAvailableFddImages();
                 }
