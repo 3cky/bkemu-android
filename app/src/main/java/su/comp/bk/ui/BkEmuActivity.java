@@ -28,7 +28,6 @@ import android.content.pm.PackageManager.NameNotFoundException;
 import android.graphics.Rect;
 import android.net.Uri;
 import android.os.Bundle;
-import android.os.Environment;
 import android.os.Handler;
 import android.view.GestureDetector;
 import android.view.KeyEvent;
@@ -44,22 +43,6 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import org.apache.commons.lang.StringUtils;
-
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.DataInputStream;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.net.URL;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
@@ -69,6 +52,20 @@ import androidx.transition.Explode;
 import androidx.transition.Transition;
 import androidx.transition.TransitionManager;
 import androidx.transition.TransitionSet;
+
+import org.apache.commons.lang.StringUtils;
+
+import java.io.BufferedOutputStream;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 import su.comp.bk.BuildConfig;
 import su.comp.bk.R;
@@ -84,6 +81,7 @@ import su.comp.bk.arch.io.KeyboardController;
 import su.comp.bk.arch.io.PeripheralPort;
 import su.comp.bk.arch.io.VideoController;
 import su.comp.bk.arch.memory.PagedMemory;
+import su.comp.bk.util.FileUtils;
 import timber.log.Timber;
 
 /**
@@ -100,9 +98,9 @@ public class BkEmuActivity extends AppCompatActivity {
     // State save/restore: Last accessed emulator binary image file length
     private static final String LAST_BIN_IMAGE_FILE_ADDRESS = BkEmuActivity.class.getName() +
             "#last_bin_image_file_length";
-    // State save/restore: Last selected disk image file URI
-    private static final String LAST_DISK_IMAGE_FILE_URI = BkEmuActivity.class.getName() +
-            "#last_disk_image_file_uri";
+    // State save/restore: Last selected disk image file path
+    private static final String LAST_DISK_IMAGE_FILE_PATH = BkEmuActivity.class.getName() +
+            "#last_disk_image_file_path";
     // State save/restore: Tape parameters block address
     private static final String TAPE_PARAMS_BLOCK_ADDRESS = BkEmuActivity.class.getName() +
             "#tape_params_block_addr";
@@ -147,8 +145,8 @@ public class BkEmuActivity extends AppCompatActivity {
     // Last loaded emulator binary image URI string
     protected String lastBinImageFileUri;
 
-    // Last selected disk image URI string
-    protected String lastDiskImageFileUri;
+    // Last selected disk image path
+    protected String lastDiskImageFilePath;
 
     // Tape parameters block address
     protected int tapeParamsBlockAddr;
@@ -163,7 +161,7 @@ public class BkEmuActivity extends AppCompatActivity {
 
     protected String intentDataProgramImageUri;
 
-    protected String intentDataDiskImagePath;
+    protected String intentDataDiskImageUri;
 
     protected Handler activityHandler;
 
@@ -222,16 +220,14 @@ public class BkEmuActivity extends AppCompatActivity {
         public void run() {
             boolean isBinImageLoaded = false;
             if (lastBinImageFileUri != null && tapeFileName != null && tapeFileName.length() > 0) {
-                String binImageFilePath = null;
+                String binImageFileUri = null;
                 try {
                     // Trying to load image file from last used location
-                    binImageFilePath = lastBinImageFileUri.substring(0,
-                            lastBinImageFileUri.lastIndexOf('/') + 1).concat(tapeFileName);
-                    doPrepareBinImageOperation();
-                    loadBinImageFile(binImageFilePath);
+                    binImageFileUri = FileUtils.replaceLastPathElement(lastBinImageFileUri, tapeFileName);
+                    loadBinImageFile(binImageFileUri);
                     isBinImageLoaded = true;
                 } catch (Exception e) {
-                    Timber.d("Can't load image from '" + binImageFilePath +
+                    Timber.d("Can't load binary image from '" + binImageFileUri +
                             "': " + e.getMessage());
                 }
             }
@@ -285,9 +281,9 @@ public class BkEmuActivity extends AppCompatActivity {
                     if (intentDataProgramImageUri != null) {
                         // Monitor command prompt, load program from path from intent data
                         activityHandler.post(new IntentDataProgramImageLoader());
-                    } else if (intentDataDiskImagePath != null) {
+                    } else if (intentDataDiskImageUri != null) {
                         // Monitor command prompt, trying to boot from mounted disk image
-                        intentDataDiskImagePath = null;
+                        intentDataDiskImageUri = null;
                         // FIXME simulate bus error trap in case of boot error
                         cpu.push(cpu.readMemory(false, Cpu.TRAP_VECTOR_BUS_ERROR));
                         // Start booting
@@ -328,7 +324,7 @@ public class BkEmuActivity extends AppCompatActivity {
                         tapeFileNameData[idx] = (byte) cpu.readMemory(true,
                                 tapeParamsBlockAddr + idx + 6);
                     }
-                    String tapeFileName = getFileName(tapeFileNameData);
+                    String tapeFileName = FileUtils.getTapeFileName(tapeFileNameData);
                     lastBinImageAddress = cpu.readMemory(false, tapeParamsBlockAddr + 2);
                     if (tapeCmdCode == 2) {
                         lastBinImageLength = cpu.readMemory(false, tapeParamsBlockAddr + 4);
@@ -385,7 +381,7 @@ public class BkEmuActivity extends AppCompatActivity {
                         tapeFileNameData[idx] = (byte) cpu.readMemory(true,
                                 tapeParamsBlockAddr + idx + 6);
                     }
-                    String tapeFileName = getFileName(tapeFileNameData);
+                    String tapeFileName = FileUtils.getTapeFileName(tapeFileNameData);
                     lastBinImageAddress = cpu.readMemory(false, tapeParamsBlockAddr + 2);
                     Runnable tapeOperationTask;
                     if (tapeCmdCode == 0) {
@@ -429,32 +425,6 @@ public class BkEmuActivity extends AppCompatActivity {
     }
 
     /**
-     * Get string tape file name from its 16 bytes array presentation.
-     * @param fileNameData internal file name array data
-     * @return string file name presentation
-     */
-    public static String getFileName(byte[] fileNameData) {
-        String fileName;
-        if (fileNameData[0] != 0) { // BK0011 flag for any file
-            try {
-                fileName = new String(fileNameData, "koi8-r");
-            } catch (UnsupportedEncodingException e) {
-                fileName = new String(fileNameData);
-            }
-            fileName = fileName.trim().toUpperCase();
-            // Strip spaces before extension (like in "NAME  .COD" in Basic)
-            int dotIndex = fileName.lastIndexOf('.');
-            if (dotIndex > 0) {
-                fileName = fileName.substring(0, dotIndex).trim().concat(
-                        fileName.substring(dotIndex));
-            }
-        } else {
-            fileName = "";
-        }
-        return fileName;
-    }
-
-    /**
      * Get trap (EMT/TRAP) number using pushed to stack PC.
      * @param cpu {@link Cpu} reference
      * @param trapBaseOpcode EMT/TRAP base opcode
@@ -490,6 +460,7 @@ public class BkEmuActivity extends AppCompatActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         if (BuildConfig.DEBUG) {
+            Timber.uprootAll();
             Timber.plant(new Timber.DebugTree());
         }
         Timber.d("onCreate(), Intent: %s", getIntent());
@@ -560,30 +531,39 @@ public class BkEmuActivity extends AppCompatActivity {
     private boolean checkIntentData() {
         // Check for last accessed program/disk file paths
         lastBinImageFileUri = getIntent().getStringExtra(LAST_BIN_IMAGE_FILE_URI);
-        lastDiskImageFileUri = getIntent().getStringExtra(LAST_DISK_IMAGE_FILE_URI);
+        lastDiskImageFilePath = getIntent().getStringExtra(LAST_DISK_IMAGE_FILE_PATH);
         // Check for program/disk image file to run
         String intentDataString = getIntent().getDataString();
         if (intentDataString != null) {
-            if (BkEmuFileDialog.isFileNameFormatMatched(intentDataString,
+            if (FileUtils.isFileNameFormatMatched(intentDataString,
                     BkEmuFileDialog.FORMAT_FILTER_BIN_IMAGES)) {
                 this.intentDataProgramImageUri = intentDataString;
                 return true;
-            } else if (BkEmuFileDialog.isFileNameFormatMatched(intentDataString,
+            } else if (FileUtils.isFileNameFormatMatched(intentDataString,
                     BkEmuFileDialog.FORMAT_FILTER_DISK_IMAGES)) {
-                this.intentDataDiskImagePath = intentDataString;
+                this.intentDataDiskImageUri = intentDataString;
                 return true;
             }
         }
         return false;
     }
 
-    // Mount intent disk image, if set
+    // Mount intent disk image, if it's provided
     private void mountIntentDataDiskImage() {
-        if (intentDataDiskImagePath == null) {
+        if (intentDataDiskImageUri == null) {
             return;
         }
-        if (!mountFddImage(FloppyDriveIdentifier.A, intentDataDiskImagePath)) {
-            intentDataDiskImagePath = null;
+        File intentDataDiskImageFile = null;
+        try {
+            intentDataDiskImageFile = FileUtils.getUriLocalFile(getApplicationContext(),
+                    intentDataDiskImageUri);
+        } catch (IOException e) {
+            Timber.e(e, "Can't get local file for floppy disk image %s",
+                    intentDataDiskImageUri);
+        }
+        if (intentDataDiskImageFile == null
+                || !mountFddImage(FloppyDriveIdentifier.A, intentDataDiskImageFile)) {
+            intentDataDiskImageUri = null;
         }
     }
 
@@ -616,7 +596,7 @@ public class BkEmuActivity extends AppCompatActivity {
                 Configuration startupConfiguration;
                 if (intentDataProgramImageUri != null) {
                     startupConfiguration = Configuration.BK_0010_MONITOR;
-                } else if (intentDataDiskImagePath != null) {
+                } else if (intentDataDiskImageUri != null) {
                     startupConfiguration = Configuration.BK_0010_KNGMD;
                 } else {
                     startupConfiguration = currentConfiguration;
@@ -697,7 +677,7 @@ public class BkEmuActivity extends AppCompatActivity {
         outState.putInt(LAST_BIN_IMAGE_FILE_ADDRESS, lastBinImageAddress);
         outState.putInt(LAST_BIN_IMAGE_FILE_LENGTH, lastBinImageLength);
         // Save last disk image file path
-        outState.putString(LAST_DISK_IMAGE_FILE_URI, lastDiskImageFileUri);
+        outState.putString(LAST_DISK_IMAGE_FILE_PATH, lastDiskImageFilePath);
         // Save tape parameters block address
         outState.putInt(TAPE_PARAMS_BLOCK_ADDRESS, tapeParamsBlockAddr);
         // Save on-screen control states
@@ -716,7 +696,7 @@ public class BkEmuActivity extends AppCompatActivity {
         lastBinImageAddress = inState.getInt(LAST_BIN_IMAGE_FILE_ADDRESS);
         lastBinImageLength = inState.getInt(LAST_BIN_IMAGE_FILE_LENGTH);
         // Restore last disk image file path
-        lastDiskImageFileUri = inState.getString(LAST_DISK_IMAGE_FILE_URI);
+        lastDiskImageFilePath = inState.getString(LAST_DISK_IMAGE_FILE_PATH);
         // Restore tape parameters block address
         tapeParamsBlockAddr = inState.getInt(TAPE_PARAMS_BLOCK_ADDRESS);
         // Restore on-screen control states
@@ -935,8 +915,7 @@ public class BkEmuActivity extends AppCompatActivity {
         TextView fddFileTextView = fddView.findViewWithTag("fdd_file");
         if (isFddMounted) {
             fddFileTextView.setTextColor(getResources().getColor(R.color.fdd_loaded));
-            String fddImageFileName = Uri.parse(fddController.getFloppyDriveImageUri(
-                    fddIdentifier)).getLastPathSegment();
+            String fddImageFileName = fddController.getFloppyDriveImageFile(fddIdentifier).getName();
             if (fddImageFileName.length() > MAX_FILE_NAME_DISPLAY_LENGTH) {
                 // Trim file name to display
                 int nameDotIndex = fddImageFileName.lastIndexOf('.');
@@ -968,11 +947,12 @@ public class BkEmuActivity extends AppCompatActivity {
      * Try to mount all available floppy drive disk images.
      */
     protected void mountAvailableFddImages() {
+        Timber.d("Mounting all available floppy disk images");
         FloppyController fddController = computer.getFloppyController();
         for (FloppyDriveIdentifier fddIdentifier : FloppyDriveIdentifier.values()) {
             String fddImagePath = readFddImagePath(fddIdentifier);
             if (fddImagePath != null) {
-                doMountFddImage(fddController, fddIdentifier, fddImagePath);
+                doMountFddImage(fddController, fddIdentifier, new File(fddImagePath));
             }
         }
     }
@@ -980,13 +960,13 @@ public class BkEmuActivity extends AppCompatActivity {
     /**
      * Try to mount disk image to given floppy drive.
      * @param fddIdentifier floppy drive identifier to mount image
-     * @param fddImagePath disk image file path
+     * @param fddImageFile disk image file
      * @return true if image successfully mounted, false otherwise
      */
-    protected boolean mountFddImage(FloppyDriveIdentifier fddIdentifier, String fddImagePath) {
+    protected boolean mountFddImage(FloppyDriveIdentifier fddIdentifier, File fddImageFile) {
         FloppyController fddController = computer.getFloppyController();
-        if (doMountFddImage(fddController, fddIdentifier, fddImagePath)) {
-            storeFddImagePath(fddIdentifier, fddImagePath);
+        if (doMountFddImage(fddController, fddIdentifier, fddImageFile)) {
+            storeFddImagePath(fddIdentifier, fddImageFile.getPath());
             return true;
         }
         return false;
@@ -994,14 +974,17 @@ public class BkEmuActivity extends AppCompatActivity {
 
     private boolean doMountFddImage(FloppyController fddController,
                                     FloppyDriveIdentifier fddIdentifier,
-                                    String fddImagePath) {
+                                    File fddImageFile) {
         try {
             if (fddController != null) {
-                fddController.mountDiskImage(fddImagePath, fddIdentifier, true);
+                fddController.mountDiskImage(fddImageFile, fddIdentifier, true);
+                Timber.d("Mounted floppy disk image %s to drive %s",
+                        fddImageFile, fddIdentifier);
                 return true;
             }
         } catch (Exception e) {
-            Timber.e(e, "Can't mount floppy disk image %s to drive %s", fddImagePath, fddIdentifier);
+            Timber.e(e, "Can't mount floppy disk image %s to drive %s",
+                    fddImageFile, fddIdentifier);
         }
         return false;
     }
@@ -1022,6 +1005,7 @@ public class BkEmuActivity extends AppCompatActivity {
         try {
             if (fddController != null && fddController.isFloppyDriveMounted(fddIdentifier)) {
                 fddController.unmountDiskImage(fddIdentifier);
+                Timber.d("Unmounted floppy disk image from drive %s", fddIdentifier);
                 return true;
             }
         } catch (Exception e) {
@@ -1038,34 +1022,12 @@ public class BkEmuActivity extends AppCompatActivity {
     }
 
     /**
-     * Get directory path for given file URI.
-     * @param fileUriString file URI as string or <code>null</code>
-     * @return directory path or external storage path if file URI is <code>null</code>
-     * or given file directory doesn't exist
-     */
-    private static String getFileDirectoryPath(String fileUriString) {
-        String directoryPath = Environment.getExternalStorageDirectory().getPath();
-        if (fileUriString != null) {
-            Uri fileUri = Uri.parse(fileUriString);
-            String filePathString = fileUri.getPath();
-            if (filePathString != null) {
-                File filePath = new File(filePathString);
-                File fileDir = filePath.getParentFile();
-                if (fileDir.exists()) {
-                    directoryPath = fileDir.getPath();
-                }
-            }
-        }
-        return directoryPath;
-    }
-
-    /**
      * Show BIN emulator image file to load selection dialog.
      * @param tapeFileName file name to load (or <code>null</code> to load any file)
      */
     protected void showBinImageFileLoadDialog(int requestCode, String tapeFileName) {
         Intent intent = new Intent(getBaseContext(), BkEmuFileDialog.class);
-        String startPath = getFileDirectoryPath(lastBinImageFileUri);
+        String startPath = FileUtils.getSafeFileUriDirectoryPath(lastBinImageFileUri);
         intent.putExtra(BkEmuFileDialog.INTENT_START_PATH, startPath);
         if (tapeFileName != null && tapeFileName.length() > 0) {
             intent.putExtra(BkEmuFileDialog.INTENT_FORMAT_FILTER, new String[] { tapeFileName });
@@ -1080,7 +1042,7 @@ public class BkEmuActivity extends AppCompatActivity {
      */
     protected void showBinImageFileSaveDialog(int requestCode, String tapeFileName) {
         Intent intent = new Intent(getBaseContext(), BkEmuFileDialog.class);
-        String startPath = new File(getFileDirectoryPath(lastBinImageFileUri), tapeFileName).getPath();
+        String startPath = new File(FileUtils.getSafeFileUriDirectoryPath(lastBinImageFileUri), tapeFileName).getPath();
         intent.putExtra(BkEmuFileDialog.INTENT_START_PATH, startPath);
         intent.putExtra(BkEmuFileDialog.INTENT_MODE, BkEmuFileDialog.Mode.SAVE);
         startActivityForResult(intent, requestCode);
@@ -1092,7 +1054,7 @@ public class BkEmuActivity extends AppCompatActivity {
      */
     protected void showMountDiskImageFileDialog(FloppyDriveIdentifier fddIdentifier) {
         Intent intent = new Intent(getBaseContext(), BkEmuFileDialog.class);
-        String startPath = getFileDirectoryPath(lastDiskImageFileUri);
+        String startPath = FileUtils.getSafeFileDirectoryPath(lastDiskImageFilePath);
         intent.putExtra(BkEmuFileDialog.INTENT_START_PATH, startPath);
         intent.putExtra(BkEmuFileDialog.INTENT_FORMAT_FILTER,
                 BkEmuFileDialog.FORMAT_FILTER_DISK_IMAGES);
@@ -1146,14 +1108,14 @@ public class BkEmuActivity extends AppCompatActivity {
                     if (diskImageFilePath == null) {
                         break;
                     }
-                    String diskImageFileUri = new File(diskImageFilePath).toURI().toString();
+                    File diskImageFile = new File(diskImageFilePath);
                     FloppyDriveIdentifier driveIdentifier = FloppyDriveIdentifier
                             .valueOf(data.getStringExtra(FloppyDriveIdentifier.class.getName()));
-                    if (mountFddImage(driveIdentifier, diskImageFileUri)) {
-                        lastDiskImageFileUri = diskImageFileUri;
+                    if (mountFddImage(driveIdentifier, diskImageFile)) {
+                        lastDiskImageFilePath = diskImageFilePath;
                         showDialog(DIALOG_DISK_MANAGER);
                     } else {
-                        Timber.e("can't mount disk image %s'", diskImageFileUri);
+                        Timber.e("can't mount disk image %s'", diskImageFilePath);
                         showDialog(DIALOG_DISK_MOUNT_ERROR);
                     }
                 }
@@ -1351,7 +1313,7 @@ public class BkEmuActivity extends AppCompatActivity {
         intent.setData(binImageFileUri);
         // Pass last accessed program/disk image file paths to new activity
         intent.putExtra(LAST_BIN_IMAGE_FILE_URI, lastBinImageFileUri);
-        intent.putExtra(LAST_DISK_IMAGE_FILE_URI, lastDiskImageFileUri);
+        intent.putExtra(LAST_DISK_IMAGE_FILE_PATH, lastDiskImageFilePath);
         finish();
         startActivity(intent);
     }
@@ -1411,32 +1373,25 @@ public class BkEmuActivity extends AppCompatActivity {
      * @throws Exception in case of loading error
      */
     protected int loadBinImageFile(String binImageFileUri) throws Exception {
-        Timber.d("loading image: %s", binImageFileUri);
-        ByteArrayOutputStream binImageOutput = new ByteArrayOutputStream();
-        try (BufferedInputStream binImageInput = new BufferedInputStream(
-                new URL(binImageFileUri).openStream())) {
-            int readByte;
-            while ((readByte = binImageInput.read()) != -1) {
-                binImageOutput.write(readByte);
-            }
-        }
+        Timber.d("loading binary image: %s", binImageFileUri);
+        byte[] binImageData = FileUtils.getUriContentData(getApplicationContext(), binImageFileUri);
         this.lastBinImageFileUri = binImageFileUri;
-        return loadBinImage(binImageOutput.toByteArray());
+        return loadBinImage(binImageData);
     }
 
     /**
      * Load image in bin format (address/length/data) from byte array.
-     * @param imageData image data byte array
+     * @param binImageData image data byte array
      * @return image load address
      * @throws IOException in case of loading error
      */
-    public int loadBinImage(byte[] imageData) throws IOException {
-        if (imageData.length < 5 || imageData.length > 01000000) {
+    public int loadBinImage(byte[] binImageData) throws IOException {
+        if (binImageData.length < 5 || binImageData.length > 01000000) {
             throw new IllegalArgumentException("Invalid binary image file length: " +
-                    imageData.length);
+                    binImageData.length);
         }
         DataInputStream imageDataInputStream = new DataInputStream(
-                new ByteArrayInputStream(imageData, 0, imageData.length));
+                new ByteArrayInputStream(binImageData, 0, binImageData.length));
         int binImageAddress = (imageDataInputStream.readByte() & 0377)
                 | ((imageDataInputStream.readByte() & 0377) << 8);
         if (lastBinImageAddress == 0) {

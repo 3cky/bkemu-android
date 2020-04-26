@@ -10,6 +10,8 @@ import java.util.List;
 import java.util.TreeMap;
 
 import su.comp.bk.R;
+import su.comp.bk.util.FileUtils;
+
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.ListActivity;
@@ -349,10 +351,10 @@ public class BkEmuFileDialog extends ListActivity implements AppCompatCallback,
         if (!f.isDirectory()) {
             f = f.getParentFile();
         }
-        if (!isDirectoryReadable(f)) {
+        if (!FileUtils.isDirectoryReadable(f)) {
             f = Environment.getExternalStorageDirectory();
         }
-        if (!isDirectoryReadable(f)) {
+        if (!FileUtils.isDirectoryReadable(f)) {
             f = getApplicationContext().getExternalFilesDir(null);
         }
 
@@ -361,11 +363,11 @@ public class BkEmuFileDialog extends ListActivity implements AppCompatCallback,
             String currentPath = f.getPath();
             pushDirToHistory(currentPath);
             if (!currentPath.equals(ROOT_PATH)) {
-                if (isDirectoryReadable(ROOT_PATH)) {
+                if (FileUtils.isDirectoryReadable(ROOT_PATH)) {
                     addDirItem(dirItems, ROOT_PATH, R.drawable.ic_folder_white_24dp);
                     currentDirElements.add(ROOT_PATH);
                 }
-                if (isDirectoryReadable(f.getParent())) {
+                if (FileUtils.isDirectoryReadable(f.getParent())) {
                     addDirItem(dirItems, "../", R.drawable.ic_folder_white_24dp);
                     currentDirElements.add(f.getParent());
                 }
@@ -385,7 +387,7 @@ public class BkEmuFileDialog extends ListActivity implements AppCompatCallback,
                 } else {
                     final String fileName = file.getName();
                     if (formatFilter != null) {
-                        boolean isFormatMatched = isFileNameFormatMatched(fileName, formatFilter);
+                        boolean isFormatMatched = FileUtils.isFileNameFormatMatched(fileName, formatFilter);
                         if (isFormatMatched) {
                             filesMap.put(fileName, fileName);
                             filesPathMap.put(fileName, file.getPath());
@@ -420,33 +422,6 @@ public class BkEmuFileDialog extends ListActivity implements AppCompatCallback,
         item.put(ITEM_KEY, itemName);
         item.put(ITEM_IMAGE, itemImageId);
         dirItems.add(item);
-    }
-
-    private static boolean isDirectoryReadable(String dirName) {
-        if (dirName == null) {
-            return false;
-        }
-        return isDirectoryReadable(new File(dirName));
-    }
-
-    private static boolean isDirectoryReadable(File dir) {
-        if (dir == null) {
-            return false;
-        }
-        return dir.exists() && dir.listFiles() != null;
-    }
-
-    public static boolean isFileNameFormatMatched(final String fileName, final String[] formatExtensions) {
-        final String fileNameLwr = fileName.toLowerCase();
-        boolean isMatched = false;
-        for (String formatExtension : formatExtensions) {
-            final String formatLwr = formatExtension.toLowerCase();
-            if (fileNameLwr.endsWith(formatLwr)) {
-                isMatched = true;
-                break;
-            }
-        }
-        return isMatched;
     }
 
     @Override

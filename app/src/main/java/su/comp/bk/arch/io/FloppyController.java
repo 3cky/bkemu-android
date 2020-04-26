@@ -19,11 +19,10 @@
  */
 package su.comp.bk.arch.io;
 
-import static su.comp.bk.arch.Computer.NANOSECS_IN_MSEC;
+import android.os.Bundle;
 
 import java.io.File;
 import java.io.RandomAccessFile;
-import java.net.URI;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 
@@ -31,7 +30,7 @@ import su.comp.bk.arch.Computer;
 import su.comp.bk.util.Crc16;
 import timber.log.Timber;
 
-import android.os.Bundle;
+import static su.comp.bk.arch.Computer.NANOSECS_IN_MSEC;
 
 /**
  * Floppy drive controller (К1801ВП1-128).
@@ -132,9 +131,9 @@ public class FloppyController implements Device {
     // State save/restore: Motor started flag state
     private static final String STATE_MOTOR_STARTED = FloppyController.class.getName() +
             "#motor_started";
-    // State save/restore: Drive disk image file URI
-    private static final String STATE_DRIVE_IMAGE_FILE_URI = FloppyDrive.class.getName() +
-            "#disk_image_file_uri";
+    // State save/restore: Drive disk image file name
+    private static final String STATE_DRIVE_IMAGE_FILE_NAME = FloppyDrive.class.getName() +
+            "#disk_image_file_name";
     // State save/restore: Drive disk image read only flag
     private static final String STATE_DRIVE_IMAGE_READ_ONLY = FloppyDrive.class.getName() +
             "#disk_image_read_only";
@@ -215,10 +214,10 @@ public class FloppyController implements Device {
         // This floppy drive identifier
         private final FloppyDriveIdentifier driveIdentifier;
 
-        // Mounted disk image file URI (or null if no disk image mounted)
-        private String mountedDiskImageFileUri;
+        // Mounted disk image file (null if no disk image mounted)
+        private File mountedDiskImageFile;
 
-        private RandomAccessFile mountedDiskImageFile;
+        private RandomAccessFile mountedDiskImageRandomAccessFile;
         private ByteBuffer mountedDiskImageBuffer;
 
         private boolean isMountedDiskImageReadOnly;
@@ -672,11 +671,11 @@ public class FloppyController implements Device {
         }
 
         /**
-         * Get mounted disk image file URI.
-         * @return mounted disk image file URI or <code>null</code> if no disk image mounted
+         * Get mounted disk image file.
+         * @return mounted disk image file or <code>null</code> if no disk image mounted
          */
-        String getMountedDiskImageFileUri() {
-            return mountedDiskImageFileUri;
+        File getMountedDiskImageFile() {
+            return mountedDiskImageFile;
         }
 
         /**
@@ -685,7 +684,7 @@ public class FloppyController implements Device {
          * <code>false</code> if not mounted
          */
         boolean isDiskImageMounted() {
-            return (getMountedDiskImageFileUri() != null);
+            return (getMountedDiskImageFile() != null);
         }
 
         /**
@@ -699,13 +698,12 @@ public class FloppyController implements Device {
 
         /**
          * Mount disk image to this drive.
-         * @param diskImageFileUri Disk image file URI to mount
+         * @param diskImageFile Disk image file to mount
          * @param isReadOnly <code>true</code> to mount disk image as read only,
          * <code>false</code> to mount disk image in read/write mode
          * @throws Exception in case of mounting error
          */
-        void mountDiskImage(String diskImageFileUri, boolean isReadOnly) throws Exception {
-            File diskImageFile = new File(new URI(diskImageFileUri));
+        void mountDiskImage(File diskImageFile, boolean isReadOnly) throws Exception {
             // Check disk image size
             if (diskImageFile.length() > BYTES_PER_DISK) {
                 throw new IllegalArgumentException("Invalid disk image size: " +
@@ -715,14 +713,14 @@ public class FloppyController implements Device {
                 unmountDiskImage();
             }
             isMountedDiskImageReadOnly = isReadOnly;
-            mountedDiskImageFile = new RandomAccessFile(diskImageFile, isReadOnly ? "r" : "rw");
-            FileChannel mountedDiskImageFileChannel = mountedDiskImageFile.getChannel();
+            mountedDiskImageRandomAccessFile = new RandomAccessFile(diskImageFile, isReadOnly ? "r" : "rw");
+            FileChannel mountedDiskImageFileChannel = mountedDiskImageRandomAccessFile.getChannel();
             mountedDiskImageBuffer.clear();
             mountedDiskImageFileChannel.read(mountedDiskImageBuffer);
             mountedDiskImageBuffer.flip();
             mountedDiskImageBuffer.limit(BYTES_PER_DISK);
             mountedDiskImageFileChannel.close();
-            this.mountedDiskImageFileUri = diskImageFileUri;
+            this.mountedDiskImageFile = diskImageFile;
             // Reload track data
             setCurrentTrack(getCurrentTrackNumber(), getCurrentTrackSide());
         }
@@ -732,8 +730,8 @@ public class FloppyController implements Device {
          * @throws Exception in case of unmounting error
          */
         void unmountDiskImage() throws Exception {
-            mountedDiskImageFileUri = null;
-            mountedDiskImageFile.close();
+            mountedDiskImageFile = null;
+            mountedDiskImageRandomAccessFile.close();
         }
 
         ByteBuffer getMountedDiskImageBuffer() {
@@ -786,8 +784,9 @@ public class FloppyController implements Device {
         outState.putBoolean(STATE_MOTOR_STARTED, isMotorStarted());
         for (FloppyDriveIdentifier driveIdentifier : FloppyDriveIdentifier.values()) {
             FloppyDrive drive = getFloppyDrive(driveIdentifier);
-            outState.putString(getFloppyDriveStateKey(STATE_DRIVE_IMAGE_FILE_URI, driveIdentifier),
-                    drive.getMountedDiskImageFileUri());
+            File mountedDiskImageFile = drive.getMountedDiskImageFile();
+            outState.putString(getFloppyDriveStateKey(STATE_DRIVE_IMAGE_FILE_NAME, driveIdentifier),
+                    (mountedDiskImageFile != null) ? mountedDiskImageFile.toString() : null);
             outState.putBoolean(getFloppyDriveStateKey(STATE_DRIVE_IMAGE_READ_ONLY, driveIdentifier),
                     drive.isMountedDiskImageReadOnly());
             outState.putInt(getFloppyDriveStateKey(STATE_DRIVE_TRACK_NUMBER, driveIdentifier),
@@ -815,14 +814,14 @@ public class FloppyController implements Device {
             FloppyDriveSide driveTrackSide = (FloppyDriveSide) inState.getSerializable(
                     getFloppyDriveStateKey(STATE_DRIVE_TRACK_SIDE, driveIdentifier));
             drive.setCurrentTrack(driveTrackNumber, driveTrackSide);
-            String diskImageFileUri = inState.getString(getFloppyDriveStateKey(
-                    STATE_DRIVE_IMAGE_FILE_URI, driveIdentifier));
-            if (diskImageFileUri != null) {
+            String diskImageFileName = inState.getString(getFloppyDriveStateKey(
+                    STATE_DRIVE_IMAGE_FILE_NAME, driveIdentifier));
+            if (diskImageFileName != null) {
                 try {
-                    drive.mountDiskImage(diskImageFileUri, inState.getBoolean(
-                            getFloppyDriveStateKey(STATE_DRIVE_IMAGE_READ_ONLY,driveIdentifier)));
+                    drive.mountDiskImage(new File(diskImageFileName), inState.getBoolean(
+                            getFloppyDriveStateKey(STATE_DRIVE_IMAGE_READ_ONLY, driveIdentifier)));
                 } catch (Exception e) {
-                    Timber.e(e, "can't remount disk file image: %s", diskImageFileUri);
+                    Timber.e(e, "can't remount disk file image: %s", diskImageFileName);
                     try {
                         drive.unmountDiskImage();
                     } catch (Exception e1) {
@@ -1081,15 +1080,15 @@ public class FloppyController implements Device {
 
     /**
      * Mount floppy drive disk image to given drive.
-     * @param diskImageFileUri floppy drive disk image file URI string
+     * @param diskImageFile floppy drive disk image file
      * @param drive {@link FloppyDriveIdentifier} of drive to mount disk image
      * @param isReadOnly <code>true</code> to mount disk image read only, <code>false</code>
      * to mount disk image read/write
      * @throws Exception in case of disk image mounting error
      */
-    public synchronized void mountDiskImage(String diskImageFileUri, FloppyDriveIdentifier drive,
+    public synchronized void mountDiskImage(File diskImageFile, FloppyDriveIdentifier drive,
             boolean isReadOnly) throws Exception {
-        getFloppyDrive(drive).mountDiskImage(diskImageFileUri, isReadOnly);
+        getFloppyDrive(drive).mountDiskImage(diskImageFile, isReadOnly);
     }
 
     /**
@@ -1181,11 +1180,11 @@ public class FloppyController implements Device {
     }
 
     /**
-     * Get mounted floppy drive image URI.
+     * Get mounted floppy drive image file.
      * @param driveIdentifier {@link FloppyDriveIdentifier} of drive to get mounted disk image URI
-     * @return mounted floppy drive image URI or <code>null</code> if no floppy drive image mounted
+     * @return mounted floppy drive image file or <code>null</code> if no floppy drive image mounted
      */
-    public synchronized String getFloppyDriveImageUri(FloppyDriveIdentifier driveIdentifier) {
-        return getFloppyDrive(driveIdentifier).getMountedDiskImageFileUri();
+    public synchronized File getFloppyDriveImageFile(FloppyDriveIdentifier driveIdentifier) {
+        return getFloppyDrive(driveIdentifier).getMountedDiskImageFile();
     }
 }
