@@ -74,13 +74,12 @@ import su.comp.bk.arch.Computer.Configuration;
 import su.comp.bk.arch.cpu.Cpu;
 import su.comp.bk.arch.cpu.addressing.IndexDeferredAddressingMode;
 import su.comp.bk.arch.cpu.opcode.EmtOpcode;
-import su.comp.bk.arch.cpu.opcode.JsrOpcode;
+import su.comp.bk.arch.cpu.opcode.JmpOpcode;
 import su.comp.bk.arch.io.FloppyController;
 import su.comp.bk.arch.io.FloppyController.FloppyDriveIdentifier;
 import su.comp.bk.arch.io.KeyboardController;
 import su.comp.bk.arch.io.PeripheralPort;
 import su.comp.bk.arch.io.VideoController;
-import su.comp.bk.arch.memory.PagedMemory;
 import su.comp.bk.util.FileUtils;
 import timber.log.Timber;
 
@@ -148,6 +147,19 @@ public class BkEmuActivity extends AppCompatActivity {
     // Last selected disk image path
     protected String lastDiskImageFilePath;
 
+    // BK0011M .BMB10 syscall - Read subroutine address
+    private static final int BK11_BMB10_READ_ADDRESS = 0155560;
+    // BK0011M .BMB10 syscall - Save subroutine address
+    private static final int BK11_BMB10_SAVE_ADDRESS = 0155150;
+    // BK0011M .BMB10 syscall exit address
+    private static final int BK11_BMB10_EXIT_ADDRESS = 0155026;
+    // BK0011M .BMB10 syscall parameters block address
+    private static final int BK11_BMB10_PARAMS_ADDRESS = 042602;
+    // BK0011M memory pages config address
+    private static final int BK11_PAGES_CONFIG_ADDRESS = 0114;
+    // BK0011M memory pages default config
+    private static final int BK11_PAGES_DEFAULT_CONFIG = 054002;
+
     // Tape parameters block address
     protected int tapeParamsBlockAddr;
 
@@ -213,9 +225,11 @@ public class BkEmuActivity extends AppCompatActivity {
      */
     class TapeLoaderTask implements Runnable {
         private final String tapeFileName;
+
         TapeLoaderTask(String tapeFileName) {
             this.tapeFileName = tapeFileName;
         }
+
         @Override
         public void run() {
             boolean isBinImageLoaded = false;
@@ -357,13 +371,12 @@ public class BkEmuActivity extends AppCompatActivity {
      * BK0011 tape operations handler.
      */
     class TapeOperations11Handler implements Cpu.OnOpcodeListener {
-        static final int BMB10_HANDLER_ADDRESS = 0154620;
-
         @Override
         public void onOpcodeExecuted(Cpu cpu, int opcode) {
-            if (cpu.readRegister(false, Cpu.PC) == BMB10_HANDLER_ADDRESS) {
+            int pc = cpu.readRegister(false, Cpu.PC);
+            if (pc == BK11_BMB10_READ_ADDRESS || pc == BK11_BMB10_SAVE_ADDRESS) {
                 // .BMB10 BK0011 system call
-                tapeParamsBlockAddr = cpu.readRegister(false, Cpu.R0);
+                tapeParamsBlockAddr = BK11_BMB10_PARAMS_ADDRESS;
                 handleTapeOperation(cpu);
             }
         }
@@ -378,11 +391,6 @@ public class BkEmuActivity extends AppCompatActivity {
             switch (tapeCmdCode) {
                 case 0: // Save to tape
                 case 1: // Read from tape
-                    // Check memory pages config
-                    if (!isMemoryPagesConfigValid(cpu, tapeParamsBlockAddr)) {
-                        // Incorrect memory pages configuration provided
-                        break;
-                    }
                     computer.pause();
                     // Get file name
                     byte[] tapeFileNameData = new byte[MAX_TAPE_FILE_NAME_LENGTH];
@@ -404,32 +412,15 @@ public class BkEmuActivity extends AppCompatActivity {
                                 (lastBinImageAddress > 0 ? Integer.toOctalString(lastBinImageAddress) : ""));
                         tapeOperationTask = new TapeLoaderTask(tapeFileName);
                     }
+                    // Setup memory map
+                    int memoryMapConfig = computer.readMemory(false, BK11_PAGES_CONFIG_ADDRESS);
+                    computer.writeMemory(false, Cpu.REG_SEL1, memoryMapConfig);
                     // Execute tape operation task
                     activityHandler.post(tapeOperationTask);
                     break;
                 default:
                     break;
             }
-        }
-
-        private boolean isMemoryPagesConfigValid(Cpu cpu, int tapeParamsBlockAddr) {
-            int firstMemoryPageIndex = cpu.readMemory(true, tapeParamsBlockAddr + 026);
-            int secondMemoryPageIndex = cpu.readMemory(true, tapeParamsBlockAddr + 027);
-            return isMemoryPageIndexValid(true, firstMemoryPageIndex)
-                    && isMemoryPageIndexValid(false, secondMemoryPageIndex);
-        }
-
-        private boolean isMemoryPageIndexValid(boolean isFirstPagedMemory, int pageIndex) {
-            if ((pageIndex & 0200) != 0) {
-                // Negative page index means do not change this memory page
-                return true;
-            }
-            if (pageIndex == 7) {
-                // Can't set system page
-                return false;
-            }
-            return isFirstPagedMemory ? pageIndex < 7 // first paged memory block: 8 RAM pages
-                : pageIndex < 12; // second paged memory block: 8 RAM pages + 4 ROM pages
         }
     }
 
@@ -628,7 +619,8 @@ public class BkEmuActivity extends AppCompatActivity {
                 computer.getCpu().setOnTrapListener(new TapeOperations10Handler());
             } else {
                 TapeOperations11Handler handler = new TapeOperations11Handler();
-                computer.getCpu().setOnOpcodeListener(JsrOpcode.OPCODE | Cpu.PC | (Cpu.PC << 6)
+                // Trap for `Jmp @CmdTab(R0)` operation (.BMB10 command router at address 154736)
+                computer.getCpu().setOnOpcodeListener(JmpOpcode.OPCODE | Cpu.R0
                             | (IndexDeferredAddressingMode.CODE << 3), handler);
             }
             bkEmuView.setComputer(computer);
@@ -1114,7 +1106,6 @@ public class BkEmuActivity extends AppCompatActivity {
                 boolean isImageLoaded = false;
                 if (resultCode == Activity.RESULT_OK) {
                     String binImageFilePath = data.getStringExtra(BkEmuFileDialog.INTENT_RESULT_PATH);
-                    doPrepareBinImageOperation();
                     isImageLoaded = binImageFileLoad(binImageFilePath);
                 }
                 doFinishBinImageLoad(isImageLoaded);
@@ -1123,7 +1114,6 @@ public class BkEmuActivity extends AppCompatActivity {
                 boolean isImageSaved = false;
                 if (resultCode == Activity.RESULT_OK) {
                     String binImageFilePath = data.getStringExtra(BkEmuFileDialog.INTENT_RESULT_PATH);
-                    doPrepareBinImageOperation();
                     isImageSaved = binImageFileSave(binImageFilePath);
                 }
                 doFinishBinImageSave(isImageSaved);
@@ -1192,7 +1182,7 @@ public class BkEmuActivity extends AppCompatActivity {
             comp.getCpu().returnFromTrap(false);
         } else { // BK0011
             // Restore memory map
-            doRestoreBk0011MemoryMap(comp);
+            comp.writeMemory(false, Cpu.REG_SEL1, BK11_PAGES_DEFAULT_CONFIG);
             // Set result code
             if (isSuccess) {
                 comp.getCpu().clearPswFlagC();
@@ -1200,8 +1190,8 @@ public class BkEmuActivity extends AppCompatActivity {
                 comp.getCpu().setPswFlagC();
                 comp.writeMemory(true, 052, 4); // STOP
             }
-            // Return from tape save routine
-            comp.getCpu().writeRegister(false, Cpu.PC, computer.getCpu().pop());
+            // Exit from tape save routine
+            comp.getCpu().writeRegister(false, Cpu.PC, BK11_BMB10_EXIT_ADDRESS);
         }
     }
 
@@ -1227,97 +1217,58 @@ public class BkEmuActivity extends AppCompatActivity {
 
     protected void doFinishBinImageLoad(boolean isSuccess) {
         final Computer comp = computer;
-        boolean isBk0010 = !comp.getConfiguration().isMemoryManagerPresent();
-        if (isSuccess) {
-            // Set result in parameters block
-            int tapeParamsBlockAddrNameIdx;
-            if (isBk0010) { // BK0010
-                tapeParamsBlockAddrNameIdx = 26;
-                // Set "OK" result code
-                comp.writeMemory(true, tapeParamsBlockAddr + 1, 0);
-                // Write loaded image start address
-                comp.writeMemory(false, tapeParamsBlockAddr + 22, lastBinImageAddress);
-                // Write loaded image length
-                comp.writeMemory(false, tapeParamsBlockAddr + 24, lastBinImageLength);
-                // Return from EMT 36
-                comp.getCpu().returnFromTrap(false);
-            } else { // BK0011
-                tapeParamsBlockAddrNameIdx = 28;
-                // Restore memory map
-                doRestoreBk0011MemoryMap(comp);
-                // Set "OK" result code
-                comp.getCpu().clearPswFlagC();
-                // Write loaded image start address
-                comp.writeMemory(false, tapeParamsBlockAddr + 24, lastBinImageAddress);
-                // Write loaded image length
-                comp.writeMemory(false, tapeParamsBlockAddr + 26, lastBinImageLength);
-                // Clear tape load routine error code
-                comp.getCpu().writeMemory(true, 052, 0);
-                // Return from tape load routine
-                comp.getCpu().writeRegister(false, Cpu.PC, comp.getCpu().pop());
-            }
-            // Write loaded image name to tape parameters block
-            String tapeFileName = StringUtils.substringAfterLast(lastBinImageFileUri, "/");
-            tapeFileName = StringUtils.substring(tapeFileName, 0, MAX_TAPE_FILE_NAME_LENGTH);
-            byte[] tapeFileNameBuffer;
-            try {
-                tapeFileNameBuffer = tapeFileName.getBytes("koi8-r");
-            } catch (UnsupportedEncodingException e) {
-                tapeFileNameBuffer = tapeFileName.getBytes();
-            }
-            byte[] tapeFileNameData = new byte[MAX_TAPE_FILE_NAME_LENGTH];
-            Arrays.fill(tapeFileNameData, (byte) ' ');
-            System.arraycopy(tapeFileNameBuffer, 0, tapeFileNameData, 0,
-                    Math.min(tapeFileNameBuffer.length, MAX_TAPE_FILE_NAME_LENGTH));
-            for (int idx = 0; idx < tapeFileNameData.length; idx++) {
-                comp.getCpu().writeMemory(true, tapeParamsBlockAddr +
-                        tapeParamsBlockAddrNameIdx + idx, tapeFileNameData[idx]);
-            }
-        } else if (!isBk0010) {
-            // Restore BK0011 memory map if BIN image load failed by some reason
-            doRestoreBk0011MemoryMap(comp);
+        boolean isBk10 = !comp.getConfiguration().isMemoryManagerPresent();
+        if (!isBk10) {
+            // Restore BK0011 default memory map
+            comp.writeMemory(false, Cpu.REG_SEL1, BK11_PAGES_DEFAULT_CONFIG);
         }
-    }
-
-    protected void doPrepareBinImageOperation() {
-        final Computer comp = computer;
-        if (comp.getConfiguration().isMemoryManagerPresent()) {
-            doSetupBk0011TapeOperationMemoryMap(comp);
+        if (!isSuccess) {
+            // In case of error we just return to tape loader subroutine, because actually it's
+            // better to allow user to break the load operation manually by the STOP key
+            return;
         }
-    }
-
-    private void doSetupBk0011TapeOperationMemoryMap(Computer comp) {
-        // Restore memory map before get page indexes from tape parameters block
-        doRestoreBk0011MemoryMap(comp);
-        // Get page indexes for both paged memory areas from tape parameters block
-        int firstPageIndex = comp.readMemory(true, tapeParamsBlockAddr + 026);
-        int secondPageIndex = comp.readMemory(true, tapeParamsBlockAddr + 027);
-        // Set both paged memory pages
-        doSetBk0011MemoryPage(comp, Computer.BK0011_PAGED_MEMORY_0_ADDRESS, firstPageIndex);
-        doSetBk0011MemoryPage(comp, Computer.BK0011_PAGED_MEMORY_1_ADDRESS, secondPageIndex);
-    }
-
-    private void doRestoreBk0011MemoryMap(Computer comp) {
-        // Copy of memory map config register is stored by BOS at address 0114
-        int memoryMapConfig = comp.readMemory(false, 0114);
-        comp.writeMemory(false, Cpu.REG_SEL1, memoryMapConfig);
-    }
-
-    private boolean doSetBk0011MemoryPage(Computer comp, int memoryAddress, int pageIndex) {
-        PagedMemory memory = (PagedMemory) comp.getMemory(memoryAddress);
-        if (memory == null) {
-            // Something got wrong
-            return false;
+        // Set result in parameters block
+        int tapeParamsBlockAddrNameIdx;
+        if (isBk10) { // BK0010
+            tapeParamsBlockAddrNameIdx = 26;
+            // Set "OK" result code
+            comp.writeMemory(true, tapeParamsBlockAddr + 1, 0);
+            // Write loaded image start address
+            comp.writeMemory(false, tapeParamsBlockAddr + 22, lastBinImageAddress);
+            // Write loaded image length
+            comp.writeMemory(false, tapeParamsBlockAddr + 24, lastBinImageLength);
+            // Return from EMT 36
+            comp.getCpu().returnFromTrap(false);
+        } else { // BK0011
+            tapeParamsBlockAddrNameIdx = 28;
+            // Set "OK" result code
+            comp.getCpu().clearPswFlagC();
+            // Write loaded image start address
+            comp.writeMemory(false, tapeParamsBlockAddr + 24, lastBinImageAddress);
+            // Write loaded image length
+            comp.writeMemory(false, tapeParamsBlockAddr + 26, lastBinImageLength);
+            // Clear tape load routine error code
+            comp.getCpu().writeMemory(true, 052, 0);
+            // Exit from tape load routine
+            comp.getCpu().writeRegister(false, Cpu.PC, BK11_BMB10_EXIT_ADDRESS);
         }
-        if (pageIndex >= memory.getNumPages() || memory.getPage(pageIndex) == null) {
-            // Invalid page number given
-            return false;
+        // Write loaded image name to tape parameters block
+        String tapeFileName = StringUtils.substringAfterLast(lastBinImageFileUri, "/");
+        tapeFileName = StringUtils.substring(tapeFileName, 0, MAX_TAPE_FILE_NAME_LENGTH);
+        byte[] tapeFileNameBuffer;
+        try {
+            tapeFileNameBuffer = tapeFileName.getBytes("koi8-r");
+        } catch (UnsupportedEncodingException e) {
+            tapeFileNameBuffer = tapeFileName.getBytes();
         }
-        // Set memory page
-        memory.setActivePageIndex(pageIndex);
-        Timber.d("BK0011: set page %d to memory address 0%s", pageIndex,
-                Integer.toOctalString(memoryAddress));
-        return true;
+        byte[] tapeFileNameData = new byte[MAX_TAPE_FILE_NAME_LENGTH];
+        Arrays.fill(tapeFileNameData, (byte) ' ');
+        System.arraycopy(tapeFileNameBuffer, 0, tapeFileNameData, 0,
+                Math.min(tapeFileNameBuffer.length, MAX_TAPE_FILE_NAME_LENGTH));
+        for (int idx = 0; idx < tapeFileNameData.length; idx++) {
+            comp.getCpu().writeMemory(true, tapeParamsBlockAddr +
+                    tapeParamsBlockAddrNameIdx + idx, tapeFileNameData[idx]);
+        }
     }
 
     /**
@@ -1418,7 +1369,8 @@ public class BkEmuActivity extends AppCompatActivity {
                 | ((imageDataInputStream.readByte() & 0377) << 8);
         final Computer comp = computer;
         for (int imageIndex = 0; imageIndex < lastBinImageLength; imageIndex++) {
-            if (!comp.writeMemory(true, lastBinImageAddress + imageIndex, imageDataInputStream.read())) {
+            if (!comp.writeMemory(true, lastBinImageAddress + imageIndex,
+                    imageDataInputStream.read())) {
                 throw new IllegalStateException("Can't write binary image data to address: 0" +
                         Integer.toOctalString(lastBinImageAddress + imageIndex));
             }
