@@ -87,8 +87,6 @@ public class BkEmuFileDialog extends ListActivity implements AppCompatCallback,
 
     public final static int REQUEST_CODE_ASK_PERMISSIONS = 0;
 
-    public final static String[] FORMAT_FILTER_BIN_IMAGES = new String[] { ".BIN" };
-    public final static String[] FORMAT_FILTER_DISK_IMAGES = new String[] { ".BKD", ".IMG" };
     private String[] formatFilter = null;
 
     private Mode mode;
@@ -186,7 +184,7 @@ public class BkEmuFileDialog extends ListActivity implements AppCompatCallback,
             createDirButton.setVisibility(View.GONE);
             formatFilter = getIntent().getStringArrayExtra(INTENT_FORMAT_FILTER);
             if (formatFilter == null) {
-                formatFilter = FORMAT_FILTER_BIN_IMAGES;
+                formatFilter = FileUtils.FILE_EXT_BINARY_IMAGES;
             }
             delegate.setTitle(getResources().getString(R.string.fd_title_load,
                     getFormatFilterString(formatFilter)));
@@ -387,7 +385,7 @@ public class BkEmuFileDialog extends ListActivity implements AppCompatCallback,
                 } else {
                     final String fileName = file.getName();
                     if (formatFilter != null) {
-                        boolean isFormatMatched = FileUtils.isFileNameFormatMatched(fileName, formatFilter);
+                        boolean isFormatMatched = FileUtils.isFileNameExtensionMatched(fileName, formatFilter);
                         if (isFormatMatched) {
                             filesMap.put(fileName, fileName);
                             filesPathMap.put(fileName, file.getPath());

@@ -219,19 +219,28 @@ public class BkEmuActivity extends AppCompatActivity {
         @Override
         public void run() {
             boolean isBinImageLoaded = false;
-            if (lastBinImageFileUri != null && tapeFileName != null && tapeFileName.length() > 0) {
+            String loadedTapeFileName = null;
+            if (lastBinImageFileUri != null && tapeFileName != null && !tapeFileName.isEmpty()) {
+                // Trying to load image file from last used location
+                String[] tapeFileNames = FileUtils.getFileNameVariants(tapeFileName,
+                        FileUtils.FILE_EXT_BINARY_IMAGES);
                 String binImageFileUri = null;
-                try {
-                    // Trying to load image file from last used location
-                    binImageFileUri = FileUtils.replaceLastPathElement(lastBinImageFileUri, tapeFileName);
-                    loadBinImageFile(binImageFileUri);
-                    isBinImageLoaded = true;
-                } catch (Exception e) {
-                    Timber.d("Can't load binary image from '" + binImageFileUri +
-                            "': " + e.getMessage());
+                for (String tapeFileName : tapeFileNames) {
+                    try {
+                        binImageFileUri = FileUtils.replaceLastPathElement(lastBinImageFileUri,
+                                tapeFileName);
+                        loadBinImageFile(binImageFileUri);
+                        loadedTapeFileName = tapeFileName;
+                        isBinImageLoaded = true;
+                        break;
+                    } catch (Exception e) {
+                        Timber.d("Can't load binary image from '" + binImageFileUri +
+                                "': " + e.getMessage());
+                    }
                 }
             }
             if (isBinImageLoaded) {
+                showBinImageFileLoadToast(true, loadedTapeFileName);
                 doFinishBinImageLoad(true);
                 computer.resume();
             } else {
@@ -535,12 +544,12 @@ public class BkEmuActivity extends AppCompatActivity {
         // Check for program/disk image file to run
         String intentDataString = getIntent().getDataString();
         if (intentDataString != null) {
-            if (FileUtils.isFileNameFormatMatched(intentDataString,
-                    BkEmuFileDialog.FORMAT_FILTER_BIN_IMAGES)) {
+            if (FileUtils.isFileNameExtensionMatched(intentDataString,
+                    FileUtils.FILE_EXT_BINARY_IMAGES)) {
                 this.intentDataProgramImageUri = intentDataString;
                 return true;
-            } else if (FileUtils.isFileNameFormatMatched(intentDataString,
-                    BkEmuFileDialog.FORMAT_FILTER_DISK_IMAGES)) {
+            } else if (FileUtils.isFileNameExtensionMatched(intentDataString,
+                    FileUtils.FILE_EXT_FLOPPY_DISK_IMAGES)) {
                 this.intentDataDiskImageUri = intentDataString;
                 return true;
             }
@@ -1021,6 +1030,21 @@ public class BkEmuActivity extends AppCompatActivity {
         new BkEmuChangeLog(this).getDialog(true).show();
     }
 
+    protected void showBinImageFileLoadToast(boolean isImageLoaded, String imageName) {
+        if (isImageLoaded) {
+            Toast.makeText(getApplicationContext(),
+                    getResources().getString(R.string.toast_image_load_info, imageName,
+                            lastBinImageAddress, lastBinImageLength),
+                    Toast.LENGTH_LONG)
+                    .show();
+        } else {
+            Toast.makeText(getApplicationContext(),
+                    getResources().getString(R.string.toast_image_load_error, imageName),
+                    Toast.LENGTH_LONG)
+                    .show();
+        }
+    }
+
     /**
      * Show BIN emulator image file to load selection dialog.
      * @param tapeFileName file name to load (or <code>null</code> to load any file)
@@ -1029,8 +1053,10 @@ public class BkEmuActivity extends AppCompatActivity {
         Intent intent = new Intent(getBaseContext(), BkEmuFileDialog.class);
         String startPath = FileUtils.getSafeFileUriDirectoryPath(lastBinImageFileUri);
         intent.putExtra(BkEmuFileDialog.INTENT_START_PATH, startPath);
-        if (tapeFileName != null && tapeFileName.length() > 0) {
-            intent.putExtra(BkEmuFileDialog.INTENT_FORMAT_FILTER, new String[] { tapeFileName });
+        if (tapeFileName != null && !tapeFileName.isEmpty()) {
+            String[] tapeFileNames = FileUtils.getFileNameVariants(tapeFileName,
+                    FileUtils.FILE_EXT_BINARY_IMAGES);
+            intent.putExtra(BkEmuFileDialog.INTENT_FORMAT_FILTER, tapeFileNames);
         }
         intent.putExtra(BkEmuFileDialog.INTENT_MODE, BkEmuFileDialog.Mode.LOAD);
         startActivityForResult(intent, requestCode);
@@ -1042,7 +1068,8 @@ public class BkEmuActivity extends AppCompatActivity {
      */
     protected void showBinImageFileSaveDialog(int requestCode, String tapeFileName) {
         Intent intent = new Intent(getBaseContext(), BkEmuFileDialog.class);
-        String startPath = new File(FileUtils.getSafeFileUriDirectoryPath(lastBinImageFileUri), tapeFileName).getPath();
+        String startPath = new File(FileUtils.getSafeFileUriDirectoryPath(lastBinImageFileUri),
+                tapeFileName).getPath();
         intent.putExtra(BkEmuFileDialog.INTENT_START_PATH, startPath);
         intent.putExtra(BkEmuFileDialog.INTENT_MODE, BkEmuFileDialog.Mode.SAVE);
         startActivityForResult(intent, requestCode);
@@ -1057,7 +1084,7 @@ public class BkEmuActivity extends AppCompatActivity {
         String startPath = FileUtils.getSafeFileDirectoryPath(lastDiskImageFilePath);
         intent.putExtra(BkEmuFileDialog.INTENT_START_PATH, startPath);
         intent.putExtra(BkEmuFileDialog.INTENT_FORMAT_FILTER,
-                BkEmuFileDialog.FORMAT_FILTER_DISK_IMAGES);
+                FileUtils.FILE_EXT_FLOPPY_DISK_IMAGES);
         intent.putExtra(FloppyDriveIdentifier.class.getName(), fddIdentifier.name());
         intent.putExtra(BkEmuFileDialog.INTENT_MODE, BkEmuFileDialog.Mode.LOAD);
         startActivityForResult(intent, REQUEST_MENU_DISK_IMAGE_FILE_SELECT);
@@ -1181,19 +1208,9 @@ public class BkEmuActivity extends AppCompatActivity {
     protected boolean binImageFileLoad(String binImageFilePath) {
         String binImageFileUri = "file:" + binImageFilePath;
         boolean isImageLoaded = doBinImageFileLoad(binImageFileUri);
-        if (isImageLoaded) {
-            Toast.makeText(getApplicationContext(),
-                    getResources().getString(R.string.toast_image_load_info,
-                        lastBinImageAddress, lastBinImageLength),
-                    Toast.LENGTH_LONG)
-                    .show();
-        } else {
-            Toast.makeText(getApplicationContext(),
-                    getResources().getString(R.string.toast_image_load_error,
-                            binImageFilePath),
-                    Toast.LENGTH_LONG)
-                    .show();
-        }
+        String imageName = isImageLoaded ? Uri.parse(binImageFileUri).getLastPathSegment()
+                : binImageFilePath;
+        showBinImageFileLoadToast(isImageLoaded, imageName);
         return isImageLoaded;
     }
 
@@ -1373,7 +1390,7 @@ public class BkEmuActivity extends AppCompatActivity {
      * @throws Exception in case of loading error
      */
     protected int loadBinImageFile(String binImageFileUri) throws Exception {
-        Timber.d("loading binary image: %s", binImageFileUri);
+        Timber.d("Trying to load binary image: %s", binImageFileUri);
         byte[] binImageData = FileUtils.getUriContentData(getApplicationContext(), binImageFileUri);
         this.lastBinImageFileUri = binImageFileUri;
         return loadBinImage(binImageData);
@@ -1406,7 +1423,7 @@ public class BkEmuActivity extends AppCompatActivity {
                         Integer.toOctalString(lastBinImageAddress + imageIndex));
             }
         }
-        Timber.d("loaded bin image file: address 0" + Integer.toOctalString(lastBinImageAddress) +
+        Timber.d("Loaded bin image file: address 0" + Integer.toOctalString(lastBinImageAddress) +
                 ", length: " + lastBinImageLength);
         return lastBinImageAddress;
     }

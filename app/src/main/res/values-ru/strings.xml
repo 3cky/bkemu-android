@@ -59,7 +59,7 @@
     <string name="fdd_image_c">Дисковод C</string>
     <string name="fdd_image_d">Дисковод D</string>
     <string name="fdd_empty">(Пусто)</string>
-    <string name="toast_image_load_info">Начальный адрес 0%1$o, длина %2$d</string>
+    <string name="toast_image_load_info">%1s: адрес 0%2$o, длина %3$d</string>
     <string name="toast_image_load_error">Ошибка загрузки файла \'%s\'</string>
     <string name="toast_image_save_info">Файл \'%s\' сохранен</string>
     <string name="toast_image_save_error">Ошибка сохранения файла \'%s\'</string>

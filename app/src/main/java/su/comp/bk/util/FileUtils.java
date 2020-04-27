@@ -31,9 +31,16 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 
 public class FileUtils {
+    /** Array of file extensions for binary images */
+    public final static String[] FILE_EXT_BINARY_IMAGES = new String[] { ".BIN" };
+    /** Array of file extensions for floppy disk images */
+    public final static String[] FILE_EXT_FLOPPY_DISK_IMAGES = new String[] { ".BKD", ".IMG" };
+
     /**
      * Replace last path element with given new element.
      * @param path path to replace element
@@ -198,22 +205,41 @@ public class FileUtils {
     }
 
     /**
-     * Checks is file name matches some of given format extensions (ignoring case).
+     * Checks is file name matches some of given extensions (ignoring case).
      * @param fileName file name to check
-     * @param formatExtensions array of file format extensions
-     * @return true if some of file format extensions matched for given file name, false otherwise
+     * @param fileExtensions array of file extensions
+     * @return true if some of extensions matched for given file name, false otherwise
      */
-    public static boolean isFileNameFormatMatched(final String fileName,
-                                                  final String[] formatExtensions) {
+    public static boolean isFileNameExtensionMatched(final String fileName,
+                                                     final String[] fileExtensions) {
         final String fileNameLwr = fileName.toLowerCase();
         boolean isMatched = false;
-        for (String formatExtension : formatExtensions) {
-            final String formatLwr = formatExtension.toLowerCase();
+        for (String fileExtension : fileExtensions) {
+            final String formatLwr = fileExtension.toLowerCase();
             if (fileNameLwr.endsWith(formatLwr)) {
                 isMatched = true;
                 break;
             }
         }
         return isMatched;
+    }
+
+    /**
+     * Get all file name variants for given list of file name extensions.
+     * @param fileName file name
+     * @param fileExtensions array of file extensions
+     * @return array of file name variants
+     */
+    public static String[] getFileNameVariants(String fileName, String[] fileExtensions) {
+        List<String> fileNameList = new ArrayList<>();
+        fileNameList.add(fileName);
+        if (!FileUtils.isFileNameExtensionMatched(fileName, fileExtensions)) {
+            for (String fileExtension : fileExtensions) {
+                fileNameList.add(fileName.concat(fileExtension));
+            }
+        }
+        String[] fileNames = new String[fileNameList.size()];
+        fileNameList.toArray(fileNames);
+        return fileNames;
     }
 }

@@ -63,7 +63,7 @@
     <string name="fdd_image_c">Floppy Drive C</string>
     <string name="fdd_image_d">Floppy Drive D</string>
     <string name="fdd_empty">(Empty)</string>
-    <string name="toast_image_load_info">Start address 0%1$o, length %2$d</string>
+    <string name="toast_image_load_info">%1s: address 0%2$o, length %3$d</string>
     <string name="toast_image_load_error">Can\'t load file \'%s\'</string>
     <string name="toast_image_save_info">File \'%s\' saved</string>
     <string name="toast_image_save_error">Can\'t save file \'%s\'</string>
