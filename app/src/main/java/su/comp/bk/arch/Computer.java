@@ -597,8 +597,13 @@ public class Computer implements Runnable {
     /**
      * Reset computer state.
      */
-    public synchronized void reset() {
-        getCpu().reset();
+    public void reset() {
+        pause();
+        synchronized (this) {
+            Timber.d("resetting computer");
+            getCpu().reset();
+        }
+        resume();
     }
 
     /**
@@ -675,13 +680,14 @@ public class Computer implements Runnable {
     public synchronized void start() {
         if (!isRunning) {
             Timber.d("starting computer");
-            this.clockThread = new Thread(this, "ComputerClockThread");
+            clockThread = new Thread(this, "ComputerClockThread");
             isRunning = true;
             clockThread.start();
-            // Waiting to emulation thread start
+            // Waiting for emulation thread start
             try {
                 this.wait();
             } catch (InterruptedException e) {
+                // Do nothing
             }
             audioOutput.start();
         } else {
@@ -695,15 +701,16 @@ public class Computer implements Runnable {
     public void stop() {
         if (isRunning) {
             Timber.d("stopping computer");
+            isRunning = false;
             audioOutput.stop();
             synchronized (this) {
-                isRunning = false;
                 this.notifyAll();
             }
             while (clockThread.isAlive()) {
                 try {
-                    this.clockThread.join();
+                    clockThread.join();
                 } catch (InterruptedException e) {
+                    // Do nothing
                 }
             }
         } else {
@@ -718,22 +725,27 @@ public class Computer implements Runnable {
     /**
      * Pause computer.
      */
-    public synchronized void pause() {
-        Timber.d("pausing computer");
-        isPaused = true;
-        this.notifyAll();
-        audioOutput.pause();
+    public void pause() {
+        if (!isPaused) {
+            Timber.d("pausing computer");
+            isPaused = true;
+            audioOutput.pause();
+        }
     }
 
     /**
      * Resume computer.
      */
-    public synchronized void resume() {
-        Timber.d("resuming computer");
-        systemUptimeUpdateTimestamp = System.nanoTime();
-        isPaused = false;
-        audioOutput.resume();
-        this.notifyAll();
+    public void resume() {
+        if (isPaused) {
+            Timber.d("resuming computer");
+            systemUptimeUpdateTimestamp = System.nanoTime();
+            isPaused = false;
+            synchronized (this) {
+                this.notifyAll();
+            }
+            audioOutput.resume();
+        }
     }
 
     /**
@@ -776,7 +788,7 @@ public class Computer implements Runnable {
     /**
      * Check computer uptime is in sync with system time.
      */
-    protected void checkUptimeSync() {
+    private void checkUptimeSync() {
         long systemTime = System.nanoTime();
         systemUptime += systemTime - systemUptimeUpdateTimestamp;
         systemUptimeUpdateTimestamp = systemTime;
@@ -794,15 +806,18 @@ public class Computer implements Runnable {
 
     @Override
     public void run() {
-        Timber.d("computer started");
         synchronized (this) {
+            Timber.d("computer started");
             this.notifyAll();
             while (isRunning) {
                 if (isPaused) {
-                    try {
-                        Timber.d("computer paused");
-                        this.wait();
-                    } catch (InterruptedException e) {
+                    Timber.d("computer paused");
+                    while (isRunning && isPaused) {
+                        try {
+                            this.wait(100);
+                        } catch (InterruptedException e) {
+                            // Do nothing
+                        }
                     }
                     Timber.d("computer resumed");
                 } else {
