@@ -91,6 +91,34 @@ public class VideoController implements Device, Computer.UptimeListener {
         { Color.BLACK, Color.CYAN, Color.GREEN, Color.WHITE }
     };
 
+    // Pixel palettes in grayscale mode
+    private final static int[][] PIXEL_PALETTES_GRAYSCALE;
+
+    static {
+        // Create grayscale pixel palettes
+        int numGrays = 4;
+        int numPalettes = 16;
+        PIXEL_PALETTES_GRAYSCALE = new int[numPalettes][numGrays];
+        for (int paletteIndex = 0; paletteIndex < numPalettes; paletteIndex++) {
+            for (int grayIndex = 0; grayIndex < numGrays; grayIndex++) {
+                int grayValue;
+                if (paletteIndex == 0) {
+                    // BK0010 palette is directly translated to 4 levels of gray
+                    grayValue = 255 * grayIndex / (numGrays - 1);
+                } else {
+                    // BK0011 palettes are mixed by PAL luma coding function
+                    int colorValue = PIXEL_PALETTES_COLOR[paletteIndex][grayIndex];
+                    int redValue = Color.red(colorValue);
+                    int greenValue = Color.green(colorValue);
+                    int blueValue = Color.blue(colorValue);
+                    grayValue = (int)(0.299 * redValue + 0.587 * greenValue + 0.114 * blueValue);
+                }
+                PIXEL_PALETTES_GRAYSCALE[paletteIndex][grayIndex] =
+                        Color.rgb(grayValue, grayValue, grayValue);
+            }
+        }
+    }
+
     // Current color palette index
     private int colorPaletteIndex = 0;
     // Screen line color palette indexes
@@ -99,9 +127,9 @@ public class VideoController implements Device, Computer.UptimeListener {
     // VideoRAM data byte to corresponding pixels lookup table (16 palettes * 8 pixels * 256 byte values)
     private final int[] videoDataToPixelsTable = new int[16 * 8 * 256];
 
-    // State save/restore: color/bw mode flag value
-    private static final String STATE_COLOR_MODE =
-            VideoController.class.getName() + "#color_mode";
+    // State save/restore: display mode value
+    private static final String STATE_DISPLAY_MODE =
+            VideoController.class.getName() + "#display_mode";
 
     // State save/restore: scroll register value
     private static final String STATE_SCROLL_REGISTER =
@@ -119,8 +147,24 @@ public class VideoController implements Device, Computer.UptimeListener {
     private static final String STATE_CURRENT_LINE =
             VideoController.class.getName() + "#line_num";
 
-    // Screen mode flag: true for color mode, false for black and white mode
-    private boolean isColorMode;
+    // Available display modes
+    public enum DisplayMode {
+        BW, // black and white
+        GRAYSCALE, // four levels of gray
+        COLOR; // four colors
+
+        /**
+         * Get next display mode (in circular order)
+         * @return next display mode
+         */
+        public DisplayMode getNext() {
+            DisplayMode[] displayModes = values();
+            return displayModes[(this.ordinal() + 1) % displayModes.length];
+        }
+    }
+
+    // Display output mode
+    private DisplayMode displayMode;
 
     // Scroll register value
     private int scrollRegister;
@@ -167,7 +211,7 @@ public class VideoController implements Device, Computer.UptimeListener {
     /**
      * Frame data (pixel data, palette data, etc).
      */
-    class FrameData {
+    static class FrameData {
         private final short[] pixelData;
         private final int[] linePaletteIndexes;
         private boolean isFullScreenMode;
@@ -228,7 +272,7 @@ public class VideoController implements Device, Computer.UptimeListener {
         this.videoBuffer = Bitmap.createBitmap(VIDEO_BUFFER_WIDTH, VIDEO_BUFFER_HEIGHT,
                 Bitmap.Config.ARGB_8888);
         writeScrollRegister(SCROLL_EXTMEM_VALUE);
-        setColorMode(true);
+        setDisplayMode(DisplayMode.COLOR);
     }
 
     public void addFrameSyncListener(FrameSyncListener frameSyncListener) {
@@ -247,25 +291,35 @@ public class VideoController implements Device, Computer.UptimeListener {
         this.colorPaletteIndex = paletteIndex;
     }
 
-    public boolean isColorMode() {
-        return isColorMode;
+    public DisplayMode getDisplayMode() {
+        return displayMode;
     }
 
-    public synchronized void setColorMode(boolean isColorMode) {
-        this.isColorMode = isColorMode;
-        updateVideoDataToPixelsTable(isColorMode);
+    public synchronized void setDisplayMode(DisplayMode displayMode) {
+        this.displayMode = displayMode;
+        updateVideoDataToPixelsTable(displayMode);
     }
 
-    private void updateVideoDataToPixelsTable(boolean isColorMode) {
+    private void updateVideoDataToPixelsTable(DisplayMode displayMode) {
         synchronized (videoDataToPixelsTable) {
             int pixelTabIdx = 0;
             for (int paletteIndex = 0; paletteIndex < PIXEL_PALETTES_COLOR.length; paletteIndex++) {
-                int bitsPerPixel = isColorMode ? SCREEN_BPP_COLOR : SCREEN_BPP_BW;
-                int[] pixelPalette = isColorMode ? PIXEL_PALETTES_COLOR[paletteIndex]
-                        : PIXEL_PALETTE_BW;
-                int pixelMask = isColorMode ? PIXEL_MASK_COLOR : PIXEL_MASK_BW;
-                int pixelsPerByte = (isColorMode ? SCREEN_PPW_COLOR : SCREEN_PPW_BW) / 2;
-                int pixelsPerScreenPixel = isColorMode ? PIXELS_PER_SCREEN_PIXEL_COLOR
+                boolean isBwMode = (displayMode == DisplayMode.BW);
+                int bitsPerPixel = !isBwMode ? SCREEN_BPP_COLOR : SCREEN_BPP_BW;
+                int[] pixelPalette;
+                switch (displayMode) {
+                    case BW:
+                        pixelPalette = PIXEL_PALETTE_BW;
+                        break;
+                    case GRAYSCALE:
+                        pixelPalette = PIXEL_PALETTES_GRAYSCALE[paletteIndex];
+                        break;
+                    default:
+                        pixelPalette = PIXEL_PALETTES_COLOR[paletteIndex];
+                }
+                int pixelMask = !isBwMode ? PIXEL_MASK_COLOR : PIXEL_MASK_BW;
+                int pixelsPerByte = (!isBwMode ? SCREEN_PPW_COLOR : SCREEN_PPW_BW) / 2;
+                int pixelsPerScreenPixel = !isBwMode ? PIXELS_PER_SCREEN_PIXEL_COLOR
                         : PIXELS_PER_SCREEN_PIXEL_BW;
                 for (int videoDataByte = 0; videoDataByte < 256; videoDataByte++) {
                     for (int videoDataBytePixelIndex = 0; videoDataBytePixelIndex < pixelsPerByte;
@@ -377,7 +431,7 @@ public class VideoController implements Device, Computer.UptimeListener {
         outState.putLong(STATE_CURRENT_LINE, currentLine);
         outState.putInt(STATE_SCROLL_REGISTER, scrollRegister);
         outState.putInt(STATE_PALETTE_INDEX, getColorPaletteIndex());
-        outState.putBoolean(STATE_COLOR_MODE, isColorMode());
+        outState.putString(STATE_DISPLAY_MODE, getDisplayMode().name());
     }
 
     @Override
@@ -386,7 +440,7 @@ public class VideoController implements Device, Computer.UptimeListener {
         currentLine = inState.getLong(STATE_CURRENT_LINE);
         scrollRegister = inState.getInt(STATE_SCROLL_REGISTER);
         setColorPaletteIndex(inState.getInt(STATE_PALETTE_INDEX));
-        setColorMode(inState.getBoolean(STATE_COLOR_MODE));
+        setDisplayMode(DisplayMode.valueOf(inState.getString(STATE_DISPLAY_MODE)));
     }
 
     private boolean isFullScreenMode() {

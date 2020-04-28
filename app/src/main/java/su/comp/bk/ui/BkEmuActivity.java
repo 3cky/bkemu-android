@@ -775,8 +775,8 @@ public class BkEmuActivity extends AppCompatActivity {
             case R.id.menu_toggle_joystick:
                 toggleOnScreenJoystickVisibility();
                 return true;
-            case R.id.menu_toggle_screen_mode:
-                toggleScreenMode();
+            case R.id.menu_switch_display_mode:
+                switchDisplayMode();
                 return true;
             case R.id.menu_reset:
                 resetComputer();
@@ -1484,10 +1484,11 @@ public class BkEmuActivity extends AppCompatActivity {
         TransitionManager.beginDelayedTransition(mainView, onScreenControlsTransition);
     }
 
-    private void toggleScreenMode() {
-        Timber.d("toggling screen mode");
+    private void switchDisplayMode() {
         VideoController videoController = computer.getVideoController();
-        videoController.setColorMode(!videoController.isColorMode());
+        VideoController.DisplayMode displayMode = videoController.getDisplayMode().getNext();
+        Timber.d("switching to display mode: %s", displayMode);
+        videoController.setDisplayMode(displayMode);
     }
 
     private void resetComputer() {

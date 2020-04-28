@@ -4,7 +4,7 @@
     <string name="fps_string">%d FPS</string>
     <string name="menu_toggle_keyboard">On-screen keyboard</string>
     <string name="menu_toggle_joystick">On-screen joystick</string>
-    <string name="menu_toggle_screen_mode">Screen mode</string>
+    <string name="menu_switch_display_mode">Display mode</string>
     <string name="menu_reset">Reset computer</string>
     <string name="menu_change_model">Change model</string>
     <string name="menu_select_model">Select model</string>
