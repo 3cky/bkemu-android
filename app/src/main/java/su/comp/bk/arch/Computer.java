@@ -505,7 +505,8 @@ public class Computer implements Runnable {
 
     private void notifyUptimeListeners() {
         long uptime = getUptime();
-        for (UptimeListener uptimeListener : uptimeListeners) {
+        for (int i = 0; i < uptimeListeners.size(); i++) {
+            UptimeListener uptimeListener = uptimeListeners.get(i);
             uptimeListener.uptimeUpdated(uptime);
         }
     }
