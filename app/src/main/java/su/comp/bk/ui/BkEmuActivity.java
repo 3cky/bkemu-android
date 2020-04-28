@@ -284,12 +284,8 @@ public class BkEmuActivity extends AppCompatActivity {
     class TapeOperations10Handler implements Cpu.OnTrapListener {
         @Override
         public void onTrap(Cpu cpu, int trapVectorAddress) {
-            switch (trapVectorAddress) {
-                case Cpu.TRAP_VECTOR_EMT:
-                    onEmtTrap(cpu);
-                    break;
-                default:
-                    break;
+            if (trapVectorAddress == Cpu.TRAP_VECTOR_EMT) {
+                onEmtTrap(cpu);
             }
         }
 
