@@ -20,9 +20,11 @@ package su.comp.bk.ui;
 
 import android.content.Context;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Matrix;
+import android.graphics.Paint;
 import android.graphics.SurfaceTexture;
 import android.os.Handler;
 import android.util.AttributeSet;
@@ -30,7 +32,6 @@ import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.TextureView;
 import android.widget.FrameLayout;
-import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.core.content.ContextCompat;
@@ -75,16 +76,19 @@ public class BkEmuView extends TextureView implements TextureView.SurfaceTexture
     protected TextView fpsIndicator;
     protected String fpsIndicatorString;
 
+    // Floppy controller activity indicator alpha (0 - transparent, 255 - opaque)
+    private static final int FLOPPY_ICON_ALPHA_255 = 127;
+    // Floppy controller activity indicator bitmap
+    private Bitmap floppyActivityIndicatorBitmap;
+    // Floppy controller activity indicator paint
+    private Paint floppyActivityIndicatorPaint;
     // Floppy controller activity indicator timeout (in milliseconds)
     private static final int FLOPPY_ACTIVITY_INDICATOR_TIMEOUT = 250;
     // Floppy controller activity indicator timeout (in CPU ticks)
     protected long floppyActivityIndicatorTimeoutCpuTicks;
     // Floppy controller activity indicator last update time (in milliseconds)
     protected long lastFloppyActivityIndicatorUpdateTime;
-
-    private final FloppyActivityIndicatorUpdateRunnable floppyActivityIndicatorUpdateRunnable =
-            new FloppyActivityIndicatorUpdateRunnable();
-    protected ImageView floppyActivityIndicator;
+    private boolean isFloppyActivityIndicatorVisible;
 
     // UI update handler
     private final Handler uiUpdateHandler;
@@ -146,6 +150,7 @@ public class BkEmuView extends TextureView implements TextureView.SurfaceTexture
                                 canvas.drawColor(bgColor);
                                 canvas.drawBitmap(videoController.renderVideoBuffer(),
                                         videoBufferBitmapTransformMatrix, null);
+                                updateFloppyActivityIndicator(canvas);
                             }
                         } finally {
                             bkEmuView.unlockCanvasAndPost(canvas);
@@ -155,7 +160,6 @@ public class BkEmuView extends TextureView implements TextureView.SurfaceTexture
 
                 long currentTime = System.currentTimeMillis();
                 updateFpsCounters(currentTime);
-                updateFloppyActivityIndicator(currentTime);
 
                 synchronized (this) {
                     isWaitingForUpdate = !isUpdateScheduled;
@@ -190,28 +194,6 @@ public class BkEmuView extends TextureView implements TextureView.SurfaceTexture
             // Set FPS indicator visibility
             if (isFpsDrawingEnabled()) {
                 fpsIndicator.setVisibility(VISIBLE);
-            }
-        }
-    }
-
-    /**
-     * Floppy drive activity indicator update task (scheduled via UI update handler)
-     */
-    class FloppyActivityIndicatorUpdateRunnable implements Runnable {
-        @Override
-        public void run() {
-            // Set floppy drive activity indicator visibility
-            boolean isFloppyActive = false;
-            FloppyController floppyController = computer.getFloppyController();
-            if (floppyController != null && floppyController.isMotorStarted()) {
-                long lastFloppyAccessCpuTimeElapsed = computer.getCpu().getTime() -
-                        floppyController.getLastAccessCpuTime();
-                isFloppyActive = (lastFloppyAccessCpuTimeElapsed <
-                        floppyActivityIndicatorTimeoutCpuTicks);
-            }
-            floppyActivityIndicator.setVisibility(isFloppyActive ? VISIBLE : INVISIBLE);
-            if (isFloppyActive) {
-                floppyActivityIndicator.requestLayout();
             }
         }
     }
@@ -273,11 +255,34 @@ public class BkEmuView extends TextureView implements TextureView.SurfaceTexture
         fpsCountersUpdateTimestamp = currentTime;
     }
 
-    protected void updateFloppyActivityIndicator(long currentTime) {
+    private void initFloppyActivityIndicator() {
+        floppyActivityIndicatorBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.floppy_disk);
+        floppyActivityIndicatorPaint = new Paint();
+        floppyActivityIndicatorPaint.setAlpha(FLOPPY_ICON_ALPHA_255);
+    }
+
+    protected void updateFloppyActivityIndicator(Canvas canvas) {
+        long currentTime = System.currentTimeMillis();
         if (currentTime - lastFloppyActivityIndicatorUpdateTime >
                 FLOPPY_ACTIVITY_INDICATOR_TIMEOUT) {
-            uiUpdateHandler.post(floppyActivityIndicatorUpdateRunnable);
+            // Check floppy drive activity indicator visibility
+            FloppyController floppyController = computer.getFloppyController();
+            if (floppyController != null && floppyController.isMotorStarted()) {
+                long lastFloppyAccessCpuTimeElapsed = computer.getUptimeTicks() -
+                        floppyController.getLastAccessCpuTime();
+                isFloppyActivityIndicatorVisible = (lastFloppyAccessCpuTimeElapsed <
+                        floppyActivityIndicatorTimeoutCpuTicks);
+            } else {
+                isFloppyActivityIndicatorVisible = false;
+
+            }
             lastFloppyActivityIndicatorUpdateTime = currentTime;
+        }
+        if (isFloppyActivityIndicatorVisible) {
+            int x = canvas.getWidth() - floppyActivityIndicatorBitmap.getWidth();
+            int y = canvas.getHeight() - floppyActivityIndicatorBitmap.getHeight();
+            canvas.drawBitmap(floppyActivityIndicatorBitmap, x, y,
+                    floppyActivityIndicatorPaint);
         }
     }
 
@@ -332,8 +337,9 @@ public class BkEmuView extends TextureView implements TextureView.SurfaceTexture
         this.fpsIndicatorString = getContext().getString(R.string.fps_string);
         this.fpsIndicator = ((FrameLayout) getParent())
                 .findViewById(R.id.fps_indicator);
-        this.floppyActivityIndicator = ((FrameLayout) getParent())
-                .findViewById(R.id.floppy_indicator);
+        // Initialize emulator UI elements
+        initFloppyActivityIndicator();
+        // Start emulator screen update thread
         this.uiUpdateThread = new BkEmuViewUpdateThread(this);
         this.uiUpdateThread.start();
     }
