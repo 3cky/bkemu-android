@@ -119,11 +119,17 @@ public class Computer implements Runnable {
     private int clockFrequency;
 
     /** Uptime sync threshold (in nanoseconds) */
-    public static final long UPTIME_SYNC_THRESHOLD = (10L * NANOSECS_IN_MSEC);
+    private static final long UPTIME_SYNC_THRESHOLD = (10L * NANOSECS_IN_MSEC);
     // Last computer system uptime update timestamp (unix timestamp, in nanoseconds)
     private long systemUptimeUpdateTimestamp;
     // Computer system uptime since start (in nanoseconds)
     private long systemUptime;
+    /** Uptime sync check interval (in nanoseconds) */
+    private static final long UPTIME_SYNC_CHECK_INTERVAL = (1L * NANOSECS_IN_MSEC);
+    // Computer system uptime sync check interval (in CPU ticks)
+    private long systemUptimeSyncCheckIntervalTicks;
+    // Last computer system uptime sync check timestamp (in CPU ticks)
+    private long systemUptimeSyncCheckTimestampTicks;
 
     private final List<UptimeListener> uptimeListeners = new ArrayList<>();
 
@@ -393,6 +399,7 @@ public class Computer implements Runnable {
      */
     public void setClockFrequency(int clockFrequency) {
         this.clockFrequency = clockFrequency;
+        systemUptimeSyncCheckIntervalTicks = nanosToCpuTime(UPTIME_SYNC_CHECK_INTERVAL);
     }
 
     private void addReadOnlyMemory(Resources resources, int romDataResId, String romId, int address)
@@ -493,6 +500,14 @@ public class Computer implements Runnable {
      */
     public long getUptime() {
         return cpuTimeToNanos(cpu.getTime());
+    }
+
+    /**
+     * Get computer time (in CPU ticks).
+     * @return current computer uptime
+     */
+    public long getUptimeTicks() {
+        return cpu.getTime();
     }
 
     /**
@@ -741,6 +756,7 @@ public class Computer implements Runnable {
         if (isPaused) {
             Timber.d("resuming computer");
             systemUptimeUpdateTimestamp = System.nanoTime();
+            systemUptimeSyncCheckTimestampTicks = getUptimeTicks();
             isPaused = false;
             synchronized (this) {
                 this.notifyAll();
@@ -790,9 +806,14 @@ public class Computer implements Runnable {
      * Check computer uptime is in sync with system time.
      */
     private void checkUptimeSync() {
+        long uptimeTicks = getUptimeTicks();
+        if (uptimeTicks - systemUptimeSyncCheckTimestampTicks < systemUptimeSyncCheckIntervalTicks) {
+            return;
+        }
         long systemTime = System.nanoTime();
         systemUptime += systemTime - systemUptimeUpdateTimestamp;
         systemUptimeUpdateTimestamp = systemTime;
+        systemUptimeSyncCheckTimestampTicks = uptimeTicks;
         long uptimesDifference = getUptime() - systemUptime;
         if (uptimesDifference >= UPTIME_SYNC_THRESHOLD) {
             long uptimesDifferenceMillis = uptimesDifference / NANOSECS_IN_MSEC;
