@@ -10,68 +10,38 @@
         android:id="@+id/toolbar"
         layout="@layout/toolbar" />
 
-    <LinearLayout
+    <RelativeLayout
         android:layout_width="fill_parent"
         android:orientation="horizontal"
         android:baselineAligned="false"
         android:layout_height="0dp"
-        android:layout_weight="1"
-        android:gravity="center_vertical" >
+        android:layout_weight="1">
 
         <include
             android:id="@+id/joystick_dpad"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentLeft="true"
+            android:layout_centerVertical="true"
             layout="@layout/joystick_dpad" />
 
-        <FrameLayout
-            android:id="@+id/emu_frame"
-            android:layout_width="0dp"
+        <su.comp.bk.ui.BkEmuView
+            android:id="@+id/emu_view"
             android:layout_height="fill_parent"
-            android:layout_weight="1" >
-
-            <su.comp.bk.ui.BkEmuView
-                android:id="@+id/emu_view"
-                android:layout_width="fill_parent"
-                android:layout_height="fill_parent"
-                android:layout_gravity="center_horizontal" />
-
-            <RelativeLayout
-                android:id="@+id/fps_layout"
-                android:layout_width="fill_parent"
-                android:layout_height="fill_parent"
-                android:paddingLeft="10dp" >
-
-                <TextView
-                    android:id="@+id/fps_indicator"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/fps_string"
-                    android:visibility="invisible" />
-            </RelativeLayout>
-
-            <RelativeLayout
-                android:id="@+id/floppy_indicator_layout"
-                android:layout_width="fill_parent"
-                android:layout_height="fill_parent"
-                android:gravity="bottom|right"
-                android:padding="3dp" >
-
-                <ImageView
-                    android:id="@+id/floppy_indicator"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:alpha="0.5"
-                    android:src="@drawable/floppy_disk"
-                    android:visibility="invisible"
-                    tools:ignore="ContentDescription" />
-            </RelativeLayout>
-
-        </FrameLayout>
+            android:layout_width="fill_parent"
+            android:layout_toRightOf="@id/joystick_dpad"
+            android:layout_toLeftOf="@id/joystick_buttons"
+            android:layout_centerHorizontal="true" />
 
         <include
             android:id="@+id/joystick_buttons"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentRight="true"
+            android:layout_centerVertical="true"
             layout="@layout/joystick_buttons" />
 
-    </LinearLayout>
+    </RelativeLayout>
 
     <include
         android:id="@+id/keyboard"

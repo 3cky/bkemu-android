@@ -21,18 +21,6 @@
             android:layout_height="fill_parent"
             android:layout_gravity="center_horizontal" />
 
-        <RelativeLayout
-            android:id="@+id/fps_layout"
-            android:layout_width="fill_parent"
-            android:layout_height="fill_parent"
-            android:paddingLeft="10dp" >
-
-            <TextView
-                android:id="@+id/fps_indicator"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:visibility="invisible" />
-        </RelativeLayout>
     </FrameLayout>
 
     <include

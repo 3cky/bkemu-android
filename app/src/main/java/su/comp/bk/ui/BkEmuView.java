@@ -25,14 +25,12 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Matrix;
 import android.graphics.Paint;
+import android.graphics.Rect;
 import android.graphics.SurfaceTexture;
-import android.os.Handler;
 import android.util.AttributeSet;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.TextureView;
-import android.widget.FrameLayout;
-import android.widget.TextView;
 
 import androidx.core.content.ContextCompat;
 
@@ -59,22 +57,31 @@ public class BkEmuView extends TextureView implements TextureView.SurfaceTexture
     // FPS current value
     protected int fpsValue;
 
-    // FPS drawing enabled flag
+    // FPS indicator text size
+    private static final float FPS_INDICATOR_SIZE = 30;
+    // FPS indicator paint for drawing on the canvas
+    private Paint fpsIndicatorPaint;
+    private Rect fpsIndicatorBounds;
+    // FPS indicator pattern string
+    protected String fpsIndicatorString;
+    // FPS indicator drawing enabled flag
     protected static boolean isFpsDrawingEnabled = false;
-    // Low FPS value
+    // FPS indicator threshold for low FPS value
     private final static int FPS_LOW_VALUE = 10;
-    // Low FPS drawing color
-    private final static int FPS_COLOR_LOW = Color.RED;
-    // Normal FPS drawing color
-    private final static int FPS_COLOR_NORMAL = Color.GREEN;
+    // FPS indicator drawing color (low FPS values)
+    private final static int FPS_INDICATOR_COLOR_LOW = Color.RED;
+    // FPS indicator drawing color (normal FPS values)
+    private final static int FPS_INDICATOR_COLOR_NORMAL = Color.GREEN;
+    // FPS indicator alpha
+    private static final int FPS_INDICATOR_ALPHA = 255;
+    // FPS indicator background color
+    private static final int FPS_INDICATOR_COLOR_BACK = Color.BLACK;
+    // FPS indicator background alpha
+    private static final int FPS_INDICATOR_ALPHA_BACK = 180;
 
     // Computer screen aspect ratio
     private final static float COMPUTER_SCREEN_ASPECT_RATIO = (4f / 3f);
 
-    private final FpsIndicatorUpdateRunnable fpsIndicatorUpdateRunnable =
-                new FpsIndicatorUpdateRunnable();
-    protected TextView fpsIndicator;
-    protected String fpsIndicatorString;
 
     // Floppy controller activity indicator alpha (0 - transparent, 255 - opaque)
     private static final int FLOPPY_ICON_ALPHA_255 = 127;
@@ -89,9 +96,6 @@ public class BkEmuView extends TextureView implements TextureView.SurfaceTexture
     // Floppy controller activity indicator last update time (in milliseconds)
     protected long lastFloppyActivityIndicatorUpdateTime;
     private boolean isFloppyActivityIndicatorVisible;
-
-    // UI update handler
-    private final Handler uiUpdateHandler;
 
     // UI update thread
     private BkEmuViewUpdateThread uiUpdateThread;
@@ -150,16 +154,13 @@ public class BkEmuView extends TextureView implements TextureView.SurfaceTexture
                                 canvas.drawColor(bgColor);
                                 canvas.drawBitmap(videoController.renderVideoBuffer(),
                                         videoBufferBitmapTransformMatrix, null);
-                                updateFloppyActivityIndicator(canvas);
+                                drawIndicators(canvas);
                             }
                         } finally {
                             bkEmuView.unlockCanvasAndPost(canvas);
                         }
                     }
                 }
-
-                long currentTime = System.currentTimeMillis();
-                updateFpsCounters(currentTime);
 
                 synchronized (this) {
                     isWaitingForUpdate = !isUpdateScheduled;
@@ -180,30 +181,14 @@ public class BkEmuView extends TextureView implements TextureView.SurfaceTexture
         }
     }
 
-    /**
-     * FPS indicator update task (scheduled via UI update handler)
-     */
-    class FpsIndicatorUpdateRunnable implements Runnable {
-        @Override
-        public void run() {
-            // Set indicator color based on FPS value
-            fpsIndicator.setTextColor((fpsValue > FPS_LOW_VALUE) ?
-                    FPS_COLOR_NORMAL : FPS_COLOR_LOW);
-            // Set indicator FPS value text
-            fpsIndicator.setText(String.format(fpsIndicatorString, fpsValue));
-            // Set FPS indicator visibility
-            if (isFpsDrawingEnabled()) {
-                fpsIndicator.setVisibility(VISIBLE);
-            }
-        }
-    }
-
     public BkEmuView(Context context, AttributeSet attrs) {
         super(context, attrs);
-        this.uiUpdateHandler = new Handler();
         // Enable focus grabbing by view
         this.setFocusable(true);
         this.setFocusableInTouchMode(true);
+        // Initialize emulator UI elements
+        initFpsIndicator();
+        initFloppyActivityIndicator();
         // Set surface events listener
         this.setSurfaceTextureListener(this);
     }
@@ -222,17 +207,23 @@ public class BkEmuView extends TextureView implements TextureView.SurfaceTexture
 
     public synchronized void setFpsDrawingEnabled(boolean isEnabled) {
         isFpsDrawingEnabled = isEnabled;
-        // Set FPS indicator visibility
-        if (!isEnabled) {
-            fpsIndicator.setVisibility(INVISIBLE);
-        }
     }
 
     public synchronized boolean isFpsDrawingEnabled() {
         return isFpsDrawingEnabled;
     }
 
-    protected void updateFpsCounters(long currentTime) {
+    private void initFpsIndicator() {
+        fpsIndicatorString = getContext().getString(R.string.fps_string);
+        fpsIndicatorBounds = new Rect();
+        fpsIndicatorPaint = new Paint();
+        fpsIndicatorPaint.setStyle(Paint.Style.FILL);
+        fpsIndicatorPaint.setTextAlign(Paint.Align.LEFT);
+        fpsIndicatorPaint.setTextSize(FPS_INDICATOR_SIZE);
+    }
+
+    protected void drawFpsIndicator(Canvas canvas, long currentTime) {
+        // Update FPS counters
         if (fpsCountersUpdateTimestamp > 0) {
             fpsFrameCounter++;
             // Calculate time elapsed from last FPS counters update
@@ -245,11 +236,21 @@ public class BkEmuView extends TextureView implements TextureView.SurfaceTexture
                 // Clear accumulated FPS frame and time
                 fpsFrameCounter = 0;
                 fpsAccumulatedTime = 0;
-                if (isFpsDrawingEnabled()) {
-                    // Update FPS indicator
-                    uiUpdateHandler.post(fpsIndicatorUpdateRunnable);
-                }
             }
+        }
+        // Draw FPS indicator, if enabled
+        if (isFpsDrawingEnabled()) {
+            String fpsText = String.format(fpsIndicatorString, fpsValue);
+            fpsIndicatorPaint.getTextBounds(fpsText, 0, fpsText.length(), fpsIndicatorBounds);
+            fpsIndicatorPaint.setColor(FPS_INDICATOR_COLOR_BACK);
+            fpsIndicatorPaint.setAlpha(FPS_INDICATOR_ALPHA_BACK);
+            fpsIndicatorBounds.offset(0, fpsIndicatorBounds.height());
+            canvas.drawRect(fpsIndicatorBounds, fpsIndicatorPaint);
+            int fpsColor = (fpsValue > FPS_LOW_VALUE) ? FPS_INDICATOR_COLOR_NORMAL
+                    : FPS_INDICATOR_COLOR_LOW;
+            fpsIndicatorPaint.setColor(fpsColor);
+            fpsIndicatorPaint.setAlpha(FPS_INDICATOR_ALPHA);
+            canvas.drawText(fpsText, 0, fpsIndicatorBounds.height(), fpsIndicatorPaint);
         }
         // Store new timestamp value
         fpsCountersUpdateTimestamp = currentTime;
@@ -261,8 +262,7 @@ public class BkEmuView extends TextureView implements TextureView.SurfaceTexture
         floppyActivityIndicatorPaint.setAlpha(FLOPPY_ICON_ALPHA_255);
     }
 
-    protected void updateFloppyActivityIndicator(Canvas canvas) {
-        long currentTime = System.currentTimeMillis();
+    protected void drawFloppyActivityIndicator(Canvas canvas, long currentTime) {
         if (currentTime - lastFloppyActivityIndicatorUpdateTime >
                 FLOPPY_ACTIVITY_INDICATOR_TIMEOUT) {
             // Check floppy drive activity indicator visibility
@@ -284,6 +284,12 @@ public class BkEmuView extends TextureView implements TextureView.SurfaceTexture
             canvas.drawBitmap(floppyActivityIndicatorBitmap, x, y,
                     floppyActivityIndicatorPaint);
         }
+    }
+
+    protected void drawIndicators(Canvas canvas) {
+        long currentTime = System.currentTimeMillis();
+        drawFloppyActivityIndicator(canvas, currentTime);
+        drawFpsIndicator(canvas, currentTime);
     }
 
     public void updateVideoBufferBitmapTransformMatrix(int viewWidth, int viewHeight) {
@@ -333,12 +339,6 @@ public class BkEmuView extends TextureView implements TextureView.SurfaceTexture
         Timber.d("onSurfaceTextureAvailable");
         // Update emulator screen bitmap scale matrix
         updateVideoBufferBitmapTransformMatrix(getWidth(), getHeight());
-        // Get FPS indicator resources
-        this.fpsIndicatorString = getContext().getString(R.string.fps_string);
-        this.fpsIndicator = ((FrameLayout) getParent())
-                .findViewById(R.id.fps_indicator);
-        // Initialize emulator UI elements
-        initFloppyActivityIndicator();
         // Start emulator screen update thread
         this.uiUpdateThread = new BkEmuViewUpdateThread(this);
         this.uiUpdateThread.start();

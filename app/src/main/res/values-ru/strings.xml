@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="fps_string">%d КВС</string>
+    <string name="fps_string">%d к/с</string>
     <string name="menu_toggle_keyboard">Клавиатура</string>
     <string name="menu_toggle_joystick">Джойстик</string>
     <string name="menu_switch_display_mode">Режим экрана</string>
