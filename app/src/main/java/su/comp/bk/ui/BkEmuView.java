@@ -19,6 +19,7 @@
 package su.comp.bk.ui;
 
 import android.content.Context;
+import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
@@ -38,6 +39,7 @@ import su.comp.bk.R;
 import su.comp.bk.arch.Computer;
 import su.comp.bk.arch.io.FloppyController;
 import su.comp.bk.arch.io.VideoController;
+import su.comp.bk.arch.io.VideoController.DisplayMode;
 import su.comp.bk.ui.BkEmuActivity.GestureListener;
 import timber.log.Timber;
 
@@ -82,9 +84,29 @@ public class BkEmuView extends TextureView implements TextureView.SurfaceTexture
     // Computer screen aspect ratio
     private final static float COMPUTER_SCREEN_ASPECT_RATIO = (4f / 3f);
 
+    // Display mode indicator steady time (in milliseconds)
+    private static final int DISPLAY_MODE_INDICATOR_STEADY_TIME = 350;
+    // Display mode indicator timeout (in milliseconds)
+    private static final int DISPLAY_MODE_INDICATOR_TIMEOUT = 650;
+    // Display mode indicator alpha at the start (0 - transparent, 255 - opaque)
+    private static final int DISPLAY_MODE_INDICATOR_ALPHA_START = 255;
+    // Display mode indicator alpha at the end (0 - transparent, 255 - opaque)
+    private static final int DISPLAY_MODE_INDICATOR_ALPHA_END = 0;
+    // Display mode indicator bitmap: black and white
+    private Bitmap displayModeBwIndicatorBitmap;
+    // Display mode indicator bitmap: grayscale
+    private Bitmap displayModeGrayscaleIndicatorBitmap;
+    // Display mode indicator bitmap: color
+    private Bitmap displayModeColorIndicatorBitmap;
+    // Display mode indicator paint
+    private Paint displayModeIndicatorPaint;
+    // Display mode: last seen state
+    private DisplayMode lastDisplayMode = null;
+    // Display mode: last change timestamp
+    private long lastDisplayModeChangeTimestamp;
 
     // Floppy controller activity indicator alpha (0 - transparent, 255 - opaque)
-    private static final int FLOPPY_ICON_ALPHA_255 = 127;
+    private static final int FLOPPY_ACTIVITY_INDICATOR_ALPHA = 127;
     // Floppy controller activity indicator bitmap
     private Bitmap floppyActivityIndicatorBitmap;
     // Floppy controller activity indicator paint
@@ -189,6 +211,7 @@ public class BkEmuView extends TextureView implements TextureView.SurfaceTexture
         // Initialize emulator UI elements
         initFpsIndicator();
         initFloppyActivityIndicator();
+        initDisplayModeIndicator();
         // Set surface events listener
         this.setSurfaceTextureListener(this);
     }
@@ -259,7 +282,7 @@ public class BkEmuView extends TextureView implements TextureView.SurfaceTexture
     private void initFloppyActivityIndicator() {
         floppyActivityIndicatorBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.floppy_disk);
         floppyActivityIndicatorPaint = new Paint();
-        floppyActivityIndicatorPaint.setAlpha(FLOPPY_ICON_ALPHA_255);
+        floppyActivityIndicatorPaint.setAlpha(FLOPPY_ACTIVITY_INDICATOR_ALPHA);
     }
 
     protected void drawFloppyActivityIndicator(Canvas canvas, long currentTime) {
@@ -286,10 +309,54 @@ public class BkEmuView extends TextureView implements TextureView.SurfaceTexture
         }
     }
 
+    private void initDisplayModeIndicator() {
+        Resources r = getResources();
+        displayModeBwIndicatorBitmap = BitmapFactory.decodeResource(r, R.drawable.display_bw);
+        displayModeGrayscaleIndicatorBitmap = BitmapFactory.decodeResource(r, R.drawable.display_gray);
+        displayModeColorIndicatorBitmap = BitmapFactory.decodeResource(r, R.drawable.display_color);
+        displayModeIndicatorPaint = new Paint();
+    }
+
+    private void drawDisplayModeIndicator(Canvas canvas, long currentTime) {
+        DisplayMode currentDisplayMode = computer.getVideoController().getDisplayMode();
+        if (lastDisplayMode != currentDisplayMode) {
+            if (lastDisplayMode != null) {
+                lastDisplayModeChangeTimestamp = currentTime;
+            }
+            lastDisplayMode = currentDisplayMode;
+        }
+        long elapsedTime = currentTime - lastDisplayModeChangeTimestamp;
+        if (elapsedTime < DISPLAY_MODE_INDICATOR_TIMEOUT) {
+            Bitmap displayModeBitmap;
+            switch (lastDisplayMode) {
+                case BW:
+                    displayModeBitmap = displayModeBwIndicatorBitmap;
+                    break;
+                case GRAYSCALE:
+                    displayModeBitmap = displayModeGrayscaleIndicatorBitmap;
+                    break;
+                default:
+                    displayModeBitmap = displayModeColorIndicatorBitmap;
+            }
+            float drawX = (canvas.getWidth() - displayModeBitmap.getWidth()) / 2f;
+            float drawY = (canvas.getHeight() - displayModeBitmap.getHeight()) / 2f;
+            int alpha = DISPLAY_MODE_INDICATOR_ALPHA_START;
+            if (elapsedTime > DISPLAY_MODE_INDICATOR_STEADY_TIME) {
+                alpha = (int)(DISPLAY_MODE_INDICATOR_ALPHA_START -
+                        (DISPLAY_MODE_INDICATOR_ALPHA_START - DISPLAY_MODE_INDICATOR_ALPHA_END)
+                                * (elapsedTime - DISPLAY_MODE_INDICATOR_STEADY_TIME)
+                                / (DISPLAY_MODE_INDICATOR_TIMEOUT - DISPLAY_MODE_INDICATOR_STEADY_TIME));
+            }
+            displayModeIndicatorPaint.setAlpha(alpha);
+            canvas.drawBitmap(displayModeBitmap, drawX, drawY, displayModeIndicatorPaint);
+        }
+    }
+
     protected void drawIndicators(Canvas canvas) {
         long currentTime = System.currentTimeMillis();
         drawFloppyActivityIndicator(canvas, currentTime);
         drawFpsIndicator(canvas, currentTime);
+        drawDisplayModeIndicator(canvas, currentTime);
     }
 
     public void updateVideoBufferBitmapTransformMatrix(int viewWidth, int viewHeight) {
