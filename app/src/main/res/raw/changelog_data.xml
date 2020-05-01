@@ -1,6 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <releases>
-    <release version="0.6.0-dev">
+    <release version="0.6.0" date="2020-05-01">
+        <changes>
+            <change>Added grayscale display mode.</change>
+            <change>Tape loader handler now automatically adds .BIN extension to the file name if needed.</change>
+            <change>Fixed an emulator lockup on some phones.</change>
+            <change>Improved compatibility with games that using downloadable overlays.</change>
+            <change>Improved handling of program and disk images from the external file managers.</change>
+            <change>User interface improvements.</change>
+        </changes>
     </release>
     <release version="0.5.0" date="2020-04-22">
         <changes>
