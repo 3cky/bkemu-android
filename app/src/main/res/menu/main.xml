@@ -21,6 +21,10 @@
           android:visible="false"
           android:enabled="false"
           app:showAsAction="ifRoom" />
+    <item android:id="@+id/menu_volume"
+        android:icon="@drawable/ic_volume_white_24"
+        android:title="@string/volume"
+        app:showAsAction="ifRoom" />
     <item android:id="@+id/menu_change_model"
           android:title="@string/menu_change_model" />
     <item android:id="@+id/menu_reset"

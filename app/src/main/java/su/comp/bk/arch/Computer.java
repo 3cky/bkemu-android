@@ -479,6 +479,14 @@ public class Computer implements Runnable {
     }
 
     /**
+     * Get {@link AudioOutput} reference.
+     * @return audio output reference
+     */
+    public AudioOutput getAudioOutput() {
+        return audioOutput;
+    }
+
+    /**
      * Set computer system uptime (in nanoseconds).
      * @param systemUptime computer system uptime to set (in nanoseconds)
      */

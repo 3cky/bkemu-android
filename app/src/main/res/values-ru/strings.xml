@@ -67,4 +67,6 @@
     <string name="about_logo">Лого BkEmu</string>
     <string name="about_version">BkEmu версии %s</string>
     <string name="about_link">https://github.com/3cky/bkemu-android</string>
+    <string name="volume">Громкость</string>
+    <string name="speaker">Аудиовыход</string>
 </resources>

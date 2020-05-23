@@ -75,6 +75,7 @@ import su.comp.bk.arch.cpu.Cpu;
 import su.comp.bk.arch.cpu.addressing.IndexDeferredAddressingMode;
 import su.comp.bk.arch.cpu.opcode.EmtOpcode;
 import su.comp.bk.arch.cpu.opcode.JmpOpcode;
+import su.comp.bk.arch.io.AudioOutput;
 import su.comp.bk.arch.io.FloppyController;
 import su.comp.bk.arch.io.FloppyController.FloppyDriveIdentifier;
 import su.comp.bk.arch.io.KeyboardController;
@@ -136,6 +137,7 @@ public class BkEmuActivity extends AppCompatActivity {
     private static final String PREFS_KEY_COMPUTER_CONFIGURATION = "su.comp.bk.a.c";
     private static final String PREFS_KEY_FLOPPY_DRIVE_IMAGE =
             "su.comp.bk.arch.io.FloppyController.FloppyDrive/image:";
+    private static final String PREFS_KEY_AUDIO_VOLUME = "su.comp.bk.arch.io.AudioOutput/volume";
 
     // Last loaded emulator binary image address
     protected int lastBinImageAddress;
@@ -619,6 +621,7 @@ public class BkEmuActivity extends AppCompatActivity {
                 computer.getCpu().setOnOpcodeListener(JmpOpcode.OPCODE | Cpu.R0
                             | (IndexDeferredAddressingMode.CODE << 3), handler);
             }
+            computer.getAudioOutput().setVolume(readAudioVolume());
             bkEmuView.setComputer(computer);
         } else {
             throw new IllegalStateException("Can't initialize computer state");
@@ -795,6 +798,9 @@ public class BkEmuActivity extends AppCompatActivity {
             case R.id.menu_changelog:
                 showChangelogDialog();
                 return true;
+            case R.id.menu_volume:
+                showVolumeDialog();
+                return true;
             default:
                 return super.onOptionsItemSelected(item);
         }
@@ -804,67 +810,84 @@ public class BkEmuActivity extends AppCompatActivity {
     protected Dialog onCreateDialog(int id) {
         switch (id) {
             case DIALOG_COMPUTER_MODEL:
-                final CharSequence[] models;
-                List<String> modelList = new ArrayList<>();
-                for (Configuration model: Configuration.values()) {
-                    int modelNameId = getResources().getIdentifier(model.name().toLowerCase(),
-                            "string", getPackageName());
-                    modelList.add((modelNameId != 0) ? getString(modelNameId) : model.name());
-                }
-                models = modelList.toArray(new String[0]);
-                return new AlertDialog.Builder(this)
-                    .setTitle(R.string.menu_select_model)
-                    .setSingleChoiceItems(models, getComputerConfiguration().ordinal(),
-                            (dialog, which) -> {
-                                // Mark selected item by tag
-                                ListView listView = ((AlertDialog) dialog).getListView();
-                                listView.setTag(which);
-                            })
-                    .setPositiveButton(R.string.ok, (dialog, whichButton) -> {
-                        // Get tagged selected item, if any
-                        ListView listView = ((AlertDialog) dialog).getListView();
-                        Integer selected = (Integer) listView.getTag();
-                        if (selected != null) {
-                            Configuration config = Configuration.values()[selected];
-                            if (computer.getConfiguration() != config) {
-                                // Set new computer configuration and restart activity
-                                setComputerConfiguration(config);
-                                restartActivity(null);
-                            }
-                        }
-                    })
-                    .setNegativeButton(R.string.cancel, (dialog, whichButton) -> {
-                        // Do nothing on cancel
-                    })
-                   .create();
+                return createComputerModelDialog();
             case DIALOG_ABOUT:
-                Dialog aboutDialog = new Dialog(this);
-                aboutDialog.setTitle(R.string.menu_about);
-                aboutDialog.requestWindowFeature(Window.FEATURE_LEFT_ICON);
-                aboutDialog.setContentView(R.layout.about_dialog);
-                aboutDialog.getWindow().setFeatureDrawableResource(Window.FEATURE_LEFT_ICON,
-                        android.R.drawable.ic_dialog_info);
-                TextView versionTextView = aboutDialog.findViewById(R.id.about_version);
-                try {
-                    versionTextView.setText(getResources().getString(R.string.about_version,
-                            getPackageManager().getPackageInfo(getPackageName(), 0).versionName));
-                } catch (NameNotFoundException e) {
-                }
-                return aboutDialog;
+                return createAboutDialog();
             case DIALOG_DISK_MANAGER:
-                Dialog fddManagerDialog = new Dialog(this);
-                fddManagerDialog.setTitle(R.string.menu_disk_manager);
-                fddManagerDialog.setContentView(R.layout.fdd_mgr_dialog);
-                return fddManagerDialog;
+                return createDiskManagerDialog();
             case DIALOG_DISK_MOUNT_ERROR:
-                return new AlertDialog.Builder(this)
-                    .setIcon(android.R.drawable.ic_dialog_alert)
-                    .setTitle(R.string.err)
-                    .setMessage(R.string.dialog_disk_mount_error)
-                    .setPositiveButton(R.string.ok, null)
-                    .create();
+                return createDiskMountErrorDialog();
         }
         return null;
+    }
+
+    private Dialog createDiskMountErrorDialog() {
+        return new AlertDialog.Builder(this)
+            .setIcon(android.R.drawable.ic_dialog_alert)
+            .setTitle(R.string.err)
+            .setMessage(R.string.dialog_disk_mount_error)
+            .setPositiveButton(R.string.ok, null)
+            .create();
+    }
+
+    private Dialog createDiskManagerDialog() {
+        Dialog fddManagerDialog = new Dialog(this);
+        fddManagerDialog.setTitle(R.string.menu_disk_manager);
+        fddManagerDialog.setContentView(R.layout.fdd_mgr_dialog);
+        return fddManagerDialog;
+    }
+
+    private Dialog createAboutDialog() {
+        Dialog aboutDialog = new Dialog(this);
+        aboutDialog.setTitle(R.string.menu_about);
+        aboutDialog.requestWindowFeature(Window.FEATURE_LEFT_ICON);
+        aboutDialog.setContentView(R.layout.about_dialog);
+        aboutDialog.getWindow().setFeatureDrawableResource(Window.FEATURE_LEFT_ICON,
+                android.R.drawable.ic_dialog_info);
+        TextView versionTextView = aboutDialog.findViewById(R.id.about_version);
+        try {
+            versionTextView.setText(getResources().getString(R.string.about_version,
+                    getPackageManager().getPackageInfo(getPackageName(), 0).versionName));
+        } catch (NameNotFoundException e) {
+            // Do nothing
+        }
+        return aboutDialog;
+    }
+
+    private Dialog createComputerModelDialog() {
+        final CharSequence[] models;
+        List<String> modelList = new ArrayList<>();
+        for (Configuration model: Configuration.values()) {
+            int modelNameId = getResources().getIdentifier(model.name().toLowerCase(),
+                    "string", getPackageName());
+            modelList.add((modelNameId != 0) ? getString(modelNameId) : model.name());
+        }
+        models = modelList.toArray(new String[0]);
+        return new AlertDialog.Builder(this)
+            .setTitle(R.string.menu_select_model)
+            .setSingleChoiceItems(models, getComputerConfiguration().ordinal(),
+                    (dialog, which) -> {
+                        // Mark selected item by tag
+                        ListView listView = ((AlertDialog) dialog).getListView();
+                        listView.setTag(which);
+                    })
+            .setPositiveButton(R.string.ok, (dialog, whichButton) -> {
+                // Get tagged selected item, if any
+                ListView listView = ((AlertDialog) dialog).getListView();
+                Integer selected = (Integer) listView.getTag();
+                if (selected != null) {
+                    Configuration config = Configuration.values()[selected];
+                    if (computer.getConfiguration() != config) {
+                        // Set new computer configuration and restart activity
+                        setComputerConfiguration(config);
+                        restartActivity(null);
+                    }
+                }
+            })
+            .setNegativeButton(R.string.cancel, (dialog, whichButton) -> {
+                // Do nothing on cancel
+            })
+           .create();
     }
 
     @Override
@@ -1078,6 +1101,14 @@ public class BkEmuActivity extends AppCompatActivity {
         startActivityForResult(intent, REQUEST_MENU_DISK_IMAGE_FILE_SELECT);
     }
 
+    /**
+     * Show audio devices volume adjustment dialog.
+     */
+    private void showVolumeDialog() {
+        BkEmuVolumeDialog bkEmuVolumeDialogFragment = new BkEmuVolumeDialog(this);
+        bkEmuVolumeDialogFragment.show(getSupportFragmentManager(), "volume");
+    }
+
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
@@ -1282,12 +1313,16 @@ public class BkEmuActivity extends AppCompatActivity {
         startActivity(intent);
     }
 
+    private SharedPreferences getPreferences() {
+        return getPreferences(MODE_PRIVATE);
+    }
+
     /**
      * Get current computer configuration as {@link Configuration} enum value.
      * @return configuration enum value
      */
     protected Configuration getComputerConfiguration() {
-        SharedPreferences prefs = getPreferences(MODE_PRIVATE);
+        SharedPreferences prefs = getPreferences();
         String configName = prefs.getString(PREFS_KEY_COMPUTER_CONFIGURATION, null);
         return (configName == null) ? Configuration.BK_0010_BASIC : Configuration.valueOf(configName);
     }
@@ -1297,7 +1332,7 @@ public class BkEmuActivity extends AppCompatActivity {
      * @param configuration configuration enum value to set
      */
     protected void setComputerConfiguration(Configuration configuration) {
-        SharedPreferences prefs = getPreferences(MODE_PRIVATE);
+        SharedPreferences prefs = getPreferences();
         SharedPreferences.Editor prefsEditor = prefs.edit();
         prefsEditor.putString(PREFS_KEY_COMPUTER_CONFIGURATION, configuration.name());
         prefsEditor.apply();
@@ -1313,7 +1348,7 @@ public class BkEmuActivity extends AppCompatActivity {
      * @return stored floppy drive image path (null if no floppy drive image was mounted)
      */
     protected String readFddImagePath(FloppyDriveIdentifier fddIdentifier) {
-        SharedPreferences prefs = getPreferences(MODE_PRIVATE);
+        SharedPreferences prefs = getPreferences();
         return prefs.getString(getPrefsFddImageKey(fddIdentifier), null);
     }
 
@@ -1324,9 +1359,29 @@ public class BkEmuActivity extends AppCompatActivity {
      */
     protected void storeFddImagePath(FloppyDriveIdentifier fddIdentifier,
                                      String floppyDriveImagePath) {
-        SharedPreferences prefs = getPreferences(MODE_PRIVATE);
+        SharedPreferences prefs = getPreferences();
         SharedPreferences.Editor prefsEditor = prefs.edit();
         prefsEditor.putString(getPrefsFddImageKey(fddIdentifier), floppyDriveImagePath);
+        prefsEditor.apply();
+    }
+
+    /**
+     * Read audio volume from shared preferences.
+     * @return stored audio volume (MAX_VOLUME by default)
+     */
+    protected int readAudioVolume() {
+        SharedPreferences prefs = getPreferences();
+        return prefs.getInt(PREFS_KEY_AUDIO_VOLUME, AudioOutput.MAX_VOLUME);
+    }
+
+    /**
+     * Store audio volume to shared preferences.
+     * @param volume audio volume to store
+     */
+    protected void storeAudioVolume(int volume) {
+        SharedPreferences prefs = getPreferences();
+        SharedPreferences.Editor prefsEditor = prefs.edit();
+        prefsEditor.putInt(PREFS_KEY_AUDIO_VOLUME, volume);
         prefsEditor.apply();
     }
 
@@ -1485,6 +1540,10 @@ public class BkEmuActivity extends AppCompatActivity {
         VideoController.DisplayMode displayMode = videoController.getDisplayMode().getNext();
         Timber.d("switching to display mode: %s", displayMode);
         videoController.setDisplayMode(displayMode);
+    }
+
+    public Computer getComputer() {
+        return computer;
     }
 
     private void resetComputer() {

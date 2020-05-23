@@ -67,4 +67,6 @@
     <string name="toast_image_load_error">Can\'t load file \'%s\'</string>
     <string name="toast_image_save_info">File \'%s\' saved</string>
     <string name="toast_image_save_error">Can\'t save file \'%s\'</string>
+    <string name="volume">Volume</string>
+    <string name="speaker">Speaker</string>
 </resources>

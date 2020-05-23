@@ -9,4 +9,7 @@
     <dimen name="joy_size">50dp</dimen>
     <dimen name="joy_text_size">30dp</dimen>
     <dimen name="joy_image_padding">10dp</dimen>
+
+    <dimen name="volume_layout_padding">20dp</dimen>
+    <dimen name="volume_source_name_padding">5dp</dimen>
 </resources>

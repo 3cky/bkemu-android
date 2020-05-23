@@ -26,6 +26,7 @@ import timber.log.Timber;
 import android.media.AudioFormat;
 import android.media.AudioManager;
 import android.media.AudioTrack;
+import android.os.Build;
 import android.os.Bundle;
 
 /**
@@ -44,6 +45,9 @@ public class AudioOutput implements Device, Runnable {
     private final static int OUTPUT_SAMPLE_RATE = 22050;
 
     private static final long NANOSECS_IN_SECOND = 1000000000L;
+
+    public static final int MIN_VOLUME = 0;
+    public static final int MAX_VOLUME = 100;
 
     private final Computer computer;
 
@@ -74,6 +78,8 @@ public class AudioOutput implements Device, Runnable {
 
     private final boolean isBk0011mMode;
 
+    private int volume = MAX_VOLUME;
+
     public AudioOutput(Computer computer, boolean isBk0011m) {
         this.computer = computer;
         this.isBk0011mMode = isBk0011m;
@@ -101,6 +107,35 @@ public class AudioOutput implements Device, Runnable {
 
     @Override
     public void init(long cpuTime) {
+    }
+
+    /**
+     * Set audio output volume.
+     * @param volume audio output volume in range [0, 100]
+     */
+    public void setVolume(int volume) {
+        this.volume = Math.max(MIN_VOLUME, Math.min(MAX_VOLUME, volume));
+        float gain = convertVolumeToGain(this.volume);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            player.setVolume(gain);
+        } else {
+            player.setStereoVolume(gain, gain);
+        }
+    }
+
+    /**
+     * Get audio output volume.
+     * @return audio output volume in range [0, 100]
+     */
+    public int getVolume() {
+        return volume;
+    }
+
+    private static float convertVolumeToGain(int volume) {
+        float minGain = AudioTrack.getMinVolume();
+        float maxGain = AudioTrack.getMaxVolume();
+        float gain = (float) ((Math.exp(volume / 100.) - 1.) / (Math.E - 1.));
+        return minGain + gain * (maxGain - minGain);
     }
 
     public void start() {
