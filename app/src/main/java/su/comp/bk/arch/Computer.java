@@ -30,7 +30,7 @@ import android.os.Bundle;
 
 import su.comp.bk.R;
 import su.comp.bk.arch.cpu.Cpu;
-import su.comp.bk.arch.io.AudioOutput;
+import su.comp.bk.arch.io.audio.AudioOutput;
 import su.comp.bk.arch.io.Device;
 import su.comp.bk.arch.io.FloppyController;
 import su.comp.bk.arch.io.KeyboardController;
@@ -41,6 +41,7 @@ import su.comp.bk.arch.io.SystemTimer;
 import su.comp.bk.arch.io.Timer;
 import su.comp.bk.arch.io.VideoController;
 import su.comp.bk.arch.io.VideoControllerManager;
+import su.comp.bk.arch.io.audio.Speaker;
 import su.comp.bk.arch.memory.Memory;
 import su.comp.bk.arch.memory.PagedMemory;
 import su.comp.bk.arch.memory.RandomAccessMemory;
@@ -293,7 +294,7 @@ public class Computer implements Runnable {
         // Notify video controller about computer time updates
         addUptimeListener(videoController);
         // Add audio output
-        audioOutput = new AudioOutput(this, config.isMemoryManagerPresent());
+        audioOutput = new Speaker(this, config.isMemoryManagerPresent());
         addDevice(audioOutput);
     }
 

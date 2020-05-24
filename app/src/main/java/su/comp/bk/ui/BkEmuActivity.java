@@ -75,7 +75,7 @@ import su.comp.bk.arch.cpu.Cpu;
 import su.comp.bk.arch.cpu.addressing.IndexDeferredAddressingMode;
 import su.comp.bk.arch.cpu.opcode.EmtOpcode;
 import su.comp.bk.arch.cpu.opcode.JmpOpcode;
-import su.comp.bk.arch.io.AudioOutput;
+import su.comp.bk.arch.io.audio.AudioOutput;
 import su.comp.bk.arch.io.FloppyController;
 import su.comp.bk.arch.io.FloppyController.FloppyDriveIdentifier;
 import su.comp.bk.arch.io.KeyboardController;
@@ -137,7 +137,8 @@ public class BkEmuActivity extends AppCompatActivity {
     private static final String PREFS_KEY_COMPUTER_CONFIGURATION = "su.comp.bk.a.c";
     private static final String PREFS_KEY_FLOPPY_DRIVE_IMAGE =
             "su.comp.bk.arch.io.FloppyController.FloppyDrive/image:";
-    private static final String PREFS_KEY_AUDIO_VOLUME = "su.comp.bk.arch.io.AudioOutput/volume";
+    private static final String PREFS_KEY_AUDIO_VOLUME =
+            "su.comp.bk.arch.io.audio.AudioOutput/volume";
 
     // Last loaded emulator binary image address
     protected int lastBinImageAddress;

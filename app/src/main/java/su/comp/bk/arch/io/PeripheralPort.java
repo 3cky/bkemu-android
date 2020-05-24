@@ -19,6 +19,7 @@
 package su.comp.bk.arch.io;
 
 import su.comp.bk.arch.Computer;
+import su.comp.bk.arch.cpu.Cpu;
 import timber.log.Timber;
 
 import android.os.Bundle;
@@ -30,9 +31,6 @@ import android.view.View.OnTouchListener;
  * BK-0010 peripheral port.
  */
 public class PeripheralPort implements Device, OnTouchListener {
-
-    public final static int DATA_REGISTER_ADDRESS = 0177714;
-
     public final static int JOYSTICK_BUTTON1 = 1;
     public final static int JOYSTICK_BUTTON2 = 2;
     public final static int JOYSTICK_BUTTON3 = 4;
@@ -67,7 +65,7 @@ public class PeripheralPort implements Device, OnTouchListener {
     /** Joystick buttons pressing scroll threshold (in pixels) */
     public final static float JOYSTICK_PRESS_THRESHOLD = 1f;
 
-    private final static int[] ADDRESSES = { DATA_REGISTER_ADDRESS };
+    private final static int[] ADDRESSES = {Cpu.REG_SEL2 };
 
     private final Computer computer;
 

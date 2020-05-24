@@ -34,7 +34,7 @@ import androidx.fragment.app.DialogFragment;
 import java.util.Objects;
 
 import su.comp.bk.R;
-import su.comp.bk.arch.io.AudioOutput;
+import su.comp.bk.arch.io.audio.AudioOutput;
 
 public class BkEmuVolumeDialog extends DialogFragment implements SeekBar.OnSeekBarChangeListener, View.OnClickListener {
 
