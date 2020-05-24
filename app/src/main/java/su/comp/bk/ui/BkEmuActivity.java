@@ -244,7 +244,7 @@ public class BkEmuActivity extends AppCompatActivity {
                 String binImageFileUri = null;
                 for (String tapeFileName : tapeFileNames) {
                     try {
-                        binImageFileUri = FileUtils.replaceLastPathElement(lastBinImageFileUri,
+                        binImageFileUri = FileUtils.replaceUriLastPathElement(lastBinImageFileUri,
                                 tapeFileName);
                         loadBinImageFile(binImageFileUri);
                         loadedTapeFileName = tapeFileName;
@@ -1224,9 +1224,9 @@ public class BkEmuActivity extends AppCompatActivity {
     }
 
     protected boolean binImageFileLoad(String binImageFilePath) {
-        String binImageFileUri = "file:" + binImageFilePath;
+        String binImageFileUri = Uri.fromFile(new File(binImageFilePath)).toString();
         boolean isImageLoaded = doBinImageFileLoad(binImageFileUri);
-        String imageName = isImageLoaded ? Uri.parse(binImageFileUri).getLastPathSegment()
+        String imageName = isImageLoaded ? FileUtils.getUriLastPathElement(binImageFileUri)
                 : binImageFilePath;
         showBinImageFileLoadToast(isImageLoaded, imageName);
         return isImageLoaded;
@@ -1281,7 +1281,7 @@ public class BkEmuActivity extends AppCompatActivity {
             comp.getCpu().writeRegister(false, Cpu.PC, BK11_BMB10_EXIT_ADDRESS);
         }
         // Write loaded image name to tape parameters block
-        String tapeFileName = StringUtils.substringAfterLast(lastBinImageFileUri, "/");
+        String tapeFileName = FileUtils.getUriLastPathElement(lastBinImageFileUri);
         tapeFileName = StringUtils.substring(tapeFileName, 0, MAX_TAPE_FILE_NAME_LENGTH);
         byte[] tapeFileNameBuffer;
         try {

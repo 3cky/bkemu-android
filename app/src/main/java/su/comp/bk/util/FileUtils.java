@@ -42,17 +42,27 @@ public class FileUtils {
     public final static String[] FILE_EXT_FLOPPY_DISK_IMAGES = new String[] { ".BKD", ".IMG" };
 
     /**
-     * Replace last path element with given new element.
-     * @param path path to replace element
-     * @param newElement new element to replace last path element
-     * @return path with replaced last element
+     * Replace URI last path element with given new element.
+     * @param uriString URI to replace element
+     * @param newElement new element to replace last URI path element
+     * @return URI with replaced last element
      */
-    public static String replaceLastPathElement(String path, String newElement) {
-        int pos = path.lastIndexOf('/');
+    public static String replaceUriLastPathElement(String uriString, String newElement) {
+        int pos = uriString.lastIndexOf('/');
         if (pos < 0) {
-            throw new IllegalArgumentException("Path contains no elements to replace: " + path);
+            throw new IllegalArgumentException("Path contains no elements to replace: " + uriString);
         }
-        return path.substring(0, pos + 1).concat(newElement);
+        Uri baseUri = Uri.parse(uriString.substring(0, pos + 1));
+        return Uri.withAppendedPath(baseUri, Uri.encode(newElement)).toString();
+    }
+
+    /**
+     * Get URI last path element.
+     * @param uriString URI to get last path element
+     * @return decoded URI last path element
+     */
+    public static String getUriLastPathElement(String uriString) {
+        return Uri.decode(Uri.parse(uriString).getLastPathSegment());
     }
 
     /**
