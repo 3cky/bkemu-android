@@ -62,7 +62,7 @@ public class Speaker extends PcmOutput {
         if (!isBk0011mMode || (value & BK0011M_ENABLE_BIT) == 0) {
             int outputState = value & OUTPUT_BIT;
             if ((outputState ^ lastOutputState) != 0) {
-                putPcmTimestamp(cpuTime);
+                putPcmSample(outputState != 0 ? Short.MAX_VALUE : Short.MIN_VALUE, cpuTime);
             }
             lastOutputState = outputState;
             return true;

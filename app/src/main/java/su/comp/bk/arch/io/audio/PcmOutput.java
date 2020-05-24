@@ -26,30 +26,40 @@ public abstract class PcmOutput extends AudioOutput {
     private static final long NANOSECS_IN_SECOND = 1000000000L;
 
     // Current PCM sample value
-    private short currentSample = Short.MIN_VALUE;
+    private short currentSample;
     // Last PCM sample timestamp (in CPU ticks)
     private long lastPcmTimestamp;
     // Number of PCM samples left to write to the samples buffer
     private int numPcmSamples = 0;
 
-    // PCM timestamps circular buffer, one per output state change
-    private final long[] pcmTimestamps;
-    // PCM timestamps circular buffer put index
-    private int putPcmTimestampIndex = 0;
-    // PCM timestamps circular buffer get index
-    private int getPcmTimestampIndex = 0;
-    // PCM timestamps circular buffer current capacity
-    private int pcmTimestampsCapacity;
+    // PCM samples circular buffer, one per output state change
+    private final PcmSample[] pcmSamples;
+    // PCM samples circular buffer put index
+    private int putPcmSampleIndex = 0;
+    // PCM samples circular buffer get index
+    private int getPcmSampleIndex = 0;
+    // PCM samples circular buffer current capacity
+    private int pcmSamplesCapacity;
 
     private final Computer computer;
+
+    private static class PcmSample {
+        // PCM sample value
+        private short value;
+        // PCM sample timestamp
+        private long timestamp;
+    }
 
     protected PcmOutput(Computer computer) {
         super();
         this.computer = computer;
         int pcmTimestampsBufferSize = (int) (getSamplesBufferSize() * computer.getClockFrequency()
                 * 1000L / (getSampleRate() * BaseOpcode.getBaseExecutionTime()));
-        pcmTimestamps = new long[pcmTimestampsBufferSize];
-        pcmTimestampsCapacity = pcmTimestamps.length;
+        pcmSamples = new PcmSample[pcmTimestampsBufferSize];
+        for (int i = 0; i < pcmSamples.length; i++) {
+            pcmSamples[i] = new PcmSample();
+        }
+        pcmSamplesCapacity = pcmSamples.length;
     }
 
     @Override
@@ -58,24 +68,26 @@ public abstract class PcmOutput extends AudioOutput {
         lastPcmTimestamp = computer.getCpu().getTime() - pcmSamplesToCpuTime(getSamplesBufferSize());
     }
 
-    protected synchronized void putPcmTimestamp(long pcmTimestamp) {
-        if (pcmTimestampsCapacity > 0) {
-            pcmTimestamps[putPcmTimestampIndex++] = pcmTimestamp;
-            putPcmTimestampIndex %= pcmTimestamps.length;
-            pcmTimestampsCapacity--;
+    protected synchronized void putPcmSample(short pcmValue, long pcmTimestamp) {
+        if (pcmSamplesCapacity > 0) {
+            PcmSample pcmSample = pcmSamples[putPcmSampleIndex++];
+            pcmSample.value = pcmValue;
+            pcmSample.timestamp = pcmTimestamp;
+            putPcmSampleIndex %= pcmSamples.length;
+            pcmSamplesCapacity--;
         } else {
-            Timber.w("%s: PCM buffer overflow!", getName());
+            Timber.w("%s: PCM samples buffer overflow!", getName());
         }
     }
 
-    private synchronized long getPcmTimestamp() {
-        long pcmTimestamp = -1L;
-        if (pcmTimestampsCapacity < pcmTimestamps.length) {
-            pcmTimestamp = pcmTimestamps[getPcmTimestampIndex++];
-            getPcmTimestampIndex %= pcmTimestamps.length;
-            pcmTimestampsCapacity++;
+    private synchronized PcmSample getPcmSample() {
+        PcmSample pcmSample = null;
+        if (pcmSamplesCapacity < pcmSamples.length) {
+            pcmSample = pcmSamples[getPcmSampleIndex++];
+            getPcmSampleIndex %= pcmSamples.length;
+            pcmSamplesCapacity++;
         }
-        return pcmTimestamp;
+        return pcmSample;
     }
 
     private long pcmSamplesToCpuTime(long numPcmSamples) {
@@ -89,10 +101,10 @@ public abstract class PcmOutput extends AudioOutput {
     @Override
     protected int writeSamples(short[] samplesBuffer, int sampleIndex) {
         if (numPcmSamples <= 0) {
-            long pcmTimestamp = getPcmTimestamp();
-            if (pcmTimestamp >= 0) {
-                numPcmSamples = (int) (cpuTimeToPcmSamples(pcmTimestamp - lastPcmTimestamp));
-                currentSample = (currentSample > 0) ? Short.MIN_VALUE : Short.MAX_VALUE;
+            PcmSample pcmSample = getPcmSample();
+            if (pcmSample != null) {
+                numPcmSamples = (int) (cpuTimeToPcmSamples(pcmSample.timestamp - lastPcmTimestamp));
+                currentSample = pcmSample.value;
                 lastPcmTimestamp += pcmSamplesToCpuTime(numPcmSamples);
             } else {
                 numPcmSamples = samplesBuffer.length - sampleIndex;
