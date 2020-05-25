@@ -8,13 +8,13 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="@dimen/volume_source_name_padding"
+        android:layout_marginBottom="@dimen/volume_output_name_padding"
         android:text="@string/speaker" />
 
     <LinearLayout
+        android:id="@+id/controls_speaker"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:tag="speaker">
+        android:layout_height="wrap_content">
 
         <ImageView
             android:id="@+id/mute_speaker"
@@ -30,6 +30,34 @@
             android:layout_height="wrap_content"
             android:layout_gravity="center_vertical"
             android:tag="speaker" />
+    </LinearLayout>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/volume_output_controls_padding"
+        android:layout_marginBottom="@dimen/volume_output_name_padding"
+        android:text="@string/covox" />
+
+    <LinearLayout
+        android:id="@+id/controls_covox"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <ImageView
+            android:id="@+id/mute_covox"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@drawable/ic_volume_white_24"
+            android:layout_gravity="center"
+            android:tag="covox" />
+
+        <SeekBar
+            android:id="@+id/volume_covox"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_vertical"
+            android:tag="covox" />
     </LinearLayout>
 
 </LinearLayout>

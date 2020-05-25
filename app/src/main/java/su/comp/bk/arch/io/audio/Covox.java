@@ -22,26 +22,17 @@ import su.comp.bk.arch.Computer;
 import su.comp.bk.arch.cpu.Cpu;
 
 /**
- * Speaker audio output (one bit PCM, bit 6 in SEL1 register).
+ * Covox audio output (8-bit, attached to the peripheral port).
  */
-public class Speaker extends PcmOutput {
-    // Speaker output bit
-    public final static int OUTPUT_BIT = (1 << 6);
+public class Covox extends PcmOutput {
+    private final static int[] ADDRESSES = { Cpu.REG_SEL2 };
 
-    // BK-0011M enable bit (0 enables audio output)
-    public final static int BK0011M_ENABLE_BIT = (1 << 11);
+    public static final String OUTPUT_NAME = "covox";
 
-    private final static int[] ADDRESSES = { Cpu.REG_SEL1 };
+    private int lastSampleValue;
 
-    public static final String OUTPUT_NAME = "speaker";
-
-    private final boolean isBk0011mMode;
-
-    private int lastOutputState;
-
-    public Speaker(Computer computer, boolean isBk0011m) {
+    public Covox(Computer computer) {
         super(computer);
-        this.isBk0011mMode = isBk0011m;
     }
 
     @Override
@@ -55,20 +46,12 @@ public class Speaker extends PcmOutput {
     }
 
     @Override
-    public int read(long cpuTime, int address) {
-        return 0;
-    }
-
-    @Override
     public boolean write(long cpuTime, boolean isByteMode, int address, int value) {
-        if (!isBk0011mMode || (value & BK0011M_ENABLE_BIT) == 0) {
-            int outputState = value & OUTPUT_BIT;
-            if ((outputState ^ lastOutputState) != 0) {
-                putPcmSample(outputState != 0 ? Short.MAX_VALUE : Short.MIN_VALUE, cpuTime);
-            }
-            lastOutputState = outputState;
-            return true;
+        int sampleValue = ((value & 0377) - 128) & 0377;
+        if (sampleValue != lastSampleValue) {
+            putPcmSample((short)(sampleValue << 8), cpuTime);
         }
-        return false;
+        lastSampleValue = sampleValue;
+        return true;
     }
 }

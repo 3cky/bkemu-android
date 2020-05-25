@@ -622,7 +622,9 @@ public class BkEmuActivity extends AppCompatActivity {
                 computer.getCpu().setOnOpcodeListener(JmpOpcode.OPCODE | Cpu.R0
                             | (IndexDeferredAddressingMode.CODE << 3), handler);
             }
-            computer.getAudioOutput().setVolume(readAudioVolume());
+            for (AudioOutput audioOutput : computer.getAudioOutputs()) {
+                audioOutput.setVolume(readAudioOutputVolume(audioOutput.getName()));
+            }
             bkEmuView.setComputer(computer);
         } else {
             throw new IllegalStateException("Can't initialize computer state");
@@ -1366,23 +1368,30 @@ public class BkEmuActivity extends AppCompatActivity {
         prefsEditor.apply();
     }
 
-    /**
-     * Read audio volume from shared preferences.
-     * @return stored audio volume (MAX_VOLUME by default)
-     */
-    protected int readAudioVolume() {
-        SharedPreferences prefs = getPreferences();
-        return prefs.getInt(PREFS_KEY_AUDIO_VOLUME, AudioOutput.MAX_VOLUME);
+    private String getPrefsAudioOutputKey(String audioOutputName) {
+        return (audioOutputName == null) ? PREFS_KEY_AUDIO_VOLUME
+                : PREFS_KEY_AUDIO_VOLUME + ":" + audioOutputName;
     }
 
     /**
-     * Store audio volume to shared preferences.
-     * @param volume audio volume to store
+     * Read audio output volume from shared preferences.
+     * @param audioOutputName audio output name
+     * @return stored audio output volume (MAX_VOLUME by default)
      */
-    protected void storeAudioVolume(int volume) {
+    protected int readAudioOutputVolume(String audioOutputName) {
+        SharedPreferences prefs = getPreferences();
+        return prefs.getInt(getPrefsAudioOutputKey(audioOutputName), AudioOutput.MAX_VOLUME);
+    }
+
+    /**
+     * Store audio output volume to shared preferences.
+     * @param volume audio output volume to store
+     * @param audioOutputName audio output name
+     */
+    protected void storeAudioOutputVolume(String audioOutputName, int volume) {
         SharedPreferences prefs = getPreferences();
         SharedPreferences.Editor prefsEditor = prefs.edit();
-        prefsEditor.putInt(PREFS_KEY_AUDIO_VOLUME, volume);
+        prefsEditor.putInt(getPrefsAudioOutputKey(audioOutputName), volume);
         prefsEditor.apply();
     }
 

@@ -23,28 +23,35 @@ import android.app.Dialog;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.SeekBar;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
+import androidx.collection.ArrayMap;
 import androidx.fragment.app.DialogFragment;
 
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 import su.comp.bk.R;
 import su.comp.bk.arch.io.audio.AudioOutput;
+import su.comp.bk.arch.io.audio.Covox;
+import su.comp.bk.arch.io.audio.Speaker;
 
-public class BkEmuVolumeDialog extends DialogFragment implements SeekBar.OnSeekBarChangeListener, View.OnClickListener {
+public class BkEmuVolumeDialog extends DialogFragment implements SeekBar.OnSeekBarChangeListener,
+        View.OnClickListener {
 
     private static final int VOLUME_MUTE = AudioOutput.MIN_VOLUME;
     private static final int VOLUME_UNMUTE = AudioOutput.MAX_VOLUME / 5;
 
     private final BkEmuActivity bkEmuActivity;
 
-    private SeekBar volumeSeekBar;
-    private ImageView muteImageView;
+    private Map<String, SeekBar> volumeSeekBars = new ArrayMap<>();
+    private Map<String, ImageView> muteImageViews = new ArrayMap<>();
 
     BkEmuVolumeDialog(BkEmuActivity bkEmuActivity) {
         this.bkEmuActivity = bkEmuActivity;
@@ -65,12 +72,32 @@ public class BkEmuVolumeDialog extends DialogFragment implements SeekBar.OnSeekB
     public void onStart() {
         super.onStart();
         Dialog dialog = Objects.requireNonNull(getDialog());
-        volumeSeekBar = dialog.findViewById(R.id.volume_speaker);
-        updateVolumeSeekBar();
-        volumeSeekBar.setOnSeekBarChangeListener(this);
-        muteImageView = dialog.findViewById(R.id.mute_speaker);
-        updateMuteButton();
-        muteImageView.setOnClickListener(this);
+        setupOutputVolumeControls(dialog.findViewById(R.id.controls_speaker), Speaker.OUTPUT_NAME);
+        setupOutputVolumeControls(dialog.findViewById(R.id.controls_covox), Covox.OUTPUT_NAME);
+    }
+
+    private void setupOutputVolumeControls(ViewGroup volumeControlsGroup, String outputName) {
+        if (volumeControlsGroup == null) {
+            return;
+        }
+        for (int i = 0; i < volumeControlsGroup.getChildCount(); i++) {
+            View v = volumeControlsGroup.getChildAt(i);
+            if (v instanceof ImageView) {
+                ImageView muteImageView = (ImageView) v;
+                muteImageViews.put(outputName, muteImageView);
+                muteImageView.setOnClickListener(this);
+                updateMuteButton(outputName);
+            } else if (v instanceof SeekBar) {
+                SeekBar volumeSeekBar = (SeekBar) v;
+                volumeSeekBars.put(outputName, volumeSeekBar);
+                volumeSeekBar.setOnSeekBarChangeListener(this);
+                updateVolumeSeekBar(outputName);
+            }
+        }
+    }
+
+    private String getControlOutputName(View v) {
+        return v.getTag().toString();
     }
 
     @Override
@@ -80,50 +107,69 @@ public class BkEmuVolumeDialog extends DialogFragment implements SeekBar.OnSeekB
 
     @Override
     public void onStopTrackingTouch(SeekBar seekBar) {
-        storeVolume();
+        storeVolume(getControlOutputName(seekBar));
     }
 
     @Override
     public void onProgressChanged(SeekBar seekBar, int volume, boolean fromUser) {
-        setVolume(volume);
-        updateMuteButton();
+        String outputName = getControlOutputName(seekBar);
+        setVolume(outputName, volume);
+        updateMuteButton(outputName);
     }
 
     @Override
-    public void onClick(View v) {
+    public void onClick(View muteImageView) {
         // Mute/unmute audio output
-        setVolume(isMuted() ? VOLUME_UNMUTE : VOLUME_MUTE);
-        storeVolume();
-        updateMuteButton();
-        updateVolumeSeekBar();
+        String outputName = getControlOutputName(muteImageView);
+        setVolume(outputName, isMuted(outputName) ? VOLUME_UNMUTE : VOLUME_MUTE);
+        storeVolume(outputName);
+        updateMuteButton(outputName);
+        updateVolumeSeekBar(outputName);
     }
 
-    private AudioOutput getAudioOutput() {
-        return bkEmuActivity.getComputer().getAudioOutput();
+    private List<AudioOutput> getAudioOutputs() {
+        return bkEmuActivity.getComputer().getAudioOutputs();
     }
 
-    private boolean isMuted() {
-        return getVolume() == VOLUME_MUTE;
+    private AudioOutput getAudioOutput(String outputName) {
+        List<AudioOutput> audioOutputs = getAudioOutputs();
+        for (AudioOutput audioOutput : audioOutputs) {
+            if (audioOutput.getName().equals(outputName)) {
+                return audioOutput;
+            }
+        }
+        return null;
     }
 
-    private void setVolume(int volume) {
-        getAudioOutput().setVolume(volume);
+    private boolean isMuted(String outputName) {
+        return getVolume(outputName) == VOLUME_MUTE;
     }
 
-    private int getVolume() {
-        return getAudioOutput().getVolume();
+    private void setVolume(String outputName, int volume) {
+        Objects.requireNonNull(getAudioOutput(outputName)).setVolume(volume);
     }
 
-    private void storeVolume() {
-        bkEmuActivity.storeAudioVolume(getVolume());
+    private int getVolume(String outputName) {
+        return Objects.requireNonNull(getAudioOutput(outputName)).getVolume();
     }
 
-    private void updateVolumeSeekBar() {
-        volumeSeekBar.setProgress(getVolume());
+    private void storeVolume(String outputName) {
+        bkEmuActivity.storeAudioOutputVolume(outputName, getVolume(outputName));
     }
 
-    private void updateMuteButton() {
-        muteImageView.setImageResource(isMuted() ? R.drawable.ic_volume_off_white_24
-                : R.drawable.ic_volume_white_24);
+    private void updateVolumeSeekBar(String outputName) {
+        SeekBar volumeSeekBar = volumeSeekBars.get(outputName);
+        if (volumeSeekBar != null) {
+            volumeSeekBar.setProgress(getVolume(outputName));
+        }
+    }
+
+    private void updateMuteButton(String outputName) {
+        ImageView muteImageView = muteImageViews.get(outputName);
+        if (muteImageView != null) {
+            muteImageView.setImageResource(isMuted(outputName)
+                    ? R.drawable.ic_volume_off_white_24
+                    : R.drawable.ic_volume_white_24);
+        }
     }
 }

@@ -173,7 +173,7 @@ public abstract class AudioOutput implements Device, Runnable {
      * Get this audio output name.
      * @return audio output name
      */
-    protected abstract String getName();
+    public abstract String getName();
 
     /**
      * Write audio samples to samples buffer.

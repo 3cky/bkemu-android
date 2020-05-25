@@ -41,6 +41,7 @@ import su.comp.bk.arch.io.SystemTimer;
 import su.comp.bk.arch.io.Timer;
 import su.comp.bk.arch.io.VideoController;
 import su.comp.bk.arch.io.VideoControllerManager;
+import su.comp.bk.arch.io.audio.Covox;
 import su.comp.bk.arch.io.audio.Speaker;
 import su.comp.bk.arch.memory.Memory;
 import su.comp.bk.arch.memory.PagedMemory;
@@ -78,8 +79,8 @@ public class Computer implements Runnable {
     // Peripheral port reference
     private PeripheralPort peripheralPort;
 
-    // Audio output reference
-    private AudioOutput audioOutput;
+    // Audio outputs list
+    private List<AudioOutput> audioOutputs = new ArrayList<>();
 
     // Floppy controller reference (<code>null</code> if no floppy controller attached)
     private FloppyController floppyController;
@@ -293,9 +294,9 @@ public class Computer implements Runnable {
         }
         // Notify video controller about computer time updates
         addUptimeListener(videoController);
-        // Add audio output
-        audioOutput = new Speaker(this, config.isMemoryManagerPresent());
-        addDevice(audioOutput);
+        // Add audio outputs
+        addAudioOutput(new Speaker(this, config.isMemoryManagerPresent()));
+        addAudioOutput(new Covox(this));
     }
 
     /**
@@ -480,11 +481,20 @@ public class Computer implements Runnable {
     }
 
     /**
-     * Get {@link AudioOutput} reference.
-     * @return audio output reference
+     * Get list of available {@link AudioOutput}s.
+     * @return audio outputs list
      */
-    public AudioOutput getAudioOutput() {
-        return audioOutput;
+    public List<AudioOutput> getAudioOutputs() {
+        return audioOutputs;
+    }
+
+    /**
+     * Add {@link AudioOutput} device.
+     * @param audioOutput audio output device to add
+     */
+    public void addAudioOutput(AudioOutput audioOutput) {
+        audioOutputs.add(audioOutput);
+        addDevice(audioOutput);
     }
 
     /**
@@ -714,7 +724,9 @@ public class Computer implements Runnable {
             } catch (InterruptedException e) {
                 // Do nothing
             }
-            audioOutput.start();
+            for (AudioOutput audioOutput : audioOutputs) {
+                audioOutput.start();
+            }
         } else {
             throw new IllegalStateException("Computer is already running!");
         }
@@ -727,7 +739,9 @@ public class Computer implements Runnable {
         if (isRunning) {
             Timber.d("stopping computer");
             isRunning = false;
-            audioOutput.stop();
+            for (AudioOutput audioOutput : audioOutputs) {
+                audioOutput.stop();
+            }
             synchronized (this) {
                 this.notifyAll();
             }
@@ -754,7 +768,9 @@ public class Computer implements Runnable {
         if (!isPaused) {
             Timber.d("pausing computer");
             isPaused = true;
-            audioOutput.pause();
+            for (AudioOutput audioOutput : audioOutputs) {
+                audioOutput.pause();
+            }
         }
     }
 
@@ -770,7 +786,9 @@ public class Computer implements Runnable {
             synchronized (this) {
                 this.notifyAll();
             }
-            audioOutput.resume();
+            for (AudioOutput audioOutput : audioOutputs) {
+                audioOutput.resume();
+            }
         }
     }
 
@@ -779,7 +797,9 @@ public class Computer implements Runnable {
      */
     public void release() {
         Timber.d("releasing computer");
-        audioOutput.release();
+        for (AudioOutput audioOutput : audioOutputs) {
+            audioOutput.release();
+        }
         if (floppyController != null) {
             floppyController.unmountDiskImages();
         }

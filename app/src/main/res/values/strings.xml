@@ -69,4 +69,5 @@
     <string name="toast_image_save_error">Can\'t save file \'%s\'</string>
     <string name="volume">Volume</string>
     <string name="speaker">Speaker</string>
+    <string name="covox" translatable="false">Covox</string>
 </resources>
