@@ -345,7 +345,7 @@ public class Computer implements Runnable {
      * @param resources Android {@link Resources} object reference
      * @param outState {@link Bundle} to save state
      */
-    public synchronized void saveState(Resources resources, Bundle outState) {
+    public void saveState(Resources resources, Bundle outState) {
         // Save computer configuration
         outState.putString(Configuration.class.getName(), getConfiguration().name());
         // Save computer system uptime
@@ -368,7 +368,7 @@ public class Computer implements Runnable {
      * @param inState {@link Bundle} to restore state
      * @throws Exception in case of error while state restoring
      */
-    public synchronized void restoreState(Resources resources, Bundle inState) throws Exception {
+    public void restoreState(Resources resources, Bundle inState) throws Exception {
         // Restore computer configuration
         Configuration config = Configuration.valueOf(inState
                 .getString(Configuration.class.getName()));

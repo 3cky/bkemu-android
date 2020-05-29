@@ -45,9 +45,9 @@ public abstract class AudioOutput<U extends AudioOutputUpdate> implements Device
     // Audio output updates circular buffer, one per output state change
     private final U[] audioOutputUpdates;
     // Audio output updates circular buffer put index
-    private int putAudioOutputUpdateIndex = 0;
+    private int putAudioOutputUpdateIndex;
     // Audio output updates circular buffer get index
-    private int getAudioOutputUpdateIndex = 0;
+    private int getAudioOutputUpdateIndex;
     // Audio output updates circular buffer current capacity
     private int audioOutputUpdatesCapacity;
 
@@ -96,7 +96,7 @@ public abstract class AudioOutput<U extends AudioOutputUpdate> implements Device
 
     @Override
     public void init(long cpuTime) {
-        // Do nothing
+        resetAudioOutputUpdates();
     }
 
     /**
@@ -188,21 +188,10 @@ public abstract class AudioOutput<U extends AudioOutputUpdate> implements Device
         return 0;
     }
 
-    @Override
-    public void run() {
-        Timber.d("%s: audio output started", getName());
-        AudioLoop:
-        while (true) {
-            int sampleIndex = 0;
-            while (sampleIndex < samplesBuffer.length) {
-                if (!isRunning) {
-                    break AudioLoop;
-                }
-                sampleIndex = writeSamples(samplesBuffer, sampleIndex);
-            }
-            player.write(samplesBuffer, 0, samplesBuffer.length);
-        }
-        Timber.d("%s: audio output stopped", getName());
+    private synchronized void resetAudioOutputUpdates() {
+        putAudioOutputUpdateIndex = 0;
+        getAudioOutputUpdateIndex = 0;
+        audioOutputUpdatesCapacity = audioOutputUpdates.length;
     }
 
     synchronized U putAudioOutputUpdate() {
@@ -252,6 +241,23 @@ public abstract class AudioOutput<U extends AudioOutputUpdate> implements Device
         numSamples -= numSamplesToWrite;
 
         return writeSamples(samplesBuffer, sampleIndex, numSamplesToWrite);
+    }
+
+    @Override
+    public void run() {
+        Timber.d("%s: audio output started", getName());
+        AudioLoop:
+        while (true) {
+            int sampleIndex = 0;
+            while (sampleIndex < samplesBuffer.length) {
+                if (!isRunning) {
+                    break AudioLoop;
+                }
+                sampleIndex = writeSamples(samplesBuffer, sampleIndex);
+            }
+            player.write(samplesBuffer, 0, samplesBuffer.length);
+        }
+        Timber.d("%s: audio output stopped", getName());
     }
 
     /**

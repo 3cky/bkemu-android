@@ -133,7 +133,7 @@ public class Ay8910 extends AudioOutput<Ay8910.Ay8910Command> {
     }
 
     @Override
-    public void init(long cpuTime) {
+    public synchronized void init(long cpuTime) {
         super.init(cpuTime);
         this.register = 0;
         this.rng = 1;
@@ -167,7 +167,7 @@ public class Ay8910 extends AudioOutput<Ay8910.Ay8910Command> {
         return true;
     }
 
-    private void writeRegister(int r, int v) {
+    private synchronized void writeRegister(int r, int v) {
         int old;
 
         this.regs[r] = (char) v;
@@ -336,7 +336,7 @@ public class Ay8910 extends AudioOutput<Ay8910.Ay8910Command> {
     }
 
     @Override
-    protected int writeSamples(short[] samplesBuffer, int sampleIndex, int length) {
+    protected synchronized int writeSamples(short[] samplesBuffer, int sampleIndex, int length) {
         /* The 8910 has three outputs, each output is the mix of one of the three */
         /* tone generators and of the (single) noise generator. The two are mixed */
         /* BEFORE going into the DAC. The formula to mix each channel is: */
