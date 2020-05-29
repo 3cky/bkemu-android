@@ -123,10 +123,7 @@ public class BkEmuVolumeDialog extends DialogFragment implements SeekBar.OnSeekB
     public void onClick(View muteImageView) {
         // Mute/unmute audio output
         String outputName = getControlOutputName(muteImageView);
-        setVolume(outputName, isMuted(outputName) ? VOLUME_UNMUTE : VOLUME_MUTE);
-        storeVolume(outputName);
-        updateMuteButton(outputName);
-        updateVolumeSeekBar(outputName);
+        setMuted(outputName, !isMuted(outputName));
     }
 
     private List<AudioOutput> getAudioOutputs() {
@@ -143,12 +140,20 @@ public class BkEmuVolumeDialog extends DialogFragment implements SeekBar.OnSeekB
         return null;
     }
 
+    private void setMuted(String outputName, boolean isMuted) {
+        setVolume(outputName, isMuted ? VOLUME_MUTE : VOLUME_UNMUTE);
+        storeVolume(outputName);
+        updateMuteButton(outputName);
+        updateVolumeSeekBar(outputName);
+    }
+
     private boolean isMuted(String outputName) {
         return getVolume(outputName) == VOLUME_MUTE;
     }
 
     private void setVolume(String outputName, int volume) {
         Objects.requireNonNull(getAudioOutput(outputName)).setVolume(volume);
+        checkOutputStates(outputName);
     }
 
     private int getVolume(String outputName) {
@@ -172,6 +177,19 @@ public class BkEmuVolumeDialog extends DialogFragment implements SeekBar.OnSeekB
             muteImageView.setImageResource(isMuted(outputName)
                     ? R.drawable.ic_volume_off_white_24
                     : R.drawable.ic_volume_white_24);
+        }
+    }
+
+    private void checkOutputStates(String updatedOutputName) {
+        String checkMuteOutputName = null;
+        if (Ay8910.OUTPUT_NAME.equals(updatedOutputName)) {
+            checkMuteOutputName = Covox.OUTPUT_NAME;
+        } else if (Covox.OUTPUT_NAME.equals(updatedOutputName)) {
+            checkMuteOutputName = Ay8910.OUTPUT_NAME;
+        }
+        if (checkMuteOutputName != null && !isMuted(updatedOutputName)
+                && !isMuted(checkMuteOutputName)) {
+            setMuted(checkMuteOutputName, true);
         }
     }
 }

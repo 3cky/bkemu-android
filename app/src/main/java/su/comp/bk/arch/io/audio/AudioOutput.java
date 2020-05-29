@@ -100,6 +100,14 @@ public abstract class AudioOutput<U extends AudioOutputUpdate> implements Device
     }
 
     /**
+     * Get default audio output volume.
+     * @return default audio output volume.
+     */
+    public int getDefaultVolume() {
+        return MAX_VOLUME;
+    }
+
+    /**
      * Set audio output volume.
      * @param volume audio output volume in range [0, 100]
      */

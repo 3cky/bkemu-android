@@ -623,7 +623,8 @@ public class BkEmuActivity extends AppCompatActivity {
                             | (IndexDeferredAddressingMode.CODE << 3), handler);
             }
             for (AudioOutput audioOutput : computer.getAudioOutputs()) {
-                audioOutput.setVolume(readAudioOutputVolume(audioOutput.getName()));
+                audioOutput.setVolume(readAudioOutputVolume(audioOutput.getName(),
+                        audioOutput.getDefaultVolume()));
             }
             bkEmuView.setComputer(computer);
         } else {
@@ -1376,11 +1377,12 @@ public class BkEmuActivity extends AppCompatActivity {
     /**
      * Read audio output volume from shared preferences.
      * @param audioOutputName audio output name
-     * @return stored audio output volume (MAX_VOLUME by default)
+     * @param defaultVolume default audio output volume
+     * @return stored audio output volume
      */
-    protected int readAudioOutputVolume(String audioOutputName) {
+    protected int readAudioOutputVolume(String audioOutputName, int defaultVolume) {
         SharedPreferences prefs = getPreferences();
-        return prefs.getInt(getPrefsAudioOutputKey(audioOutputName), AudioOutput.MAX_VOLUME);
+        return prefs.getInt(getPrefsAudioOutputKey(audioOutputName), defaultVolume);
     }
 
     /**

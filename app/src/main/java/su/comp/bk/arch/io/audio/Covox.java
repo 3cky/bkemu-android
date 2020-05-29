@@ -46,6 +46,11 @@ public class Covox extends PcmOutput {
     }
 
     @Override
+    public int getDefaultVolume() {
+        return MIN_VOLUME; // covox is muted by default
+    }
+
+    @Override
     public boolean write(long cpuTime, boolean isByteMode, int address, int value) {
         int sampleValue = ((value & 0377) - 128) & 0377;
         if (sampleValue != lastSampleValue) {
