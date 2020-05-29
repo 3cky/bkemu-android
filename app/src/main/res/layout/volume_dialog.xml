@@ -37,6 +37,34 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="@dimen/volume_output_controls_padding"
         android:layout_marginBottom="@dimen/volume_output_name_padding"
+        android:text="@string/ay8910" />
+
+    <LinearLayout
+        android:id="@+id/controls_ay8910"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <ImageView
+            android:id="@+id/mute_ay8910"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@drawable/ic_volume_white_24"
+            android:layout_gravity="center"
+            android:tag="ay8910" />
+
+        <SeekBar
+            android:id="@+id/volume_ay8910"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_vertical"
+            android:tag="ay8910" />
+    </LinearLayout>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/volume_output_controls_padding"
+        android:layout_marginBottom="@dimen/volume_output_name_padding"
         android:text="@string/covox" />
 
     <LinearLayout

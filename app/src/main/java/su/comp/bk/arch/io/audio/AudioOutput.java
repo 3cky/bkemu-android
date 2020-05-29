@@ -23,23 +23,40 @@ import android.media.AudioTrack;
 import android.os.Build;
 import android.os.Bundle;
 
+import su.comp.bk.arch.Computer;
+import su.comp.bk.arch.cpu.opcode.BaseOpcode;
 import su.comp.bk.arch.io.Device;
 import timber.log.Timber;
 
 /**
  * Base sampled audio output device.
  */
-public abstract class AudioOutput implements Device, Runnable {
+public abstract class AudioOutput<U extends AudioOutputUpdate> implements Device, Runnable {
+    private static final long NANOSECS_IN_SECOND = 1000000000L;
 
     private final static int OUTPUT_SAMPLE_RATE = 22050;
 
     public static final int MIN_VOLUME = 0;
     public static final int MAX_VOLUME = 100;
 
-    private final AudioTrack player;
-
     // Audio samples buffer
     private final short[] samplesBuffer;
+
+    // Audio output updates circular buffer, one per output state change
+    private final U[] audioOutputUpdates;
+    // Audio output updates circular buffer put index
+    private int putAudioOutputUpdateIndex = 0;
+    // Audio output updates circular buffer get index
+    private int getAudioOutputUpdateIndex = 0;
+    // Audio output updates circular buffer current capacity
+    private int audioOutputUpdatesCapacity;
+
+    private long lastAudioOutputUpdateTimestamp;
+    private int numSamples;
+
+    private final Computer computer;
+
+    private final AudioTrack player;
 
     private Thread audioOutputThread;
 
@@ -47,7 +64,8 @@ public abstract class AudioOutput implements Device, Runnable {
 
     private int volume = MAX_VOLUME;
 
-    public AudioOutput() {
+    AudioOutput(Computer computer) {
+        this.computer = computer;
         int minBufferSize = AudioTrack.getMinBufferSize(OUTPUT_SAMPLE_RATE,
                 AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT);
         if (minBufferSize <= 0) {
@@ -57,6 +75,9 @@ public abstract class AudioOutput implements Device, Runnable {
                 AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT,
                 minBufferSize, AudioTrack.MODE_STREAM);
         samplesBuffer = new short[minBufferSize / 2]; // two bytes per sample
+        int pcmTimestampsBufferSize = (int) (getSamplesBufferSize() * computer.getClockFrequency()
+                * 1000L / (getSampleRate() * BaseOpcode.getBaseExecutionTime()));
+        audioOutputUpdates = createAudioOutputUpdates(pcmTimestampsBufferSize);
         Timber.d("%s: created audio output, player buffer size: %d",
                 getName(), minBufferSize);
     }
@@ -67,6 +88,10 @@ public abstract class AudioOutput implements Device, Runnable {
 
     public int getSamplesBufferSize() {
         return samplesBuffer.length;
+    }
+
+    Computer getComputer() {
+        return computer;
     }
 
     @Override
@@ -106,6 +131,8 @@ public abstract class AudioOutput implements Device, Runnable {
     public void start() {
         Timber.d("%s: starting audio output", getName());
         isRunning = true;
+        lastAudioOutputUpdateTimestamp = getComputer().getCpu().getTime() -
+                samplesToCpuTime(getSamplesBufferSize());
         audioOutputThread = new Thread(this, "AudioOutputThread-" + getName());
         audioOutputThread.start();
     }
@@ -118,6 +145,7 @@ public abstract class AudioOutput implements Device, Runnable {
             try {
                 audioOutputThread.join();
             } catch (InterruptedException e) {
+                // Do nothing
             }
         }
     }
@@ -169,6 +197,55 @@ public abstract class AudioOutput implements Device, Runnable {
         Timber.d("%s: audio output stopped", getName());
     }
 
+    synchronized U putAudioOutputUpdate() {
+        U pcmSample = null;
+        if (audioOutputUpdatesCapacity > 0) {
+            pcmSample = audioOutputUpdates[putAudioOutputUpdateIndex++];
+            putAudioOutputUpdateIndex %= audioOutputUpdates.length;
+            audioOutputUpdatesCapacity--;
+        } else {
+            Timber.w("%s: PCM samples buffer overflow!", getName());
+        }
+        return pcmSample;
+    }
+
+    private synchronized U getAudioOutputUpdate() {
+        U audioOutputUpdate = null;
+        if (audioOutputUpdatesCapacity < audioOutputUpdates.length) {
+            audioOutputUpdate = audioOutputUpdates[getAudioOutputUpdateIndex++];
+            getAudioOutputUpdateIndex %= audioOutputUpdates.length;
+            audioOutputUpdatesCapacity++;
+        }
+        return audioOutputUpdate;
+    }
+
+    private long samplesToCpuTime(long numSamples) {
+        return computer.nanosToCpuTime(numSamples * NANOSECS_IN_SECOND / getSampleRate());
+    }
+
+    private long cpuTimeToSamples(long cpuTime) {
+        return computer.cpuTimeToNanos(cpuTime) * getSampleRate() / NANOSECS_IN_SECOND;
+    }
+
+    private int writeSamples(short[] samplesBuffer, int sampleIndex) {
+        while (numSamples <= 0) {
+            U audioOutputUpdate = getAudioOutputUpdate();
+            if (audioOutputUpdate != null) {
+                handleAudioOutputUpdate(audioOutputUpdate);
+                numSamples = (int) (cpuTimeToSamples(audioOutputUpdate.timestamp
+                        - lastAudioOutputUpdateTimestamp));
+            } else {
+                numSamples = samplesBuffer.length - sampleIndex;
+            }
+            lastAudioOutputUpdateTimestamp += samplesToCpuTime(numSamples);
+        }
+
+        int numSamplesToWrite = Math.min(numSamples, samplesBuffer.length - sampleIndex);
+        numSamples -= numSamplesToWrite;
+
+        return writeSamples(samplesBuffer, sampleIndex, numSamplesToWrite);
+    }
+
     /**
      * Get this audio output name.
      * @return audio output name
@@ -176,10 +253,24 @@ public abstract class AudioOutput implements Device, Runnable {
     public abstract String getName();
 
     /**
+     * Create array of audio output update event objects.
+     * @param numAudioOutputUpdates number of audio output update event objects in array
+     * @return array of audio output update event objects
+     */
+    protected abstract U[] createAudioOutputUpdates(int numAudioOutputUpdates);
+
+    /**
+     * Handle audio output update event.
+     * @param audioOutputUpdate audio output update event object
+     */
+    protected abstract void handleAudioOutputUpdate(U audioOutputUpdate);
+
+    /**
      * Write audio samples to samples buffer.
      * @param samplesBuffer buffer to write samples
      * @param sampleIndex buffer index to write samples
+     * @param numSamples number of samples to write
      * @return updated samples buffer index
      */
-    protected abstract int writeSamples(short[] samplesBuffer, int sampleIndex);
+    protected abstract int writeSamples(short[] samplesBuffer, int sampleIndex, int numSamples);
 }

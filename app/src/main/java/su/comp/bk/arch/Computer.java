@@ -41,6 +41,7 @@ import su.comp.bk.arch.io.SystemTimer;
 import su.comp.bk.arch.io.Timer;
 import su.comp.bk.arch.io.VideoController;
 import su.comp.bk.arch.io.VideoControllerManager;
+import su.comp.bk.arch.io.audio.Ay8910;
 import su.comp.bk.arch.io.audio.Covox;
 import su.comp.bk.arch.io.audio.Speaker;
 import su.comp.bk.arch.memory.Memory;
@@ -297,6 +298,7 @@ public class Computer implements Runnable {
         // Add audio outputs
         addAudioOutput(new Speaker(this, config.isMemoryManagerPresent()));
         addAudioOutput(new Covox(this));
+        addAudioOutput(new Ay8910(this));
     }
 
     /**

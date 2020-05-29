@@ -39,6 +39,7 @@ import java.util.Objects;
 
 import su.comp.bk.R;
 import su.comp.bk.arch.io.audio.AudioOutput;
+import su.comp.bk.arch.io.audio.Ay8910;
 import su.comp.bk.arch.io.audio.Covox;
 import su.comp.bk.arch.io.audio.Speaker;
 
@@ -73,6 +74,7 @@ public class BkEmuVolumeDialog extends DialogFragment implements SeekBar.OnSeekB
         super.onStart();
         Dialog dialog = Objects.requireNonNull(getDialog());
         setupOutputVolumeControls(dialog.findViewById(R.id.controls_speaker), Speaker.OUTPUT_NAME);
+        setupOutputVolumeControls(dialog.findViewById(R.id.controls_ay8910), Ay8910.OUTPUT_NAME);
         setupOutputVolumeControls(dialog.findViewById(R.id.controls_covox), Covox.OUTPUT_NAME);
     }
 
