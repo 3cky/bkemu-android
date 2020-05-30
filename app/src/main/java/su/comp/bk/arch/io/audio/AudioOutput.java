@@ -34,13 +34,14 @@ import timber.log.Timber;
 public abstract class AudioOutput<U extends AudioOutputUpdate> implements Device, Runnable {
     private static final long NANOSECS_IN_SECOND = 1000000000L;
 
-    private final static int OUTPUT_SAMPLE_RATE = 22050;
-
     public static final int MIN_VOLUME = 0;
     public static final int MAX_VOLUME = 100;
 
     public static final short MIN_OUTPUT = 0;
     public static final short MAX_OUTPUT = Short.MAX_VALUE;
+
+    // Audio sample rate
+    private final int sampleRate;
 
     // Audio samples buffer
     private final short[] samplesBuffer;
@@ -69,24 +70,25 @@ public abstract class AudioOutput<U extends AudioOutputUpdate> implements Device
 
     AudioOutput(Computer computer) {
         this.computer = computer;
-        int minBufferSize = AudioTrack.getMinBufferSize(OUTPUT_SAMPLE_RATE,
+        sampleRate = AudioTrack.getNativeOutputSampleRate(AudioManager.STREAM_MUSIC);
+        int minBufferSize = AudioTrack.getMinBufferSize(sampleRate,
                 AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT);
         if (minBufferSize <= 0) {
             throw new IllegalStateException("Invalid minimum audio buffer size: " + minBufferSize);
         }
-        player = new AudioTrack(AudioManager.STREAM_MUSIC, OUTPUT_SAMPLE_RATE,
+        player = new AudioTrack(AudioManager.STREAM_MUSIC, sampleRate,
                 AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT,
                 minBufferSize, AudioTrack.MODE_STREAM);
         samplesBuffer = new short[minBufferSize / 2]; // two bytes per sample
-        int pcmTimestampsBufferSize = (int) (getSamplesBufferSize() * computer.getClockFrequency()
+        int audioOutputUpdatesSize = (int) (2 * getSamplesBufferSize() * computer.getClockFrequency()
                 * 1000L / (getSampleRate() * BaseOpcode.getBaseExecutionTime()));
-        audioOutputUpdates = createAudioOutputUpdates(pcmTimestampsBufferSize);
-        Timber.d("%s: created audio output, player buffer size: %d",
-                getName(), minBufferSize);
+        audioOutputUpdates = createAudioOutputUpdates(audioOutputUpdatesSize);
+        Timber.d("%s: created audio output, sample rate: %d, samples buffer size: %d, updates buffer size: %d",
+                getName(), sampleRate, samplesBuffer.length, audioOutputUpdatesSize);
     }
 
     public int getSampleRate() {
-        return OUTPUT_SAMPLE_RATE;
+        return sampleRate;
     }
 
     public int getSamplesBufferSize() {
