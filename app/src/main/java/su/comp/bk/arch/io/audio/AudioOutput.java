@@ -39,6 +39,9 @@ public abstract class AudioOutput<U extends AudioOutputUpdate> implements Device
     public static final int MIN_VOLUME = 0;
     public static final int MAX_VOLUME = 100;
 
+    public static final short MIN_OUTPUT = 0;
+    public static final short MAX_OUTPUT = Short.MAX_VALUE;
+
     // Audio samples buffer
     private final short[] samplesBuffer;
 

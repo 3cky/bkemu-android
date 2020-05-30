@@ -52,8 +52,6 @@ public class Ay8910 extends AudioOutput<Ay8910.Ay8910Command> {
     private static final int AY_PORTA = 14;
     private static final int AY_PORTB = 15;
 
-    private static final int MAX_OUTPUT = Short.MAX_VALUE;
-
     private static final int STEP = 0x8000;
 
     private /*unsigned*/ char[] regs = new char[16];

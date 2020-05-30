@@ -52,9 +52,9 @@ public class Covox extends PcmOutput {
 
     @Override
     public boolean write(long cpuTime, boolean isByteMode, int address, int value) {
-        int sampleValue = ((value & 0377) - 128) & 0377;
+        int sampleValue = value & 0377;
         if (sampleValue != lastSampleValue) {
-            putPcmSample((short)(sampleValue << 8), cpuTime);
+            putPcmSample((short)(((sampleValue + Byte.MIN_VALUE) << 8) | sampleValue), cpuTime);
         }
         lastSampleValue = sampleValue;
         return true;
