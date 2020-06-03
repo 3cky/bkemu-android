@@ -144,7 +144,7 @@ public abstract class AudioOutput<U extends AudioOutputUpdate> implements Device
     public void start() {
         Timber.d("%s: starting audio output", getName());
         isRunning = true;
-        lastAudioOutputUpdateTimestamp = getComputer().getCpu().getTime() -
+        lastAudioOutputUpdateTimestamp = getComputer().getUptimeTicks() -
                 samplesToCpuTime(getSamplesBufferSize());
         audioOutputThread = new Thread(this, "AudioOutputThread-" + getName());
         audioOutputThread.start();
@@ -200,14 +200,15 @@ public abstract class AudioOutput<U extends AudioOutputUpdate> implements Device
     }
 
     synchronized U putAudioOutputUpdate() {
-        U pcmSample = null;
-        if (audioOutputUpdatesCapacity > 0) {
-            pcmSample = audioOutputUpdates[putAudioOutputUpdateIndex++];
-            putAudioOutputUpdateIndex %= audioOutputUpdates.length;
-            audioOutputUpdatesCapacity--;
-        } else {
+        if (audioOutputUpdatesCapacity == 0) {
             Timber.w("%s: PCM samples buffer overflow!", getName());
+            // Discard least recent element from the circular buffer
+            getAudioOutputUpdateIndex = ++getAudioOutputUpdateIndex % audioOutputUpdates.length;
+            audioOutputUpdatesCapacity++;
         }
+        U pcmSample = audioOutputUpdates[putAudioOutputUpdateIndex++];
+        putAudioOutputUpdateIndex %= audioOutputUpdates.length;
+        audioOutputUpdatesCapacity--;
         return pcmSample;
     }
 
@@ -236,10 +237,12 @@ public abstract class AudioOutput<U extends AudioOutputUpdate> implements Device
                 handleAudioOutputUpdate(audioOutputUpdate);
                 numSamples = (int) (cpuTimeToSamples(audioOutputUpdate.timestamp
                         - lastAudioOutputUpdateTimestamp));
+                lastAudioOutputUpdateTimestamp += samplesToCpuTime(numSamples);
             } else {
                 numSamples = samplesBuffer.length - sampleIndex;
+                lastAudioOutputUpdateTimestamp = getComputer().getUptimeTicks() -
+                        samplesToCpuTime(getSamplesBufferSize());
             }
-            lastAudioOutputUpdateTimestamp += samplesToCpuTime(numSamples);
         }
 
         int numSamplesToWrite = Math.min(numSamples, samplesBuffer.length - sampleIndex);
