@@ -160,7 +160,7 @@ public class Ay8910 extends AudioOutput<Ay8910.Ay8910Command> {
             putCommand(register, v, cpuTime);
         } else {
             // Set register number
-            register = v;
+            register = v & 0x0f;
         }
         return true;
     }
