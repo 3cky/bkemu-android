@@ -1,47 +1,59 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/about_layout"
-    android:layout_width="fill_parent"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_height="fill_parent"
-    android:orientation="vertical"
-    android:padding="10dp" >
+    android:layout_width="fill_parent">
 
-    <ImageView android:id="@+id/about_logo"
-        android:src="@drawable/logo"
+    <LinearLayout
+        android:id="@+id/about_layout"
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"
-        android:layout_gravity="center_horizontal"
-        android:padding="15dp"
-        android:contentDescription="@string/about_logo"/>
+        android:orientation="vertical"
+        android:padding="10dp" >
 
-    <TextView android:id="@+id/about_version"
-        android:layout_width="fill_parent"
-        android:layout_height="wrap_content"
-        android:textSize="20dp"
-        android:gravity="center_horizontal"
-        android:text="@string/about_version" />
+        <ImageView android:id="@+id/about_logo"
+            android:src="@drawable/logo"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:padding="15dp"
+            android:contentDescription="@string/about_logo"/>
 
-    <TextView android:id="@+id/about_link"
-        android:layout_width="fill_parent"
-        android:layout_height="wrap_content"
-        android:paddingTop="10dp"
-        android:gravity="center_horizontal"
-        android:autoLink="web"
-        android:text="@string/about_link" />
+        <TextView android:id="@+id/about_version"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:textSize="20sp"
+            android:gravity="center_horizontal"
+            android:text="@string/about_version"/>
 
-    <TextView android:id="@+id/about_info"
-        android:layout_width="fill_parent"
-        android:layout_height="wrap_content"
-        android:paddingTop="10dp"
-        android:gravity="center_horizontal"
-        android:text="@string/about_info" />
+        <TextView android:id="@+id/about_build"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:textSize="15sp"
+            android:gravity="center_horizontal"
+            android:text="@string/about_build" />
 
-    <TextView android:id="@+id/about_perf"
-        android:layout_width="fill_parent"
-        android:layout_height="wrap_content"
-        android:textSize="10dp"
-        android:paddingTop="10dp"
-        android:gravity="center_horizontal"
-        android:text="@string/about_perf" />
+        <TextView android:id="@+id/about_info"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:paddingTop="10dp"
+            android:gravity="center_horizontal"
+            android:text="@string/about_info" />
 
-</LinearLayout>
+        <TextView android:id="@+id/about_link"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_horizontal"
+            android:autoLink="web"
+            android:text="@string/about_link" />
+
+        <TextView android:id="@+id/about_perf"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:textSize="10sp"
+            android:paddingTop="10dp"
+            android:gravity="center_horizontal"
+            android:text="@string/about_perf" />
+
+    </LinearLayout>
+
+</ScrollView>

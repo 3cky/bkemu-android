@@ -63,9 +63,14 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.List;
+import java.util.Locale;
+import java.util.TimeZone;
 
 import su.comp.bk.BuildConfig;
 import su.comp.bk.R;
@@ -855,6 +860,13 @@ public class BkEmuActivity extends AppCompatActivity {
         } catch (NameNotFoundException e) {
             // Do nothing
         }
+        Date buildDate = new Date(BuildConfig.BUILD_TIMESTAMP);
+        TimeZone tz = TimeZone.getTimeZone("UTC");
+        DateFormat df = new SimpleDateFormat("yyyyMMddHHmm", Locale.US);
+        df.setTimeZone(tz);
+        String build = df.format(buildDate);
+        TextView buildTextView = aboutDialog.findViewById(R.id.about_build);
+        buildTextView.setText(getResources().getString(R.string.about_build, build));
         return aboutDialog;
     }
 

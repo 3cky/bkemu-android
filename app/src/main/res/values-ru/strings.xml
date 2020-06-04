@@ -49,8 +49,12 @@
     <string name="err">Ошибка</string>
     <string name="exit_confirm_title">Выход</string>
     <string name="exit_confirm_message">Вы действительно хотите выйти?</string>
+    <string name="about_logo">Лого BkEmu</string>
+    <string name="about_version">BkEmu версии %s</string>
+    <string name="about_build">Сборка %s</string>
     <string name="about_info">Эмулятор семейства 16-разрядных PDP-11-совместимых советских домашних компьютеров <b>Электроника БК&#8211;0010/11M</b></string>
     <string name="about_perf">Эффективная частота процессора: %1$.3f МГц (%2$.2f%%)</string>
+    <string name="about_link">https://github.com/3cky/bkemu-android</string>
     <string name="changelog_title">Что нового?</string>
     <string name="changelog_title_full">Списк изменений</string>
     <string name="changelog_show_full">Полный список</string>
@@ -64,9 +68,6 @@
     <string name="toast_image_save_info">Файл \'%s\' сохранен</string>
     <string name="toast_image_save_error">Ошибка сохранения файла \'%s\'</string>
     <string name="app_name">BkEmu</string>
-    <string name="about_logo">Лого BkEmu</string>
-    <string name="about_version">BkEmu версии %s</string>
-    <string name="about_link">https://github.com/3cky/bkemu-android</string>
     <string name="volume">Громкость</string>
     <string name="speaker">Аудиовыход</string>
 </resources>
