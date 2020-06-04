@@ -46,6 +46,26 @@
             android:autoLink="web"
             android:text="@string/about_link" />
 
+        <TextView android:id="@+id/about_changelog"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:paddingTop="5dp"
+            android:gravity="center_horizontal"
+            android:clickable="true"
+            android:focusable="true"
+            android:textColor="@color/item_clickable"
+            android:text="@string/about_changelog" />
+
+        <TextView android:id="@+id/about_share"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:paddingTop="5dp"
+            android:gravity="center_horizontal"
+            android:clickable="true"
+            android:focusable="true"
+            android:textColor="@color/item_clickable"
+            android:text="@string/about_share" />
+
         <TextView android:id="@+id/about_perf"
             android:layout_width="fill_parent"
             android:layout_height="wrap_content"

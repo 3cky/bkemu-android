@@ -801,12 +801,6 @@ public class BkEmuActivity extends AppCompatActivity {
             case R.id.menu_about:
                 showDialog(DIALOG_ABOUT);
                 return true;
-            case R.id.menu_share:
-                shareApplication();
-                return true;
-            case R.id.menu_changelog:
-                showChangelogDialog();
-                return true;
             case R.id.menu_volume:
                 showVolumeDialog();
                 return true;
@@ -867,6 +861,16 @@ public class BkEmuActivity extends AppCompatActivity {
         String build = df.format(buildDate);
         TextView buildTextView = aboutDialog.findViewById(R.id.about_build);
         buildTextView.setText(getResources().getString(R.string.about_build, build));
+        TextView changelogTextView = aboutDialog.findViewById(R.id.about_changelog);
+        changelogTextView.setOnClickListener(v -> {
+            aboutDialog.dismiss();
+            showChangelogDialog();
+        });
+        TextView shareTextView = aboutDialog.findViewById(R.id.about_share);
+        shareTextView.setOnClickListener(v -> {
+            aboutDialog.dismiss();
+            shareApplication();
+        });
         return aboutDialog;
     }
 
