@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <releases>
+    <release version="0.8.0-dev" />
     <release version="0.7.0" date="05.06.2020">
         <changes>
             <change>Реализована эмуляция музыкального сопроцессора AY-3-8910.</change>
