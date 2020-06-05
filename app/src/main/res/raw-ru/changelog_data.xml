@@ -1,6 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <releases>
-    <release version="0.7.0-dev" />
+    <release version="0.7.0" date="05.06.2020">
+        <changes>
+            <change>Реализована эмуляция музыкального сопроцессора AY-3-8910.</change>
+            <change>Реализована эмуляция 8-битного монофонического ЦАП Covox.</change>
+            <change>Добавлен диалог регулировки громкости аудиоустройств.</change>
+            <change>Исправлена загрузка bin-образов с пробелами в имени файла.</change>
+        </changes>
+    </release>
     <release version="0.6.0" date="01.05.2020">
         <changes>
             <change>Добавлен режим отображения "градации серого".</change>
