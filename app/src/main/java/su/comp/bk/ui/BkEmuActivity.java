@@ -27,6 +27,7 @@ import android.content.SharedPreferences;
 import android.content.pm.PackageManager.NameNotFoundException;
 import android.graphics.Rect;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.view.GestureDetector;
@@ -44,6 +45,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
@@ -92,7 +94,7 @@ import timber.log.Timber;
 /**
  * Main application activity.
  */
-public class BkEmuActivity extends AppCompatActivity {
+public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiVisibilityChangeListener {
 
     // State save/restore: Last accessed emulator binary image file URI
     private static final String LAST_BIN_IMAGE_FILE_URI = BkEmuActivity.class.getName() +
@@ -184,6 +186,8 @@ public class BkEmuActivity extends AppCompatActivity {
     protected String intentDataDiskImageUri;
 
     protected Handler activityHandler;
+
+    private Toolbar toolbar;
 
     /**
      * Gesture listener
@@ -476,6 +480,9 @@ public class BkEmuActivity extends AppCompatActivity {
         bkEmuView = findViewById(R.id.emu_view);
         bkEmuView.setGestureListener(new GestureListener());
 
+        View decorView = getWindow().getDecorView();
+        decorView.setOnSystemUiVisibilityChangeListener(this);
+
         checkIntentData();
         initializeComputer(savedInstanceState);
         mountIntentDataDiskImage();
@@ -572,7 +579,7 @@ public class BkEmuActivity extends AppCompatActivity {
     }
 
     private void initToolbar() {
-        final Toolbar toolbar = findViewById(R.id.toolbar);
+        toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
         final ActionBar actionBar = getSupportActionBar();
         if (actionBar != null) {
@@ -678,6 +685,17 @@ public class BkEmuActivity extends AppCompatActivity {
         super.onDestroy();
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN)
+    @Override
+    public void onSystemUiVisibilityChange(int visibility) {
+        if ((visibility & View.SYSTEM_UI_FLAG_FULLSCREEN) == 0) {
+            leaveFullscreenMode();
+            toolbar.setVisibility(View.VISIBLE);
+        } else {
+            toolbar.setVisibility(View.GONE);
+        }
+    }
+
     @Override
     protected void onSaveInstanceState(@NonNull Bundle outState) {
         Timber.d("onSaveInstanceState()");
@@ -771,6 +789,9 @@ public class BkEmuActivity extends AppCompatActivity {
         boolean isFloppyControllerAttached = computer.getConfiguration().isFloppyControllerPresent();
         menu.findItem(R.id.menu_disk_manager).setEnabled(isFloppyControllerAttached);
         menu.findItem(R.id.menu_disk_manager).setVisible(isFloppyControllerAttached);
+        boolean isImmersiveModeSupported = (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT);
+        menu.findItem(R.id.menu_fullscreen_mode).setEnabled(isImmersiveModeSupported);
+        menu.findItem(R.id.menu_fullscreen_mode).setVisible(isImmersiveModeSupported);
         return true;
     }
 
@@ -803,6 +824,11 @@ public class BkEmuActivity extends AppCompatActivity {
                 return true;
             case R.id.menu_volume:
                 showVolumeDialog();
+                return true;
+            case R.id.menu_fullscreen_mode:
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+                    enterFullscreenMode();
+                }
                 return true;
             default:
                 return super.onOptionsItemSelected(item);
@@ -1568,6 +1594,28 @@ public class BkEmuActivity extends AppCompatActivity {
         VideoController.DisplayMode displayMode = videoController.getDisplayMode().getNext();
         Timber.d("switching to display mode: %s", displayMode);
         videoController.setDisplayMode(displayMode);
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.KITKAT)
+    private void enterFullscreenMode() {
+        Timber.d("entering fullscreen mode");
+        setSystemUiVisibility(View.SYSTEM_UI_FLAG_IMMERSIVE
+                | View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                | View.SYSTEM_UI_FLAG_FULLSCREEN);
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN)
+    private void leaveFullscreenMode() {
+        Timber.d("leaving fullscreen mode");
+        setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_STABLE);
+    }
+
+    private void setSystemUiVisibility(int visibility) {
+        View decorView = getWindow().getDecorView();
+        decorView.setSystemUiVisibility(visibility);
     }
 
     public Computer getComputer() {
