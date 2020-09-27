@@ -59,10 +59,6 @@
     <string name="changelog_title">Что нового?</string>
     <string name="changelog_title_full">Списк изменений</string>
     <string name="changelog_show_full">Полный список</string>
-    <string name="fdd_image_a">Дисковод A</string>
-    <string name="fdd_image_b">Дисковод B</string>
-    <string name="fdd_image_c">Дисковод C</string>
-    <string name="fdd_image_d">Дисковод D</string>
     <string name="fdd_empty">(Пусто)</string>
     <string name="toast_image_load_info">%1s: адрес 0%2$o, длина %3$d</string>
     <string name="toast_image_load_error">Ошибка загрузки файла \'%s\'</string>

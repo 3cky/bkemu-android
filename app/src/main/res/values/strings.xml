@@ -60,10 +60,6 @@
     <string name="changelog_title">What\'s new?</string>
     <string name="changelog_title_full">Changelog</string>
     <string name="changelog_show_full">Full changelog</string>
-    <string name="fdd_image_a">Floppy Drive A</string>
-    <string name="fdd_image_b">Floppy Drive B</string>
-    <string name="fdd_image_c">Floppy Drive C</string>
-    <string name="fdd_image_d">Floppy Drive D</string>
     <string name="fdd_empty">(Empty)</string>
     <string name="toast_image_load_info">%1s: address 0%2$o, length %3$d</string>
     <string name="toast_image_load_error">Can\'t load file \'%s\'</string>

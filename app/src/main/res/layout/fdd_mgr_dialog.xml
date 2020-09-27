@@ -1,170 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/fdd_mgr_layout"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
     android:layout_gravity="center"
     android:orientation="vertical">
 
-    <RelativeLayout
+    <include
         android:id="@+id/fdd_layout_a"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:background="@drawable/floppy_drive_case"
-        android:padding="5dp"
-        android:layout_margin="5dp" >
+        layout="@layout/fdd" />
 
-        <TextView
-            android:id="@+id/fdd_label_a"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginRight="3dp"
-            android:textSize="24sp"
-            android:textColor="@color/fdd_label"
-            tools:ignore="HardcodedText"
-            android:text="A" />
-
-        <ImageView
-            android:id="@+id/fdd_image_a"
-            android:tag="fdd_image"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_toRightOf="@id/fdd_label_a"
-            android:src="@drawable/floppy_drive"
-            android:contentDescription="@string/fdd_image_a" />
-
-        <TextView
-            android:id="@+id/fdd_file_a"
-            android:tag="fdd_file"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_below="@id/fdd_image_a"
-            android:layout_centerInParent="true"
-            android:layout_marginTop="3dp"
-            android:text="@string/fdd_empty"
-            android:textColor="@color/fdd_empty" />
-
-    </RelativeLayout>
-
-    <RelativeLayout
+    <include
         android:id="@+id/fdd_layout_b"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:background="@drawable/floppy_drive_case"
-        android:padding="5dp"
-        android:layout_margin="5dp" >
+        layout="@layout/fdd" />
 
-        <TextView
-            android:id="@+id/fdd_label_b"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginRight="3dp"
-            android:textSize="24sp"
-            android:textColor="@color/fdd_label"
-            tools:ignore="HardcodedText"
-            android:text="B" />
-
-        <ImageView
-            android:id="@+id/fdd_image_b"
-            android:tag="fdd_image"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_toRightOf="@id/fdd_label_b"
-            android:src="@drawable/floppy_drive"
-            android:contentDescription="@string/fdd_image_b" />
-
-        <TextView
-            android:id="@+id/fdd_file_b"
-            android:tag="fdd_file"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_below="@id/fdd_image_b"
-            android:layout_centerInParent="true"
-            android:layout_marginTop="3dp"
-            android:text="@string/fdd_empty"
-            android:textColor="@color/fdd_empty" />
-
-    </RelativeLayout>
-
-    <RelativeLayout
+    <include
         android:id="@+id/fdd_layout_c"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:background="@drawable/floppy_drive_case"
-        android:padding="5dp"
-        android:layout_margin="5dp" >
+        layout="@layout/fdd" />
 
-        <TextView
-            android:id="@+id/fdd_label_c"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginRight="3dp"
-            android:textSize="24sp"
-            android:textColor="@color/fdd_label"
-            tools:ignore="HardcodedText"
-            android:text="C" />
-
-        <ImageView
-            android:id="@+id/fdd_image_c"
-            android:tag="fdd_image"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_toRightOf="@id/fdd_label_c"
-            android:src="@drawable/floppy_drive"
-            android:contentDescription="@string/fdd_image_c" />
-
-        <TextView
-            android:id="@+id/fdd_file_c"
-            android:tag="fdd_file"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_below="@id/fdd_image_c"
-            android:layout_centerInParent="true"
-            android:layout_marginTop="3dp"
-            android:text="@string/fdd_empty"
-            android:textColor="@color/fdd_empty" />
-
-    </RelativeLayout>
-
-    <RelativeLayout
+    <include
         android:id="@+id/fdd_layout_d"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:background="@drawable/floppy_drive_case"
-        android:padding="5dp"
-        android:layout_margin="5dp" >
-
-        <TextView
-            android:id="@+id/fdd_label_d"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginRight="3dp"
-            android:textSize="24sp"
-            android:textColor="@color/fdd_label"
-            tools:ignore="HardcodedText"
-            android:text="D" />
-
-        <ImageView
-            android:id="@+id/fdd_image_d"
-            android:tag="fdd_image"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_toRightOf="@id/fdd_label_d"
-            android:src="@drawable/floppy_drive"
-            android:contentDescription="@string/fdd_image_d" />
-
-        <TextView
-            android:id="@+id/fdd_file_d"
-            android:tag="fdd_file"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_below="@id/fdd_image_d"
-            android:layout_centerInParent="true"
-            android:layout_marginTop="3dp"
-            android:text="@string/fdd_empty"
-            android:textColor="@color/fdd_empty" />
-
-    </RelativeLayout>
+        layout="@layout/fdd" />
 
 </LinearLayout>

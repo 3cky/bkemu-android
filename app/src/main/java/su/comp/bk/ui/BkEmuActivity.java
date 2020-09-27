@@ -973,6 +973,8 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
 
     protected void updateFloppyDriveView(final View fddView,
             final FloppyDriveIdentifier fddIdentifier) {
+        TextView fddLabelView = fddView.findViewWithTag("fdd_label");
+        fddLabelView.setText(fddIdentifier.name());
         FloppyController fddController = computer.getFloppyController();
         boolean isFddMounted = fddController.isFloppyDriveMounted(fddIdentifier);
         ImageView fddImageView = fddView.findViewWithTag("fdd_image");
