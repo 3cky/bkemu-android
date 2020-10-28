@@ -20,11 +20,17 @@
 package su.comp.bk.arch.io;
 
 import android.os.Bundle;
+import android.util.SparseBooleanArray;
+
+import androidx.annotation.NonNull;
 
 import java.io.File;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
+import java.util.ArrayList;
 
 import su.comp.bk.arch.Computer;
 import su.comp.bk.util.Crc16;
@@ -92,36 +98,47 @@ public class FloppyController implements Device {
     /** Index hole length (in nanoseconds) */
     public final static long NANOSECS_PER_INDEX_HOLE = NANOSECS_IN_MSEC;
 
-    /** Tracks per floppy disk */
-    public final static int TRACKS_PER_DISK = 81;
+    /** Maximum tracks per floppy disk */
+    public final static int MAX_TRACKS_PER_DISK = 81;
     /** Sectors per track */
     public final static int SECTORS_PER_TRACK = 10;
     /** Bytes per sector */
     public final static int BYTES_PER_SECTOR = 512;
+    /** Words per sector */
+    public final static int WORDS_PER_SECTOR = BYTES_PER_SECTOR / 2;
 
-    /** Bytes per two-sided disk */
-    public final static int BYTES_PER_DISK = TRACKS_PER_DISK * SECTORS_PER_TRACK * BYTES_PER_SECTOR * 2;
+    /** Max bytes per two-sided disk */
+    public final static int MAX_BYTES_PER_DISK = MAX_TRACKS_PER_DISK * SECTORS_PER_TRACK
+            * BYTES_PER_SECTOR * 2;
 
     private final static int[] ADDRESSES = { CONTROL_REGISTER_ADDRESS, DATA_REGISTER_ADDRESS };
 
     // State save/restore: Synchronous read flag state
     private static final String STATE_SYNCHRONOUS_READ = FloppyController.class.getName() +
-            "#synch_read";
+            "#sync_read";
     // State save/restore: Marker found flag state
     private static final String STATE_MARKER_FOUND = FloppyController.class.getName() +
             "#marker_found";
     // State save/restore: Data ready flag state
     private static final String STATE_DATA_READY = FloppyController.class.getName() +
             "#data_ready";
+    // State save/restore: Write operation flag state
+    private static final String STATE_WRITE_OPERATION = FloppyController.class.getName() +
+            "#write_operation";
     // State save/restore: Data ready read position
     private static final String STATE_DATA_READY_READ_POSITION = FloppyController.class.getName() +
             "#data_ready_read_position";
-    // State save/restore: CRC correct flag state
-    private static final String STATE_CRC_CORRECT = FloppyController.class.getName() +
-            "#crc_correct";
+    // State save/restore: Last marker data position
+    private static final String STATE_LAST_MARKER_POSITION = FloppyController.class.getName() +
+            "#last_marker_position";
+    // State save/restore: CRC flag state
+    private static final String STATE_CRC_FLAG = FloppyController.class.getName() + "#crc_flag";
     // State save/restore: Last data register read time
-    private static final String STATE_LAST_DATA_REGISTER_READ_TIME = FloppyController.class.getName() +
-            "#last_data_register_read_time";
+    private static final String STATE_LAST_DATA_REGISTER_READ_TIME =
+            FloppyController.class.getName() + "#last_data_register_read_time";
+    // State save/restore: Last data register write time
+    private static final String STATE_LAST_DATA_REGISTER_WRITE_TIME =
+            FloppyController.class.getName() + "#last_data_register_write_time";
     // State save/restore: Last controller access time
     private static final String STATE_LAST_ACCESS_TIME = FloppyController.class.getName() +
             "#last_access_time";
@@ -131,12 +148,22 @@ public class FloppyController implements Device {
     // State save/restore: Motor started flag state
     private static final String STATE_MOTOR_STARTED = FloppyController.class.getName() +
             "#motor_started";
+
     // State save/restore: Drive disk image file name
     private static final String STATE_DRIVE_IMAGE_FILE_NAME = FloppyDrive.class.getName() +
-            "#disk_image_file_name";
-    // State save/restore: Drive disk image read only flag
-    private static final String STATE_DRIVE_IMAGE_READ_ONLY = FloppyDrive.class.getName() +
-            "#disk_image_read_only";
+            "#image_file_name";
+    // State save/restore: Drive current track data
+    private static final String STATE_DRIVE_CURRENT_TRACK_DATA = FloppyDrive.class.getName() +
+            "#current_track_data";
+    // State save/restore: Drive current track data is modified flag
+    private static final String STATE_DRIVE_CURRENT_TRACK_DATA_MODIFIED =
+            FloppyDrive.class.getName() + "#current_track_data_modified";
+    // State save/restore: Drive current track data marker positions
+    private static final String STATE_DRIVE_CURRENT_TRACK_DATA_MARKER_POSITIONS =
+            FloppyDrive.class.getName() + "#current_track_data_marker_positions";
+    // State save/restore: Drive write protect flag
+    private static final String STATE_DRIVE_WRITE_PROTECT_MODE = FloppyDrive.class.getName() +
+            "#write_protect";
     // State save/restore: Drive track number
     private static final String STATE_DRIVE_TRACK_NUMBER = FloppyDrive.class.getName() +
             "#track_number";
@@ -165,11 +192,20 @@ public class FloppyController implements Device {
     // Data ready track read position in synchronous read state
     private int dataReadyReadPosition;
 
-    // CRC is correct in synchronous read state flag
-    private boolean isCrcCorrect;
+    // CRC flag (set if CRC is correct in synchronous read state, or if CRC is written in write state)
+    private boolean isCrcFlag;
 
     // Last data register read CPU time
     private long lastDataRegisterReadCpuTime;
+
+    // Write operation in progress flag
+    private boolean isWriteOperation;
+
+    // Last marker track position
+    private int lastMarkerPosition;
+
+    // Last data register write CPU time
+    private long lastDataRegisterWriteCpuTime;
 
     // Last controller access CPU time
     private long lastAccessCpuTime;
@@ -196,21 +232,21 @@ public class FloppyController implements Device {
     }
 
     /**
-     * Floppy drive track changed event listener.
-     */
-    interface OnFloppyDriveTrackChanged {
-        /**
-         * Notifies about floppy drive track changed.
-         * @param trackNumber Track number [0, TRACKS_PER_DISK]
-         * @param trackSide Track side [Side.Down, Side.UP]
-         */
-        void onFloppyDriveTrackChanged(int trackNumber, FloppyDriveSide trackSide);
-    }
-
-    /**
      * Floppy drive class.
      */
     class FloppyDrive {
+        public static final int SEQ_SYNC = 0x0000;
+        public static final int SEQ_SYNC_LENGTH = 6;
+
+        public static final int SEQ_GAP = 0x4e4e;
+        public static final int SEQ_GAP1_LENGTH = 16;
+        public static final int SEQ_GAP2_LENGTH = 11;
+        public static final int SEQ_GAP3_LENGTH = 24;
+
+        public static final int SEQ_MARK = 0xa1a1;
+        public static final int SEQ_MARK_ID = 0xa1fe;
+        public static final int SEQ_MARK_DATA = 0xa1fb;
+
         // This floppy drive identifier
         private final FloppyDriveIdentifier driveIdentifier;
 
@@ -218,371 +254,208 @@ public class FloppyController implements Device {
         private File mountedDiskImageFile;
 
         private RandomAccessFile mountedDiskImageRandomAccessFile;
-        private ByteBuffer mountedDiskImageBuffer;
+        private MappedByteBuffer mountedDiskImageBuffer;
 
-        private boolean isMountedDiskImageReadOnly;
+        private boolean isWriteProtectMode;
+
+        private int lastTrackNumber = MAX_TRACKS_PER_DISK;
 
         private int currentTrackNumber;
 
         private FloppyDriveSide currentTrackSide;
 
-        private final FloppyDriveTrackArea[] currentTrackData = new FloppyDriveTrackArea[WORDS_PER_TRACK];
+        private final short[] currentTrackData = new short[WORDS_PER_TRACK];
+        private final SparseBooleanArray currentTrackDataMarkerPositions = new SparseBooleanArray();
 
-        protected final OnFloppyDriveTrackChanged[] trackChangedListeners =
-                new OnFloppyDriveTrackChanged[SECTORS_PER_TRACK * 2];
-
-        /**
-         * Abstract floppy drive track area class.
-         */
-        abstract class FloppyDriveTrackArea {
-            // Track area position in track
-            private int startPosition;
-
-            /**
-             * Abstract floppy drive track area constructor.
-             * @param position floppy drive track area position from track start (in words)
-             */
-            FloppyDriveTrackArea(int position) {
-                this.startPosition = position;
-            }
-
-            /**
-             * Get floppy drive track area index for given track position.
-             * @param position floppy drive track area position from track start (in words)
-             * @return this floppy drive track area index
-             */
-            protected int getPositionIndex(int position) {
-                return (position - startPosition);
-            }
-
-            /**
-             * Get floppy drive track area length.
-             * @return floppy drive track area length (in words)
-             */
-            protected abstract int getLength();
-
-            /**
-             * Check given position is marker start position.
-             * @param position floppy drive track area position from track start (in words)
-             * @return <code>true</code> if given position is marker start position,
-             * <code>false</code> otherwise
-             */
-            public boolean isMarkerPosition(int position) {
-                return isDiskImageMounted() && isMarkerPositionInternal(getPositionIndex(position));
-            }
-
-            /**
-             * Check given internal data index is marker start position.
-             * @return <code>true</code> if given internal data index is marker start position,
-             * <code>false</code> otherwise
-             */
-            protected abstract boolean isMarkerPositionInternal(int index);
-
-            /**
-             * Check given position is CRC position.
-             * @param position floppy drive track area position from track start (in words)
-             * @return <code>true</code> if given position is CRC position,
-             * <code>false</code> otherwise
-             */
-            public boolean isCrcPosition(int position) {
-                return isDiskImageMounted() && isCrcPositionInternal(getPositionIndex(position));
-            }
-
-            /**
-             * Check given internal data index is CRC position.
-             * @return <code>true</code> if given internal data index is CRC position,
-             * <code>false</code> otherwise
-             */
-            protected abstract boolean isCrcPositionInternal(int index);
-
-            /**
-             * Read data from this floppy drive track area.
-             * @param position floppy drive track area read position (from track start, in words)
-             * @return read floppy drive track area word
-             */
-            public int read(int position) {
-                return isDiskImageMounted() ? readInternal(getPositionIndex(position)) : 0;
-            }
-
-            /**
-             * Internal data read from this floppy drive track area.
-             * @param index floppy drive track area read index from this area start (in words)
-             * @return read floppy drive track area data word
-             */
-            protected abstract int readInternal(int index);
-
-            /**
-             * Write data to this floppy drive track area.
-             * @param position floppy drive track area write position (from track start, in words)
-             * @param value word data value to write
-             */
-            public void write(int position, int value) {
-                if (isDiskImageMounted()) {
-                    writeInternal(getPositionIndex(position), value);
-                }
-            }
-
-            /**
-             * Internal data write to this floppy drive track area.
-             * @param index floppy drive track area write index from this area start (in words)
-             * @param value word data value to write
-             */
-            protected abstract void writeInternal(int index, int value);
-        }
-
-        /**
-         * Floppy drive track gap/sync sequences class.
-         */
-        class FloppyDriveTrackSequence extends FloppyDriveTrackArea {
-            public static final int SEQ_GAP = 0x4e4e;
-            public static final int SEQ_SYNC = 0x0000;
-
-            public static final int SEQ_SYNC_LENGTH = 6;
-            public static final int SEQ_GAP1_LENGTH = 16;
-            public static final int SEQ_GAP2_LENGTH = 11;
-            public static final int SEQ_GAP3_LENGTH = 18;
-
-            private final int sequenceValue;
-            private final int sequenceLength;
-
-            FloppyDriveTrackSequence(int position, int value, int length) {
-                super(position);
-                this.sequenceValue = value;
-                this.sequenceLength = length;
-            }
-
-            @Override
-            protected int getLength() {
-                return sequenceLength;
-            }
-
-            @Override
-            protected int readInternal(int index) {
-                return sequenceValue;
-            }
-
-            @Override
-            protected void writeInternal(int index, int value) {
-                // Do nothing
-            }
-
-            @Override
-            protected boolean isMarkerPositionInternal(int index) {
-                return false;
-            }
-
-            @Override
-            protected boolean isCrcPositionInternal(int index) {
-                return false;
-            }
-        }
-
-        /**
-         * Floppy drive track sector header class.
-         */
-        class FloppyDriveTrackSectorHeader extends FloppyDriveTrackArea
-                implements OnFloppyDriveTrackChanged {
-            // Sector header - track number byte index
-            private final static int TRACK_NUMBER_INDEX = 4;
-            // Sector header - head number byte index
-            private final static int HEAD_NUMBER_INDEX = 5;
-            // Sector header - sector number byte index
-            private final static int SECTOR_NUMBER_INDEX = 6;
-            // Sector header - CRC value first byte index
-            private final static int CRC_VALUE_INDEX = 8;
-
-            private final byte[] data = {
-                (byte) 0xa1, (byte) 0xa1, (byte) 0xa1, (byte) 0xfe, // IDAM
-                0, 0, 0, // track number (0-79), head number(0-1), sector number(1-10)
-                2, // 512 bytes per sector
-                0, 0 // CRC value (big endian)
-            };
-
-            FloppyDriveTrackSectorHeader(int position, int sectorNumber) {
-                super(position);
-                data[SECTOR_NUMBER_INDEX] = (byte) sectorNumber;
-            }
-
-            @Override
-            public void onFloppyDriveTrackChanged(int trackNumber, FloppyDriveSide trackSide) {
-                data[TRACK_NUMBER_INDEX] = (byte) trackNumber;
-                data[HEAD_NUMBER_INDEX] = (byte) trackSide.ordinal();
-                correctCrcValue();
-            }
-
-            private void correctCrcValue() {
-                short crcValue = Crc16.calculate(data, 0, CRC_VALUE_INDEX);
-                data[CRC_VALUE_INDEX] = (byte) (crcValue >> 8);
-                data[CRC_VALUE_INDEX + 1] = (byte) crcValue;
-            }
-
-            @Override
-            protected int getLength() {
-                return (data.length >> 1);
-            }
-
-            @Override
-            protected int readInternal(int index) {
-                int dataIndex = (index << 1);
-                return ((data[dataIndex] << 8) & 0177400) | (data[dataIndex + 1] & 0377);
-            }
-
-            @Override
-            protected void writeInternal(int index, int value) {
-                // TODO Auto-generated method stub
-
-            }
-
-            @Override
-            protected boolean isMarkerPositionInternal(int index) {
-                return (index == 0);
-            }
-
-            @Override
-            protected boolean isCrcPositionInternal(int index) {
-                return ((index << 1) == CRC_VALUE_INDEX);
-            }
-        }
-
-        /**
-         * Floppy drive track sector data class.
-         */
-        class FloppyDriveTrackSectorData extends FloppyDriveTrackArea
-                implements OnFloppyDriveTrackChanged {
-
-            // Sector data address marker length (in words)
-            private final static int SECTOR_DATA_AM_LENGTH = 2;
-            // Sector CRC value index (in words)
-            private final static int SECTOR_CRC_INDEX = SECTOR_DATA_AM_LENGTH +
-                    (BYTES_PER_SECTOR >> 1);
-
-            private final short[] dataMarker = {
-                    (short) 0xa1a1, (short) 0xa1fb, // DATA AM
-            };
-
-            private final int sectorIndex;
-
-            private short dataMarkerCrcValue;
-            private short crcValue;
-
-            FloppyDriveTrackSectorData(int position, int sectorNumber) {
-                super(position);
-                sectorIndex = sectorNumber - 1;
-                dataMarkerCrcValue = Crc16.INIT_VALUE;
-                for (short dataMarkerWord : dataMarker) {
-                    dataMarkerCrcValue = Crc16.calculate(dataMarkerCrcValue,
-                            (byte) (dataMarkerWord >> 8));
-                    dataMarkerCrcValue = Crc16.calculate(dataMarkerCrcValue,
-                            (byte) (dataMarkerWord));
-                }
-            }
-
-            @Override
-            public void onFloppyDriveTrackChanged(int trackNumber, FloppyDriveSide trackSide) {
-                // Update sector CRC value
-                int imageBufferStartIndex = getImageBufferStartIndex(trackNumber, trackSide);
-                ByteBuffer diskImageBuffer = getMountedDiskImageBuffer();
-                crcValue = dataMarkerCrcValue;
-                for (int dataIndex = imageBufferStartIndex; dataIndex < (imageBufferStartIndex
-                        + BYTES_PER_SECTOR); dataIndex++) {
-                    crcValue = Crc16.calculate(crcValue, diskImageBuffer.get(dataIndex));
-                }
-            }
-
-            @Override
-            protected int getLength() {
-                return (SECTOR_CRC_INDEX + 1); // DATA AM + Data + 2 bytes of CRC
-            }
-
-            @Override
-            protected int readInternal(int index) {
-                short data;
-                if (index < SECTOR_DATA_AM_LENGTH) {
-                    data = dataMarker[index];
-                } else if (index < SECTOR_CRC_INDEX) {
-                    int dataIndex = (index - SECTOR_DATA_AM_LENGTH) << 1;
-                    int imageBufferDataIndex = getImageBufferStartIndex(getCurrentTrackNumber(),
-                            getCurrentTrackSide()) + dataIndex;
-                    ByteBuffer diskImageBuffer = getMountedDiskImageBuffer();
-                    data = diskImageBuffer.getShort(imageBufferDataIndex);
-                } else {
-                    data = crcValue;
-                }
-                return (data & 0177777);
-            }
-
-            /**
-             * Get this sector start index in mapped floppy drive image file.
-             * @return this sector start index in mapped floppy drive image file (in bytes).
-             */
-            private int getImageBufferStartIndex(int trackNumber, FloppyDriveSide side) {
-                return BYTES_PER_SECTOR * (SECTORS_PER_TRACK * (trackNumber * 2 + side.ordinal())
-                        + sectorIndex);
-            }
-
-            @Override
-            protected void writeInternal(int index, int value) {
-                // TODO Auto-generated method stub
-
-            }
-
-            @Override
-            protected boolean isMarkerPositionInternal(int index) {
-                return (index == 0);
-            }
-
-            @Override
-            protected boolean isCrcPositionInternal(int index) {
-                return (index == SECTOR_CRC_INDEX);
-            }
-        }
+        private boolean isCurrentTrackDataModified;
 
         FloppyDrive(FloppyDriveIdentifier driveIdentifier) {
-            this.mountedDiskImageBuffer = ByteBuffer.allocate(BYTES_PER_DISK);
             this.driveIdentifier = driveIdentifier;
             setCurrentTrack(0, FloppyDriveSide.DOWN);
-            initializeCurrentTrackData();
         }
 
-        private void initializeCurrentTrackData() {
+        /**
+         * Get current track data.
+         * @return current track data
+         */
+        short[] getCurrentTrackData() {
+            return currentTrackData;
+        }
+
+        private void loadCurrentTrackData() {
+            clearCurrentTrackDataMarkerPositions();
             int position = 0;
             // GAP1
-            position = initializeCurrentTrackData(position, new FloppyDriveTrackSequence(position,
-                    FloppyDriveTrackSequence.SEQ_GAP, FloppyDriveTrackSequence.SEQ_GAP1_LENGTH));
+            position = writeCurrentTrackDataSequence(position, SEQ_GAP, SEQ_GAP1_LENGTH);
             // Sectors
             for (int sectorNumber = 1; sectorNumber <= SECTORS_PER_TRACK; sectorNumber++) {
                 // Header sync
-                position = initializeCurrentTrackData(position, new FloppyDriveTrackSequence(position,
-                        FloppyDriveTrackSequence.SEQ_SYNC, FloppyDriveTrackSequence.SEQ_SYNC_LENGTH));
+                position = writeCurrentTrackDataSequence(position, SEQ_SYNC, SEQ_SYNC_LENGTH);
                 // Sector header - IDAM + descriptor + CRC
-                FloppyDriveTrackSectorHeader sectorHeader = new FloppyDriveTrackSectorHeader(
-                        position, sectorNumber);
-                position = initializeCurrentTrackData(position, sectorHeader);
-                trackChangedListeners[(sectorNumber - 1) * 2] = sectorHeader;
+                position = writeCurrentTrackSectorHeader(position, sectorNumber);
                 // GAP2
-                position = initializeCurrentTrackData(position, new FloppyDriveTrackSequence(position,
-                        FloppyDriveTrackSequence.SEQ_GAP, FloppyDriveTrackSequence.SEQ_GAP2_LENGTH));
+                position = writeCurrentTrackDataSequence(position, SEQ_GAP, SEQ_GAP2_LENGTH);
                 // Data sync
-                position = initializeCurrentTrackData(position, new FloppyDriveTrackSequence(position,
-                        FloppyDriveTrackSequence.SEQ_SYNC, FloppyDriveTrackSequence.SEQ_SYNC_LENGTH));
+                position = writeCurrentTrackDataSequence(position, SEQ_SYNC, SEQ_SYNC_LENGTH);
                 // Sector data - DATA AM + Data + CRC
-                FloppyDriveTrackSectorData sectorData = new FloppyDriveTrackSectorData(
-                        position, sectorNumber);
-                position = initializeCurrentTrackData(position, sectorData);
-                trackChangedListeners[(sectorNumber - 1) * 2 + 1] = sectorData;
-                // GAP3 (19 words for 512 bytes per sector) or GAP4B (to end of track)
-                position = initializeCurrentTrackData(position, new FloppyDriveTrackSequence(position,
-                        FloppyDriveTrackSequence.SEQ_GAP, (sectorNumber < SECTORS_PER_TRACK)
-                            ? FloppyDriveTrackSequence.SEQ_GAP3_LENGTH : WORDS_PER_TRACK - position));
+                position = writeCurrentTrackSectorData(position, sectorNumber);
+                // GAP3 or GAP4B for the last sector
+                position = writeCurrentTrackDataSequence(position, SEQ_GAP,
+                        (sectorNumber < SECTORS_PER_TRACK) ? SEQ_GAP3_LENGTH
+                                : WORDS_PER_TRACK - position);
+            }
+            setCurrentTrackDataModified(false);
+        }
+
+        private int writeCurrentTrackDataSequence(int position, int value, int length) {
+            int dataIndex = position;
+            while (dataIndex < position + length) {
+                writeCurrentTrackData(dataIndex++, value);
+            }
+            return dataIndex;
+        }
+
+        private int writeCurrentTrackSectorHeader(int position, int sectorNumber) {
+            int dataIndex = position;
+            // ID AM
+            writeCurrentTrackData(dataIndex++, SEQ_MARK, true);
+            writeCurrentTrackData(dataIndex++, SEQ_MARK_ID);
+            // Track number (0-79), head number(0-1)
+            writeCurrentTrackData(dataIndex++, currentTrackNumber << 8 | currentTrackSide.ordinal());
+            // Sector number(1-10), sector size (2 for 512 bytes per sector)
+            writeCurrentTrackData(dataIndex++, sectorNumber << 8 | 2);
+            // CRC value (big endian)
+            writeCurrentTrackData(dataIndex++, Crc16.calculate(currentTrackData, position, 4));
+            return dataIndex;
+        }
+
+        private int writeCurrentTrackSectorData(int position, int sectorNumber) {
+            int dataIndex = position;
+            // DATA AM
+            writeCurrentTrackData(dataIndex++, SEQ_MARK, true);
+            writeCurrentTrackData(dataIndex++, SEQ_MARK_DATA);
+            // Sector data
+            ByteBuffer diskImageBuffer = getMountedDiskImageBuffer();
+            int imageBufferOffset = getImageSectorOffset(currentTrackSide, currentTrackNumber, sectorNumber);
+            for (int wordIndex = 0; wordIndex < WORDS_PER_SECTOR; wordIndex++) {
+                writeCurrentTrackData(dataIndex++, diskImageBuffer.getShort(
+                        imageBufferOffset + wordIndex * 2));
+            }
+            // CRC value (big endian)
+            int length = dataIndex - position;
+            writeCurrentTrackData(dataIndex++, Crc16.calculate(currentTrackData, position, length));
+            return dataIndex;
+        }
+
+        private void saveCurrentTrackData() {
+            int position = 0;
+            short[] trackData = getCurrentTrackData();
+
+            // Loop by track data
+            Loop:
+            while (true) {
+                // Find sector header start
+                while (!isCurrentTrackDataMarkerPosition(position)) {
+                    if (position >= WORDS_PER_TRACK - 5) {
+                        break Loop;
+                    }
+                    position++;
+                }
+
+                int headerPosition = position;
+
+                // Check sector header marker
+                if (readCurrentTrackData(position++) != SEQ_MARK
+                        || readCurrentTrackData(position++) != SEQ_MARK_ID) {
+                    continue;
+                }
+
+                // Check sector header data
+                int data = readCurrentTrackData(position++);
+                int trackNumber = (data >> 8) & 0377;
+                if (trackNumber != currentTrackNumber) {
+                    Timber.w("Unexpected track number: expected: %d, found: %d",
+                            currentTrackNumber, trackNumber);
+                    continue;
+                }
+                int trackSide = data & 0377;
+                if (trackSide != currentTrackSide.ordinal()) {
+                    Timber.w("Unexpected track side: expected: %d, found: %d",
+                            currentTrackSide.ordinal(), trackSide);
+                    continue;
+                }
+                data = readCurrentTrackData(position++);
+                int sectorNumber = (data >> 8) & 0377;
+                if (sectorNumber < 1 || trackNumber > SECTORS_PER_TRACK) {
+                    Timber.w("Unexpected sector number: %d", sectorNumber);
+                    continue;
+                }
+                int sectorSize = data & 0377;
+                if (sectorSize != 2) {
+                    Timber.w("Unexpected sector size: %d", sectorSize);
+                    continue;
+                }
+
+                // Check sector header CRC
+                int length = position - headerPosition;
+                int crcValue = readCurrentTrackData(position++);
+                if (crcValue != (Crc16.calculate(trackData, headerPosition, length) & 0177777)) {
+                    Timber.w("Invalid sector header CRC, sector: %d", sectorNumber);
+                    continue;
+                }
+
+                // Find sector data start
+                while (!isCurrentTrackDataMarkerPosition(position)) {
+                    if (position >= WORDS_PER_TRACK - (WORDS_PER_SECTOR + 3)) {
+                        break Loop;
+                    }
+                    position++;
+                }
+
+                int dataPosition = position;
+
+                // Check sector data marker
+                if (readCurrentTrackData(position++) != SEQ_MARK
+                        || readCurrentTrackData(position++) != SEQ_MARK_DATA) {
+                    continue;
+                }
+
+                position += WORDS_PER_SECTOR;
+
+                // Check sector data CRC
+                length = position - dataPosition;
+                crcValue = readCurrentTrackData(position++);
+                if (crcValue != (Crc16.calculate(trackData, dataPosition, length) & 0177777)) {
+                    Timber.w("Invalid sector data CRC, sector: %d", sectorNumber);
+                    continue;
+                }
+
+                // Save sector data to image
+                Timber.d("Saving sector data, sector number: %d", sectorNumber);
+                ByteBuffer diskImageBuffer = getMountedDiskImageBuffer();
+                int imageBufferOffset = getImageSectorOffset(currentTrackSide, currentTrackNumber,
+                        sectorNumber);
+                for (int wordIndex = 0; wordIndex < WORDS_PER_SECTOR; wordIndex++) {
+                    data = readCurrentTrackData(dataPosition + 2 + wordIndex);
+                    diskImageBuffer.putShort(imageBufferOffset + wordIndex * 2, (short) data);
+                }
+            }
+            setCurrentTrackDataModified(false);
+        }
+
+        void flushCurrentTrackData() {
+            if (isDiskImageMounted() && isCurrentTrackDataModified()) {
+                saveCurrentTrackData();
             }
         }
 
-        private int initializeCurrentTrackData(int position, FloppyDriveTrackArea area) {
-            int dataIndex = position;
-            while (dataIndex < position + area.getLength()) {
-                currentTrackData[dataIndex++] = area;
-            }
-            return dataIndex;
+        /**
+         * Get sector offset in floppy drive image file.
+         * @return sector offset in floppy drive image file (in bytes).
+         */
+        private int getImageSectorOffset(FloppyDriveSide side, int trackNumber, int sectorNumber) {
+            return BYTES_PER_SECTOR * (SECTORS_PER_TRACK * (trackNumber * 2 + side.ordinal())
+                    + sectorNumber - 1);
         }
 
         /**
@@ -591,33 +464,74 @@ public class FloppyController implements Device {
          * @return read data word
          */
         int readCurrentTrackData(int position) {
-            return currentTrackData[position].read(position);
+            return currentTrackData[position] & 0177777;
         }
+
         /**
          * Write data to current track at given position.
-         * @param position track data position (in words from track start)
+         * @param position track data position (in words from the track start)
+         * @param value data word to write
+         * @param isMarker <code>true</code> if value is marker data
+         */
+        void writeCurrentTrackData(int position, int value, boolean isMarker) {
+            currentTrackData[position] = (short) value;
+            setCurrentTrackDataMarkerPosition(position, isMarker);
+            setCurrentTrackDataModified(true);
+        }
+
+        /**
+         * Write non-marker data to current track at given position.
+         * @param position track data position (in words from the track start)
          * @param value data word to write
          */
         void writeCurrentTrackData(int position, int value) {
-            currentTrackData[position].write(position, value);
+            writeCurrentTrackData(position, value, false);
         }
 
         /**
-         * Check given position of current track data is marker start position.
-         * @return <code>true</code> if given position is marker start position,
+         * Check is current track data modified by write operations.
+         * @return <code>true</code> if track data was modified, <code>false</code> otherwise
+         */
+        boolean isCurrentTrackDataModified() {
+            return isCurrentTrackDataModified;
+        }
+
+        /**
+         * Set current track data modified by write operations flag state
+         * @param isCurrentTrackDataModified <code>true</code> to mark track data is modified,
+         *                                 <code>false</code> to mark as not modified
+         */
+        void setCurrentTrackDataModified(boolean isCurrentTrackDataModified) {
+            this.isCurrentTrackDataModified = isCurrentTrackDataModified;
+        }
+
+        /**
+         * Set current track data position marker flag.
+         * @param position track data position (in words from the track start)
+         * @param isMarker <code>true</code> to set given position as marker position
+         */
+        void setCurrentTrackDataMarkerPosition(int position, boolean isMarker) {
+            if (isMarker) {
+                currentTrackDataMarkerPositions.put(position, true);
+            } else {
+                currentTrackDataMarkerPositions.delete(position);
+            }
+        }
+
+        /**
+         * Check given position of current track data is marker position.
+         * @return <code>true</code> if given position is marker position,
          * <code>false</code> otherwise
          */
         boolean isCurrentTrackDataMarkerPosition(int position) {
-            return currentTrackData[position].isMarkerPosition(position);
+            return currentTrackDataMarkerPositions.get(position);
         }
 
         /**
-         * Check given position of current track data is CRC position.
-         * @return <code>true</code> if given position is CRC position,
-         * <code>false</code> otherwise
+         * Clear current track data marker positions.
          */
-        boolean isCurrentTrackDataCrcPosition(int position) {
-            return currentTrackData[position].isCrcPosition(position);
+        void clearCurrentTrackDataMarkerPositions() {
+            currentTrackDataMarkerPositions.clear();
         }
 
         /**
@@ -645,13 +559,16 @@ public class FloppyController implements Device {
             if (isDebugEnabled) {
                 d("set track: " + trackNumber + ", side: " + trackSide);
             }
+
+            // Flush current track data
+            flushCurrentTrackData();
+
             this.currentTrackNumber = trackNumber;
             this.currentTrackSide = trackSide;
-            // OnFloppyDriveTrackChanged listeners notify if disk image mounted
+
+            // Load current track data if disk image mounted
             if (isDiskImageMounted()) {
-                for (OnFloppyDriveTrackChanged listener : trackChangedListeners) {
-                    listener.onFloppyDriveTrackChanged(trackNumber, trackSide);
-                }
+                loadCurrentTrackData();
             }
         }
 
@@ -659,11 +576,31 @@ public class FloppyController implements Device {
          * Get next current track number after single step to center or to edge.
          * @param isStepToCenter <code>true</code> is track changed with single step to center,
          * <code>false</code> if track changed with single step to edge
-         * @return next track number in range [0, TRACKS_PER_DISK - 1]
+         * @return next track number in range [0, maxTrackNumber]
          */
         int getNextTrackNumber(boolean isStepToCenter) {
             return Math.max(Math.min((getCurrentTrackNumber() + (isStepToCenter ? 1 : -1)),
-                    TRACKS_PER_DISK - 1), 0);
+                    getLastTrackNumber()), 0);
+        }
+
+        /**
+         * Get current disk image last track number.
+         * @return last track number in range [0, MAX_TRACKS_PER_DISK - 1]
+         */
+        int getLastTrackNumber() {
+            return lastTrackNumber;
+        }
+
+        /**
+         * Set disk image last track number.
+         * @param lastTrackNumber last track number in range [0, MAX_TRACKS_PER_DISK - 1]
+         */
+        void setLastTrackNumber(int lastTrackNumber) {
+            if (lastTrackNumber < 0 || lastTrackNumber >= MAX_TRACKS_PER_DISK) {
+                throw new IllegalArgumentException("Invalid lastTrackNumber value: "
+                        + lastTrackNumber);
+            }
+            this.lastTrackNumber = lastTrackNumber;
         }
 
         boolean isDiskIndexHoleActive(long cpuTime) {
@@ -688,38 +625,45 @@ public class FloppyController implements Device {
         }
 
         /**
-         * Check is mounted disk image is read only.
-         * @return <code>true</code> if mounted disk image is read only,
-         * <code>false</code> if not mounted or mounted in read/write mode
+         * Check is drive in write protect mode.
+         * @return <code>true</code> if drive is in write protect mode
          */
-        boolean isMountedDiskImageReadOnly() {
-            return (isDiskImageMounted() && isMountedDiskImageReadOnly);
+        boolean isWriteProtectMode() {
+            return isWriteProtectMode;
+        }
+
+        /**
+         * Set drive write protect mode.
+         * @param isWriteProtectMode <code>true</code> to set drive write protect mode
+         */
+        void setWriteProtectMode(boolean isWriteProtectMode) {
+            this.isWriteProtectMode = isWriteProtectMode;
         }
 
         /**
          * Mount disk image to this drive.
          * @param diskImageFile Disk image file to mount
-         * @param isReadOnly <code>true</code> to mount disk image as read only,
-         * <code>false</code> to mount disk image in read/write mode
+         * @param isWriteProtectMode <code>true</code> to mount disk image in write protect mode
          * @throws Exception in case of mounting error
          */
-        void mountDiskImage(File diskImageFile, boolean isReadOnly) throws Exception {
-            // Check disk image size
-            if (diskImageFile.length() > BYTES_PER_DISK) {
+        void mountDiskImage(@NonNull File diskImageFile, boolean isWriteProtectMode)
+                throws Exception {
+            // Check disk image
+            if (diskImageFile.length() > MAX_BYTES_PER_DISK) {
                 throw new IllegalArgumentException("Invalid disk image size: " +
                             diskImageFile.length());
             }
             if (isDiskImageMounted()) {
                 unmountDiskImage();
             }
-            isMountedDiskImageReadOnly = isReadOnly;
-            mountedDiskImageRandomAccessFile = new RandomAccessFile(diskImageFile, isReadOnly ? "r" : "rw");
-            FileChannel mountedDiskImageFileChannel = mountedDiskImageRandomAccessFile.getChannel();
-            mountedDiskImageBuffer.clear();
-            mountedDiskImageFileChannel.read(mountedDiskImageBuffer);
-            mountedDiskImageBuffer.flip();
-            mountedDiskImageBuffer.limit(BYTES_PER_DISK);
-            mountedDiskImageFileChannel.close();
+            setWriteProtectMode(isWriteProtectMode);
+            int lastDiskImageTrackNumber = (int) (diskImageFile.length()
+                    / (SECTORS_PER_TRACK * BYTES_PER_SECTOR * 2) - 1);
+            setLastTrackNumber(lastDiskImageTrackNumber);
+            mountedDiskImageRandomAccessFile = new RandomAccessFile(diskImageFile, "rw");
+            mountedDiskImageBuffer = mountedDiskImageRandomAccessFile.getChannel().map(
+                    FileChannel.MapMode.READ_WRITE,0, diskImageFile.length());
+            mountedDiskImageBuffer.order(ByteOrder.BIG_ENDIAN);
             this.mountedDiskImageFile = diskImageFile;
             // Reload track data
             setCurrentTrack(getCurrentTrackNumber(), getCurrentTrackSide());
@@ -727,10 +671,12 @@ public class FloppyController implements Device {
 
         /**
          * Unmount current mounted disk image.
-         * @throws Exception in case of unmounting error
+         * @throws Exception in case of unmount error
          */
         void unmountDiskImage() throws Exception {
+            flushCurrentTrackData();
             mountedDiskImageFile = null;
+            mountedDiskImageBuffer.force();
             mountedDiskImageRandomAccessFile.close();
         }
 
@@ -775,11 +721,14 @@ public class FloppyController implements Device {
     public synchronized void saveState(Bundle outState) {
         outState.putSerializable(STATE_SELECTED_FLOPPY_DRIVE, getSelectedFloppyDriveIdentifier());
         outState.putBoolean(STATE_SYNCHRONOUS_READ, isSynchronousReadState());
+        outState.putBoolean(STATE_WRITE_OPERATION, isWriteOperation());
         outState.putBoolean(STATE_MARKER_FOUND, isMarkerFound());
         outState.putBoolean(STATE_DATA_READY, isDataReady());
         outState.putInt(STATE_DATA_READY_READ_POSITION, getDataReadyReadPosition());
-        outState.putBoolean(STATE_CRC_CORRECT, isCrcCorrect());
+        outState.putInt(STATE_LAST_MARKER_POSITION, getLastMarkerPosition());
+        outState.putBoolean(STATE_CRC_FLAG, isCrcFlag());
         outState.putLong(STATE_LAST_DATA_REGISTER_READ_TIME, getLastDataRegisterReadCpuTime());
+        outState.putLong(STATE_LAST_DATA_REGISTER_WRITE_TIME, getLastDataRegisterWriteCpuTime());
         outState.putLong(STATE_LAST_ACCESS_TIME, getLastAccessCpuTime());
         outState.putBoolean(STATE_MOTOR_STARTED, isMotorStarted());
         for (FloppyDriveIdentifier driveIdentifier : FloppyDriveIdentifier.values()) {
@@ -787,12 +736,25 @@ public class FloppyController implements Device {
             File mountedDiskImageFile = drive.getMountedDiskImageFile();
             outState.putString(getFloppyDriveStateKey(STATE_DRIVE_IMAGE_FILE_NAME, driveIdentifier),
                     (mountedDiskImageFile != null) ? mountedDiskImageFile.toString() : null);
-            outState.putBoolean(getFloppyDriveStateKey(STATE_DRIVE_IMAGE_READ_ONLY, driveIdentifier),
-                    drive.isMountedDiskImageReadOnly());
+            outState.putShortArray(getFloppyDriveStateKey(STATE_DRIVE_CURRENT_TRACK_DATA,
+                    driveIdentifier), drive.getCurrentTrackData());
+            outState.putBoolean(getFloppyDriveStateKey(STATE_DRIVE_CURRENT_TRACK_DATA_MODIFIED,
+                    driveIdentifier), drive.isCurrentTrackDataModified());
+            ArrayList<Integer> markerPositions = new ArrayList<>();
+            for (int position = 0; position < WORDS_PER_TRACK; position++) {
+                if (drive.isCurrentTrackDataMarkerPosition(position)) {
+                    markerPositions.add(position);
+                }
+            }
+            outState.putIntegerArrayList(getFloppyDriveStateKey(
+                    STATE_DRIVE_CURRENT_TRACK_DATA_MARKER_POSITIONS, driveIdentifier),
+                    markerPositions);
+            outState.putBoolean(getFloppyDriveStateKey(STATE_DRIVE_WRITE_PROTECT_MODE,
+                    driveIdentifier), drive.isWriteProtectMode());
             outState.putInt(getFloppyDriveStateKey(STATE_DRIVE_TRACK_NUMBER, driveIdentifier),
                     drive.getCurrentTrackNumber());
-            outState.putSerializable(getFloppyDriveStateKey(STATE_DRIVE_TRACK_SIDE, driveIdentifier),
-                    drive.getCurrentTrackSide());
+            outState.putSerializable(getFloppyDriveStateKey(STATE_DRIVE_TRACK_SIDE,
+                    driveIdentifier), drive.getCurrentTrackSide());
         }
     }
 
@@ -800,11 +762,14 @@ public class FloppyController implements Device {
     public synchronized void restoreState(Bundle inState) {
         selectFloppyDrive((FloppyDriveIdentifier) inState.getSerializable(STATE_SELECTED_FLOPPY_DRIVE));
         setSynchronousReadState(inState.getBoolean(STATE_SYNCHRONOUS_READ));
+        setWriteOperation(inState.getBoolean(STATE_WRITE_OPERATION));
         setMarkerFound(inState.getBoolean(STATE_MARKER_FOUND));
         setDataReady(inState.getBoolean(STATE_DATA_READY));
         setDataReadyReadPosition(inState.getInt(STATE_DATA_READY_READ_POSITION));
-        setCrcCorrect(inState.getBoolean(STATE_CRC_CORRECT));
+        setLastMarkerPosition(inState.getInt(STATE_LAST_MARKER_POSITION));
+        setCrcFlag(inState.getBoolean(STATE_CRC_FLAG));
         setLastDataRegisterReadCpuTime(inState.getLong(STATE_LAST_DATA_REGISTER_READ_TIME));
+        setLastDataRegisterWriteCpuTime(inState.getLong(STATE_LAST_DATA_REGISTER_WRITE_TIME));
         setLastAccessCpuTime(inState.getLong(STATE_LAST_ACCESS_TIME));
         setMotorStarted(inState.getBoolean(STATE_MOTOR_STARTED));
         for (FloppyDriveIdentifier driveIdentifier : FloppyDriveIdentifier.values()) {
@@ -814,17 +779,32 @@ public class FloppyController implements Device {
             FloppyDriveSide driveTrackSide = (FloppyDriveSide) inState.getSerializable(
                     getFloppyDriveStateKey(STATE_DRIVE_TRACK_SIDE, driveIdentifier));
             drive.setCurrentTrack(driveTrackNumber, driveTrackSide);
+            drive.setWriteProtectMode(inState.getBoolean(getFloppyDriveStateKey(
+                    STATE_DRIVE_WRITE_PROTECT_MODE, driveIdentifier)));
             String diskImageFileName = inState.getString(getFloppyDriveStateKey(
                     STATE_DRIVE_IMAGE_FILE_NAME, driveIdentifier));
             if (diskImageFileName != null) {
                 try {
-                    drive.mountDiskImage(new File(diskImageFileName), inState.getBoolean(
-                            getFloppyDriveStateKey(STATE_DRIVE_IMAGE_READ_ONLY, driveIdentifier)));
+                    drive.mountDiskImage(new File(diskImageFileName), drive.isWriteProtectMode());
+                    short[] currentTrackData = inState.getShortArray(getFloppyDriveStateKey(
+                            STATE_DRIVE_CURRENT_TRACK_DATA, driveIdentifier));
+                    System.arraycopy(currentTrackData, 0, drive.getCurrentTrackData(),
+                            0, currentTrackData.length);
+                    ArrayList<Integer> markerPositions = inState.getIntegerArrayList(
+                            getFloppyDriveStateKey(STATE_DRIVE_CURRENT_TRACK_DATA_MARKER_POSITIONS,
+                                    driveIdentifier));
+                    drive.clearCurrentTrackDataMarkerPositions();
+                    for (int markerPosition: markerPositions) {
+                        drive.setCurrentTrackDataMarkerPosition(markerPosition, true);
+                    }
+                    drive.setCurrentTrackDataModified(inState.getBoolean(getFloppyDriveStateKey(
+                            STATE_DRIVE_CURRENT_TRACK_DATA_MODIFIED, driveIdentifier)));
                 } catch (Exception e) {
                     Timber.e(e, "can't remount disk file image: %s", diskImageFileName);
                     try {
                         drive.unmountDiskImage();
                     } catch (Exception e1) {
+                        // Do nothing
                     }
                 }
             }
@@ -862,35 +842,73 @@ public class FloppyController implements Device {
     }
 
     protected int readControlRegister(long cpuTime) {
-        int value = 0;
         FloppyDrive drive = getSelectedFloppyDrive();
-        if (drive != null) {
-            // Track 0 flag
-            if (drive.getCurrentTrackNumber() == 0) {
-                value |= TR0;
+        if (drive == null) {
+            return 0;
+        }
+
+        int result = 0;
+
+        // Track 0 flag
+        if (drive.getCurrentTrackNumber() == 0) {
+            result |= TR0;
+        }
+
+        // Floppy disk write protect flag
+        if (drive.isDiskImageMounted() && drive.isWriteProtectMode()) {
+            result |= WRP;
+        }
+
+        // Floppy disk index hole activity flag
+        if (drive.isDiskIndexHoleActive(cpuTime)) {
+            result |= IND;
+        }
+
+        int trackPosition = getTrackPosition(cpuTime);
+
+        if (isWriteOperation()) {
+            // Handle write state
+            int lastDataRegisterWritePosition = getTrackPosition(getLastDataRegisterWriteCpuTime());
+            int numDataWords = getNumTrackDataWords(lastDataRegisterWritePosition, trackPosition);
+
+            // Set flags
+            setDataReady(numDataWords > 0); // last word written
+
+            if (numDataWords > 1) { // CRC written
+                if (!isCrcFlag()) {
+                    setCrcFlag(true);
+                    // Write CRC value
+                    int crcPosition = getNextTrackPosition(lastDataRegisterWritePosition);
+                    short[] trackData = drive.getCurrentTrackData();
+                    int length = getNumTrackDataWords(getLastMarkerPosition(), crcPosition);
+                    short crcValue = Crc16.calculate(trackData, getLastMarkerPosition(), length);
+                    drive.writeCurrentTrackData(crcPosition, crcValue);
+                }
             }
-            // Floppy disk write protect flag
-            if (drive.isMountedDiskImageReadOnly()) {
-                value |= WRP;
+
+            // Check write operation end condition
+            if (numDataWords > 2) { // last word and CRC written, end write operation
+                endWriteOperation();
             }
-            // Floppy disk index hole activity flag
-            if (drive.isDiskIndexHoleActive(cpuTime)) {
-                value |= IND;
-            }
-            int trackPosition = getTrackPosition(cpuTime);
+        }
+
+        if (!isWriteOperation()) {
+            // Handle read state
             int lastDataRegisterReadPosition = getTrackPosition(getLastDataRegisterReadCpuTime());
             int numReadDataWords = getNumTrackDataWords(lastDataRegisterReadPosition, trackPosition);
+
             // Check data is ready
             if (isMarkerFound() && !isDataReady()) {
                 setDataReady(numReadDataWords > 0);
                 if (isDataReady()) {
-                    setDataReadyReadPosition((lastDataRegisterReadPosition + 1) % WORDS_PER_TRACK);
+                    setDataReadyReadPosition(getNextTrackPosition(lastDataRegisterReadPosition));
 //                    d(TAG, "isDataReady, position: " + trackPosition +
 //                            ", dataReadyReadPosition: " + getDataReadyReadPosition() +
 //                            ", readDataWords: " + numReadDataWords + ", isCrcPosition: " +
 //                            drive.isCurrentTrackDataCrcPosition(trackPosition));
                 }
             }
+
             // Check for synchronous read state
             if (isSynchronousReadState()) {
                 if (!isMarkerFound()) {
@@ -900,6 +918,7 @@ public class FloppyController implements Device {
                             d("marker found, position: " + trackPosition);
                         }
                         setMarkerFound(true);
+                        setLastMarkerPosition(trackPosition);
                         setDataReady(true);
                         setDataReadyReadPosition(trackPosition);
                     }
@@ -908,25 +927,32 @@ public class FloppyController implements Device {
                     if (numReadDataWords > 1) {
                         // Data ready flag set, synchronous read completed
                         setSynchronousReadState(false);
-                        // Check was CRC read as last data word
-                        setCrcCorrect(drive.isCurrentTrackDataCrcPosition(getDataReadyReadPosition()));
+                        // Check CRC is correct
+                        short[] trackData = drive.getCurrentTrackData();
+                        int crcPosition = getDataReadyReadPosition();
+                        int length = getNumTrackDataWords(getLastMarkerPosition(), crcPosition);
+                        short crcValue = Crc16.calculate(trackData, getLastMarkerPosition(), length);
+                        setCrcFlag((crcValue & 0177777) == drive.readCurrentTrackData(crcPosition));
                         if (isDebugEnabled) {
                             d("synchronous read completed, position: " + trackPosition +
                                     ", dataReadyReadPosition: " + getDataReadyReadPosition() +
-                                    ", readDataWords: " + numReadDataWords + ", isCrcCorrect: " + isCrcCorrect());
+                                    ", readDataWords: " + numReadDataWords +
+                                    ", isCrcCorrect: " + isCrcFlag());
                         }
-
                     }
                 }
             }
-            if (isDataReady()) {
-                value |= TR;
-            }
-            if (isCrcCorrect()) {
-                value |= CRC;
-            }
         }
-        return value;
+
+        if (isDataReady()) {
+            result |= TR;
+        }
+
+        if (isCrcFlag()) {
+            result |= CRC;
+        }
+
+        return result;
     }
 
     private static int getNumTrackDataWords(int oldPosition, int newPosition) {
@@ -937,6 +963,7 @@ public class FloppyController implements Device {
     protected void writeControlRegister(long cpuTime, int value) {
         // Set floppy drives motor state
         setMotorStarted((value & MSW) != 0);
+
         // Determine floppy drive to operate
         int driveMask = value & (DS0 | DS1 | DS2 | DS3);
         FloppyDriveIdentifier driveIdentifier = null;
@@ -957,27 +984,39 @@ public class FloppyController implements Device {
                 // Drive unselected
                 break;
         }
+
         // Select floppy drive
         selectFloppyDrive(driveIdentifier);
+
         // Do operations on selected drive, if any
         if (driveIdentifier != null) {
             FloppyDrive drive = getFloppyDrive(driveIdentifier);
+
+            // Handle Write Marker flag
+            if ((value & WM) != 0 && isWriteOperation()) {
+                int markerPosition = getTrackPosition(getLastDataRegisterWriteCpuTime());
+                drive.setCurrentTrackDataMarkerPosition(markerPosition, true);
+                setLastMarkerPosition(markerPosition);
+            }
+
             // Check is track number or side changed
             FloppyDriveSide trackSide = (value & HS) != 0 ? FloppyDriveSide.UP : FloppyDriveSide.DOWN;
             int trackNumber = (value & ST) != 0 ? drive.getNextTrackNumber((value & DIR) != 0)
                     : drive.getCurrentTrackNumber();
             if (trackSide != drive.getCurrentTrackSide()
                     || trackNumber != drive.getCurrentTrackNumber()) {
-                // Track changed, cancel synchronous read mode
+                // Track changed, cancel synchronous read or write mode
                 cancelSynchronousRead();
+                endWriteOperation();
                 // Set floppy drive track number and side
                 drive.setCurrentTrack(trackNumber, trackSide);
             }
+
+
             // Process GOR flag
             if ((value & GOR) != 0) {
                 startSynchronousRead();
             }
-            // TODO Process WM flag
         }
     }
 
@@ -1005,12 +1044,12 @@ public class FloppyController implements Device {
         this.dataReadyReadPosition = position;
     }
 
-    private boolean isCrcCorrect() {
-        return isCrcCorrect;
+    private boolean isCrcFlag() {
+        return isCrcFlag;
     }
 
-    private void setCrcCorrect(boolean isCrcCorrect) {
-        this.isCrcCorrect = isCrcCorrect;
+    private void setCrcFlag(boolean isCrcFlag) {
+        this.isCrcFlag = isCrcFlag;
     }
 
     private long getLastDataRegisterReadCpuTime() {
@@ -1019,6 +1058,14 @@ public class FloppyController implements Device {
 
     private void setLastDataRegisterReadCpuTime(long lastDataRegisterReadCpuTime) {
         this.lastDataRegisterReadCpuTime = lastDataRegisterReadCpuTime;
+    }
+
+    private long getLastDataRegisterWriteCpuTime() {
+        return lastDataRegisterWriteCpuTime;
+    }
+
+    private void setLastDataRegisterWriteCpuTime(long lastDataRegisterWriteCpuTime) {
+        this.lastDataRegisterWriteCpuTime = lastDataRegisterWriteCpuTime;
     }
 
     public synchronized long getLastAccessCpuTime() {
@@ -1038,6 +1085,7 @@ public class FloppyController implements Device {
     }
 
     private void startSynchronousRead() {
+        endWriteOperation();
         cancelSynchronousRead();
         setSynchronousReadState(true);
     }
@@ -1046,10 +1094,11 @@ public class FloppyController implements Device {
         setSynchronousReadState(false);
         setMarkerFound(false);
         setDataReady(false);
-        setCrcCorrect(false);
+        setCrcFlag(false);
     }
 
     protected int readDataRegister(long cpuTime) {
+        endWriteOperation();
         int value = 0;
         FloppyDrive selectedDrive = getSelectedFloppyDrive();
         if (selectedDrive != null && isMotorStarted()) {
@@ -1065,6 +1114,55 @@ public class FloppyController implements Device {
         return value;
     }
 
+    private boolean isWriteOperation() {
+        return isWriteOperation;
+    }
+
+    private void setWriteOperation(boolean isWriteOperation) {
+        this.isWriteOperation = isWriteOperation;
+    }
+
+    public int getLastMarkerPosition() {
+        return lastMarkerPosition;
+    }
+
+    public void setLastMarkerPosition(int position) {
+        this.lastMarkerPosition = position;
+    }
+
+    private void startWriteOperation(int position) {
+        cancelSynchronousRead();
+        setWriteOperation(true);
+    }
+
+    private void endWriteOperation() {
+        setCrcFlag(false);
+        setWriteOperation(false);
+        FloppyDrive floppyDrive = getSelectedFloppyDrive();
+        if (floppyDrive != null) {
+            floppyDrive.flushCurrentTrackData();
+        }
+    }
+
+    protected void writeDataRegister(long cpuTime, int value) {
+        FloppyDrive selectedDrive = getSelectedFloppyDrive();
+        if (selectedDrive != null && isMotorStarted()) {
+            int position = getTrackPosition(cpuTime);
+            if (!isWriteOperation() && !selectedDrive.isWriteProtectMode()) {
+                startWriteOperation(position);
+            }
+            if (isWriteOperation()) {
+                // Mounted disk media is in big-endian mode, and low byte is written first,
+                // so swap bytes before write
+                int writeValue = ((value << 8) & 0177400) | ((value >> 8) & 0377);
+                selectedDrive.writeCurrentTrackData(position, writeValue);
+            }
+        }
+        setDataReady(false);
+        setCrcFlag(false);
+        setLastDataRegisterWriteCpuTime(cpuTime);
+    }
+
     /**
      * Get track position for given CPU time.
      * @param cpuTime CPU time to get track position
@@ -1074,21 +1172,25 @@ public class FloppyController implements Device {
         return (int) ((cpuTime / clockTicksPerWord) % WORDS_PER_TRACK);
     }
 
-    protected void writeDataRegister(long cpuTime, int value) {
-        // TODO
+    /**
+     * Get next track position.
+     * @param position track position (in words)
+     * @return next track position
+     */
+    private static int getNextTrackPosition(int position) {
+        return (position + 1) % WORDS_PER_TRACK;
     }
 
     /**
      * Mount floppy drive disk image to given drive.
      * @param diskImageFile floppy drive disk image file
      * @param drive {@link FloppyDriveIdentifier} of drive to mount disk image
-     * @param isReadOnly <code>true</code> to mount disk image read only, <code>false</code>
-     * to mount disk image read/write
+     * @param isWriteProtectMode <code>true</code> to mount disk image in write protect mode
      * @throws Exception in case of disk image mounting error
      */
     public synchronized void mountDiskImage(File diskImageFile, FloppyDriveIdentifier drive,
-            boolean isReadOnly) throws Exception {
-        getFloppyDrive(drive).mountDiskImage(diskImageFile, isReadOnly);
+            boolean isWriteProtectMode) throws Exception {
+        getFloppyDrive(drive).mountDiskImage(diskImageFile, isWriteProtectMode);
     }
 
     /**
@@ -1143,8 +1245,9 @@ public class FloppyController implements Device {
             d("selected drive: " + floppyDriveIdentifier);
         }
         if (selectedFloppyDriveIdentifier != floppyDriveIdentifier) {
-            // Cancel synchronous data read
+            // Cancel synchronous data read or write operation
             cancelSynchronousRead();
+            endWriteOperation();
         }
         this.selectedFloppyDriveIdentifier = floppyDriveIdentifier;
     }
@@ -1186,5 +1289,24 @@ public class FloppyController implements Device {
      */
     public synchronized File getFloppyDriveImageFile(FloppyDriveIdentifier driveIdentifier) {
         return getFloppyDrive(driveIdentifier).getMountedDiskImageFile();
+    }
+
+    /**
+     * Check floppy drive is in write protect mode.
+     * @param driveIdentifier {@link FloppyDriveIdentifier} of drive to get mode
+     * @return <code>true</code> if floppy drive is in write protect mode
+     */
+    public synchronized boolean isFloppyDriveInWriteProtectMode(FloppyDriveIdentifier driveIdentifier) {
+        return getFloppyDrive(driveIdentifier).isWriteProtectMode();
+    }
+
+    /**
+     * Set floppy drive write protect mode.
+     * @param driveIdentifier {@link FloppyDriveIdentifier} of drive to set mode
+     * @param isWriteProtectMode <code>true</code> to set floppy drive in write protect mode
+     */
+    public synchronized void setFloppyDriveWriteProtectMode(FloppyDriveIdentifier driveIdentifier,
+                                                            boolean isWriteProtectMode) {
+        getFloppyDrive(driveIdentifier).setWriteProtectMode(isWriteProtectMode);
     }
 }

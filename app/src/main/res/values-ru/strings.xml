@@ -67,4 +67,5 @@
     <string name="app_name">BkEmu</string>
     <string name="volume">Громкость</string>
     <string name="speaker">Аудиовыход</string>
+    <string name="write_protect">Защита записи</string>
 </resources>

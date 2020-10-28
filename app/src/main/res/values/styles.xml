@@ -12,7 +12,13 @@
         <item name="android:windowBackground">@color/theme_window_background</item>
     </style>
 
+    <style name="AppTheme.SwitchCompat" parent="AppTheme">
+        <item name="android:textAppearance">@style/TextAppearance.AppCompat.Caption</item>
+        <item name="colorControlActivated">@color/theme_primary_dark</item>
+    </style>
+
     <color name="theme_primary">#212121</color>
+    <color name="theme_primary_medium">#505050</color>
     <color name="theme_primary_dark">#000000</color>
     <color name="theme_window_background">#101010</color>
 

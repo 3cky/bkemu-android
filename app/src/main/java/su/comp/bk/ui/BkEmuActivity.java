@@ -48,6 +48,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.SwitchCompat;
 import androidx.appcompat.widget.Toolbar;
 import androidx.transition.ChangeBounds;
 import androidx.transition.Explode;
@@ -142,8 +143,12 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
     private static final int FILE_NAME_DISPLAY_SUFFIX_LENGTH = 3;
 
     private static final String PREFS_KEY_COMPUTER_CONFIGURATION = "su.comp.bk.a.c";
+    private static final String PREFS_KEY_FLOPPY_DRIVE_PREFIX =
+            "su.comp.bk.arch.io.FloppyController.FloppyDrive/";
     private static final String PREFS_KEY_FLOPPY_DRIVE_IMAGE =
-            "su.comp.bk.arch.io.FloppyController.FloppyDrive/image:";
+            PREFS_KEY_FLOPPY_DRIVE_PREFIX + "image:";
+    private static final String PREFS_KEY_FLOPPY_DRIVE_WRITE_PROTECT_MODE =
+            PREFS_KEY_FLOPPY_DRIVE_PREFIX + "writeProtectMode:";
     private static final String PREFS_KEY_AUDIO_VOLUME =
             "su.comp.bk.arch.io.audio.AudioOutput/volume";
 
@@ -572,8 +577,8 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
             Timber.e(e, "Can't get local file for floppy disk image %s",
                     intentDataDiskImageUri);
         }
-        if (intentDataDiskImageFile == null
-                || !mountFddImage(FloppyDriveIdentifier.A, intentDataDiskImageFile)) {
+        if (intentDataDiskImageFile == null || !mountFddImage(FloppyDriveIdentifier.A,
+                intentDataDiskImageFile, true)) {
             intentDataDiskImageUri = null;
         }
     }
@@ -976,12 +981,17 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
         TextView fddLabelView = fddView.findViewWithTag("fdd_label");
         fddLabelView.setText(fddIdentifier.name());
         FloppyController fddController = computer.getFloppyController();
+        SwitchCompat fddWriteProtectSwitch = fddView.findViewWithTag("fdd_wp_switch");
+        fddWriteProtectSwitch.setOnCheckedChangeListener((buttonView, isChecked) ->
+                setFddWriteProtectMode(fddController, fddIdentifier, isChecked));
         boolean isFddMounted = fddController.isFloppyDriveMounted(fddIdentifier);
         ImageView fddImageView = fddView.findViewWithTag("fdd_image");
         fddImageView.setImageResource(isFddMounted ? R.drawable.floppy_drive_loaded
                 : R.drawable.floppy_drive);
         TextView fddFileTextView = fddView.findViewWithTag("fdd_file");
         if (isFddMounted) {
+            fddWriteProtectSwitch.setClickable(true);
+            fddWriteProtectSwitch.setChecked(fddController.isFloppyDriveInWriteProtectMode(fddIdentifier));
             fddFileTextView.setTextColor(getResources().getColor(R.color.fdd_loaded));
             String fddImageFileName = fddController.getFloppyDriveImageFile(fddIdentifier).getName();
             if (fddImageFileName.length() > MAX_FILE_NAME_DISPLAY_LENGTH) {
@@ -998,6 +1008,8 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
             }
             fddFileTextView.setText(fddImageFileName);
         } else {
+            fddWriteProtectSwitch.setClickable(false);
+            fddWriteProtectSwitch.setChecked(false);
             fddFileTextView.setTextColor(getResources().getColor(R.color.fdd_empty));
             fddFileTextView.setText(R.string.fdd_empty);
         }
@@ -1019,8 +1031,10 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
         FloppyController fddController = computer.getFloppyController();
         for (FloppyDriveIdentifier fddIdentifier : FloppyDriveIdentifier.values()) {
             String fddImagePath = readFddImagePath(fddIdentifier);
+            boolean fddWriteProtectMode = readFddWriteProtectMode(fddIdentifier);
             if (fddImagePath != null) {
-                doMountFddImage(fddController, fddIdentifier, new File(fddImagePath));
+                doMountFddImage(fddController, fddIdentifier, new File(fddImagePath),
+                        fddWriteProtectMode);
             }
         }
     }
@@ -1029,12 +1043,15 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
      * Try to mount disk image to given floppy drive.
      * @param fddIdentifier floppy drive identifier to mount image
      * @param fddImageFile disk image file
+     * @param isWriteProtectMode <code>true</code> to mount floppy disk image in write protect mode
      * @return true if image successfully mounted, false otherwise
      */
-    protected boolean mountFddImage(FloppyDriveIdentifier fddIdentifier, File fddImageFile) {
+    protected boolean mountFddImage(FloppyDriveIdentifier fddIdentifier, File fddImageFile,
+                                    boolean isWriteProtectMode) {
         FloppyController fddController = computer.getFloppyController();
-        if (doMountFddImage(fddController, fddIdentifier, fddImageFile)) {
+        if (doMountFddImage(fddController, fddIdentifier, fddImageFile, isWriteProtectMode)) {
             storeFddImagePath(fddIdentifier, fddImageFile.getPath());
+            storeFddWriteProtectMode(fddIdentifier, isWriteProtectMode);
             return true;
         }
         return false;
@@ -1042,12 +1059,12 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
 
     private boolean doMountFddImage(FloppyController fddController,
                                     FloppyDriveIdentifier fddIdentifier,
-                                    File fddImageFile) {
+                                    File fddImageFile, boolean isWriteProtectMode) {
         try {
             if (fddController != null) {
-                fddController.mountDiskImage(fddImageFile, fddIdentifier, true);
-                Timber.d("Mounted floppy disk image %s to drive %s",
-                        fddImageFile, fddIdentifier);
+                fddController.mountDiskImage(fddImageFile, fddIdentifier, isWriteProtectMode);
+                Timber.d("Mounted floppy disk image %s to drive %s in %s mode",
+                        fddImageFile, fddIdentifier, (isWriteProtectMode ? "write protect" : "normal"));
                 return true;
             }
         } catch (Exception e) {
@@ -1203,7 +1220,7 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
                     File diskImageFile = new File(diskImageFilePath);
                     FloppyDriveIdentifier driveIdentifier = FloppyDriveIdentifier
                             .valueOf(data.getStringExtra(FloppyDriveIdentifier.class.getName()));
-                    if (mountFddImage(driveIdentifier, diskImageFile)) {
+                    if (mountFddImage(driveIdentifier, diskImageFile, false)) {
                         lastDiskImageFilePath = diskImageFilePath;
                         showDialog(DIALOG_DISK_MANAGER);
                     } else {
@@ -1386,6 +1403,13 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
         prefsEditor.apply();
     }
 
+    protected void setFddWriteProtectMode(FloppyController fddController,
+                                          FloppyDriveIdentifier fddIdentifier,
+                                          boolean isWriteProtectMode) {
+        fddController.setFloppyDriveWriteProtectMode(fddIdentifier, isWriteProtectMode);
+        storeFddWriteProtectMode(fddIdentifier, isWriteProtectMode);
+    }
+
     private String getPrefsFddImageKey(FloppyDriveIdentifier fddIdentifier) {
         return PREFS_KEY_FLOPPY_DRIVE_IMAGE + fddIdentifier.name();
     }
@@ -1410,6 +1434,33 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
         SharedPreferences prefs = getPreferences();
         SharedPreferences.Editor prefsEditor = prefs.edit();
         prefsEditor.putString(getPrefsFddImageKey(fddIdentifier), floppyDriveImagePath);
+        prefsEditor.apply();
+    }
+
+    private String getFddWriteProtectModePrefsKey(FloppyDriveIdentifier fddIdentifier) {
+        return PREFS_KEY_FLOPPY_DRIVE_WRITE_PROTECT_MODE + fddIdentifier.name();
+    }
+
+    /**
+     * Read floppy drive write protect mode from shared preferences.
+     * @param fddIdentifier floppy drive identifier
+     * @return <code>true</code> if floppy drive is in write protect mode
+     */
+    protected boolean readFddWriteProtectMode(FloppyDriveIdentifier fddIdentifier) {
+        SharedPreferences prefs = getPreferences();
+        return prefs.getBoolean(getFddWriteProtectModePrefsKey(fddIdentifier), false);
+    }
+
+    /**
+     * Store floppy drive write protect mode to shared preferences.
+     * @param fddIdentifier floppy drive identifier
+     * @param isWriteProtectMode <code>true</code> if floppy drive is in write protect mode
+     */
+    protected void storeFddWriteProtectMode(FloppyDriveIdentifier fddIdentifier,
+                                            boolean isWriteProtectMode) {
+        SharedPreferences prefs = getPreferences();
+        SharedPreferences.Editor prefsEditor = prefs.edit();
+        prefsEditor.putBoolean(getFddWriteProtectModePrefsKey(fddIdentifier), isWriteProtectMode);
         prefsEditor.apply();
     }
 

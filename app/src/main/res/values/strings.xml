@@ -69,4 +69,5 @@
     <string name="speaker">Speaker</string>
     <string name="covox" translatable="false">Covox</string>
     <string name="ay8910" translatable="false">AY8910</string>
+    <string name="write_protect">Write Protect</string>
 </resources>

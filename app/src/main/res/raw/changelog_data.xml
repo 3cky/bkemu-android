@@ -1,6 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <releases>
-    <release version="0.8.0-dev" />
+    <release version="0.8.0-dev">
+        <changes>
+            <change>Implemented read/write mode for floppy disk images.</change>
+            <change>Added full-screen mode.</change>
+        </changes>
+    </release>
     <release version="0.7.0" date="2020-06-05">
         <changes>
             <change>Implemented AY-3-8910 programmable sound generator emulation.</change>

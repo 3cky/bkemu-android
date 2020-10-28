@@ -52,10 +52,10 @@ public class Crc16 {
         int index = offset;
         while (counter-- > 0) {
             crcValue = calculate(crcValue, data[index++]);
+            index %= data.length;
         }
         return crcValue;
     }
-
 
     /**
      * Calculate CRC value for byte array.
@@ -64,5 +64,34 @@ public class Crc16 {
      */
     public static short calculate(byte[] data) {
         return calculate(data, 0, data.length);
+    }
+
+    /**
+     * Calculate next CRC value for word data.
+     * @param crcValue current CRC value
+     * @param data word data value to add to CRC
+     * @return next CRC value
+     */
+    public static short calculate(short crcValue, short data) {
+        short x = calculate(crcValue, (byte) (data >> 8));
+        return calculate(x, (byte) data);
+    }
+
+    /**
+     * Calculate CRC value of part of data from word array.
+     * @param data word array
+     * @param offset data offset to calculate CRC value
+     * @param length data length to calculate CRC value
+     * @return calculated CRC value
+     */
+    public static short calculate(short[] data, int offset, int length) {
+        short crcValue = INIT_VALUE;
+        int counter = length;
+        int index = offset;
+        while (counter-- > 0) {
+            crcValue = calculate(crcValue, data[index++]);
+            index %= data.length;
+        }
+        return crcValue;
     }
 }

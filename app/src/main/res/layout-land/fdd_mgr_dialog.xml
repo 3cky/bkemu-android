@@ -10,14 +10,23 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
-        android:orientation="horizontal">
+        android:orientation="horizontal"
+		android:baselineAligned="false"
+		android:layout_margin="@dimen/fdd_margin">
 
 		<include
 			android:id="@+id/fdd_layout_a"
+			android:layout_weight="1"
+			android:layout_width="0dp"
+			android:layout_height="wrap_content"
+			android:layout_marginRight="@dimen/fdd_margin"
 			layout="@layout/fdd" />
 
 		<include
 			android:id="@+id/fdd_layout_b"
+			android:layout_weight="1"
+			android:layout_width="0dp"
+			android:layout_height="wrap_content"
 			layout="@layout/fdd" />
 
     </LinearLayout>
@@ -26,14 +35,23 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
-        android:orientation="horizontal">
+        android:orientation="horizontal"
+		android:baselineAligned="false"
+		android:layout_marginBottom="@dimen/fdd_margin">
 
 		<include
 			android:id="@+id/fdd_layout_c"
+			android:layout_weight="1"
+			android:layout_width="0dp"
+			android:layout_height="wrap_content"
+			android:layout_marginRight="@dimen/fdd_margin"
 			layout="@layout/fdd" />
 
 		<include
 			android:id="@+id/fdd_layout_d"
+			android:layout_weight="1"
+			android:layout_width="0dp"
+			android:layout_height="wrap_content"
 			layout="@layout/fdd" />
 
     </LinearLayout>

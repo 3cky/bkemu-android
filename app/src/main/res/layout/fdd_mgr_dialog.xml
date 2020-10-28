@@ -8,18 +8,33 @@
 
     <include
         android:id="@+id/fdd_layout_a"
+        android:layout_height="wrap_content"
+        android:layout_width="wrap_content"
+        android:layout_margin="@dimen/fdd_margin"
         layout="@layout/fdd" />
 
     <include
         android:id="@+id/fdd_layout_b"
+        android:layout_height="wrap_content"
+        android:layout_width="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginBottom="@dimen/fdd_margin"
         layout="@layout/fdd" />
 
     <include
         android:id="@+id/fdd_layout_c"
+        android:layout_height="wrap_content"
+        android:layout_width="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginBottom="@dimen/fdd_margin"
         layout="@layout/fdd" />
 
     <include
         android:id="@+id/fdd_layout_d"
+        android:layout_height="wrap_content"
+        android:layout_width="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginBottom="@dimen/fdd_margin"
         layout="@layout/fdd" />
 
 </LinearLayout>

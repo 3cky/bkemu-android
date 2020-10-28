@@ -1,42 +1,53 @@
 <?xml version="1.0" encoding="utf-8"?>
-
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/fdd_layout"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
     android:background="@drawable/floppy_drive_case"
-    android:padding="5dp"
-    android:layout_margin="5dp" >
+    android:padding="@dimen/fdd_padding"
+    android:orientation="vertical">
 
     <TextView
-        android:id="@+id/fdd_label"
-        android:tag="fdd_label"
-        android:layout_width="wrap_content"
+        android:tag="fdd_file"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginRight="3dp"
-        android:textSize="24sp"
-        android:textColor="@color/fdd_label"
-        android:text="A"
-        tools:ignore="HardcodedText" />
+        android:textAlignment="center"
+        android:gravity="center_horizontal"
+        android:layout_marginBottom="@dimen/fdd_text_margin"
+        android:text="@string/fdd_empty"
+        android:textColor="@color/theme_primary_medium" />
 
     <ImageView
-        android:id="@+id/fdd_image"
         android:tag="fdd_image"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_toRightOf="@id/fdd_label"
         android:src="@drawable/floppy_drive" />
 
-    <TextView
-        android:id="@+id/fdd_file"
-        android:tag="fdd_file"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_below="@id/fdd_image"
-        android:layout_centerInParent="true"
-        android:layout_marginTop="3dp"
-        android:text="@string/fdd_empty"
-        android:textColor="@color/fdd_empty" />
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
 
-</RelativeLayout>
+        <TextView
+            android:tag="fdd_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginRight="@dimen/fdd_text_margin"
+            android:textSize="@dimen/fdd_label_size"
+            android:textColor="@color/fdd_label"
+            android:text="A"
+            tools:ignore="HardcodedText" />
+
+        <androidx.appcompat.widget.SwitchCompat
+            android:tag="fdd_wp_switch"
+            android:theme="@style/AppTheme.SwitchCompat"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="end|center_vertical"
+            android:textColor="@color/theme_primary_medium"
+            android:text="@string/write_protect"/>
+
+    </LinearLayout>
+
+</LinearLayout>
