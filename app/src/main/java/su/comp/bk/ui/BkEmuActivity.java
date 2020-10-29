@@ -1061,7 +1061,12 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
                                     FloppyDriveIdentifier fddIdentifier,
                                     File fddImageFile, boolean isWriteProtectMode) {
         try {
-            if (fddController != null) {
+            if (fddImageFile != null && fddController != null) {
+                for (FloppyDriveIdentifier d : FloppyDriveIdentifier.values()) {
+                    if (fddImageFile.equals(fddController.getFloppyDriveImageFile(d))) {
+                        unmountFddImage(d);
+                    }
+                }
                 fddController.mountDiskImage(fddImageFile, fddIdentifier, isWriteProtectMode);
                 Timber.d("Mounted floppy disk image %s to drive %s in %s mode",
                         fddImageFile, fddIdentifier, (isWriteProtectMode ? "write protect" : "normal"));
