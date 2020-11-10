@@ -4,6 +4,7 @@
         <changes>
             <change>Implemented read/write mode for floppy disk images.</change>
             <change>Added full-screen mode.</change>
+            <change>Fixed 50 Hz timer interrupt timings.</change>
         </changes>
     </release>
     <release version="0.7.0" date="2020-06-05">

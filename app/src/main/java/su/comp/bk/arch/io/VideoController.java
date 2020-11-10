@@ -187,9 +187,8 @@ public class VideoController implements Device, Computer.UptimeListener {
     private final static int FRAME_LINES_VISIBLE = 256;
     // Frame horizontal sync period (64 uS, in nanoseconds)
     private final static long FRAME_SYNC_PERIOD_HORIZONTAL = 64 * 1000L;
-    // Frame vertical sync period
-    private final static long FRAME_SYNC_PERIOD_VERTICAL =
-            FRAME_SYNC_PERIOD_HORIZONTAL * FRAME_LINES_TOTAL;
+    // Frame vertical sync line number
+    private final static long FRAME_SYNC_LINE_VERTICAL = FRAME_LINES_VISIBLE + 1;
     // Current displayed line number
     private long currentLine;
     // Current displayed frame number
@@ -402,7 +401,8 @@ public class VideoController implements Device, Computer.UptimeListener {
                 // Check for VSync
                 // Get displayed frame number (numbered from 0)
                 long currentLineFrame = currentLine / FRAME_LINES_TOTAL;
-                if (currentLineFrame >= currentFrame) {
+                if (currentLineFrameLine >= FRAME_SYNC_LINE_VERTICAL
+                        && currentLineFrame >= currentFrame) {
                     // VSync
                     storeLastFrameVideoData();
                     notifyFrameSyncListenersVerticalSync();
