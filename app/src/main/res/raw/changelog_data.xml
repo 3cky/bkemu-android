@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <releases>
-    <release version="0.8.0-dev">
+    <release version="0.8.0" date="2020-11-10">
         <changes>
             <change>Implemented read/write mode for floppy disk images.</change>
             <change>Added full-screen mode.</change>
