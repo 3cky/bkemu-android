@@ -84,11 +84,8 @@ public class VideoControllerManager implements Device {
 
     @Override
     public boolean write(long cpuTime, boolean isByteMode, int address, int value) {
-        if (!isByteMode) {
-            setVideoControllerConfiguration(value);
-            return true;
-        }
-        return false;
+        setVideoControllerConfiguration(value);
+        return true;
     }
 
     private void setVideoControllerConfiguration(int paletteRegisterValue) {

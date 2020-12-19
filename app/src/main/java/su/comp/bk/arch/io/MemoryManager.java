@@ -86,7 +86,7 @@ public class MemoryManager implements Device {
 
     @Override
     public boolean write(long cpuTime, boolean isByteMode, int address, int value) {
-        if (!isByteMode && (value & ENABLE_BIT) != 0) {
+        if ((value & ENABLE_BIT) != 0) {
             setMemoryConfiguration(value);
             return true;
         }

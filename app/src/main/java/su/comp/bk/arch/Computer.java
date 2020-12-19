@@ -214,9 +214,11 @@ public class Computer implements Runnable {
             // BK-0010 configurations
             setClockFrequency(CLOCK_FREQUENCY_BK0010);
             // Set RAM configuration
-            RandomAccessMemory workMemory = new RandomAccessMemory("WorkMemory", 0, 020000);
+            RandomAccessMemory workMemory = new RandomAccessMemory("WorkMemory",
+                    0,020000, Type.K565RU6);
             addMemory(workMemory);
-            RandomAccessMemory videoMemory = new RandomAccessMemory("VideoMemory", 040000, 020000);
+            RandomAccessMemory videoMemory = new RandomAccessMemory("VideoMemory",
+                    040000, 020000, Type.K565RU6);
             addMemory(videoMemory);
             // Add video controller
             videoController = new VideoController(videoMemory);
@@ -253,7 +255,7 @@ public class Computer implements Runnable {
             for (int memoryPageIndex = 0; memoryPageIndex < MemoryManager.NUM_RAM_PAGES;
                     memoryPageIndex++) {
                 Memory memoryPage = new RandomAccessMemory("MemoryPage" + memoryPageIndex,
-                        0, 020000);
+                        0, 020000, Type.K565RU5);
                 firstPagedMemory.setPage(memoryPageIndex, memoryPage);
                 secondPagedMemory.setPage(memoryPageIndex, memoryPage);
             }
@@ -652,6 +654,8 @@ public class Computer implements Runnable {
      */
     public int readMemory(boolean isByteMode, int address) {
         int readValue = BUS_ERROR;
+
+        int wordAddress = address & 0177776;
         // First check for I/O registers
         if (address >= getDevicesStartAddress()) {
             List<Device> subdevices = getDevices(address);
@@ -659,23 +663,26 @@ public class Computer implements Runnable {
                 long cpuClock = getCpu().getTime();
                 readValue = 0;
                 for (Device subdevice: subdevices) {
-                    // Read subdevice state value in word mode
-                    int subdeviceState = subdevice.read(cpuClock, address & 0177776);
-                    // For byte mode read and odd address - extract high byte
-                    if (isByteMode && (address & 1) != 0) {
-                        subdeviceState >>= 8;
-                    }
-                    // Concatenate this subdevice state value with values of other subdevices
-                    readValue |= (subdeviceState & (isByteMode ? 0377 : 0177777));
+                    // Read and combine subdevice state values in word mode
+                    readValue |= subdevice.read(cpuClock, wordAddress);
                 }
             }
         } else {
             // Check for memory at given address
             Memory memory = getMemory(address);
             if (memory != null) {
-                readValue = memory.read(isByteMode, address);
+                readValue = memory.read(wordAddress);
             }
         }
+
+        if (readValue != BUS_ERROR) {
+            if (isByteMode && (address & 1) != 0) {
+                // Extract high byte if byte mode read from odd address
+                readValue >>= 8;
+            }
+            readValue &= (isByteMode ? 0377 : 0177777);
+        }
+
         return readValue;
     }
 
@@ -689,6 +696,11 @@ public class Computer implements Runnable {
      */
     public boolean writeMemory(boolean isByteMode, int address, int value) {
         boolean isWritten = false;
+
+        if (isByteMode && (address & 1) != 0) {
+            value <<= 8;
+        }
+
         // First check for I/O registers
         if (address >= getDevicesStartAddress()) {
             List<Device> devices = getDevices(address);
@@ -699,7 +711,6 @@ public class Computer implements Runnable {
                         isWritten = true;
                     }
                 }
-
             }
         } else {
             // Check for memory at given address
@@ -708,6 +719,7 @@ public class Computer implements Runnable {
                 isWritten = memory.write(isByteMode, address, value);
             }
         }
+
         return isWritten;
     }
 

@@ -24,7 +24,6 @@ import static org.junit.Assert.*;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import android.os.Bundle;
@@ -46,10 +45,11 @@ public class ComputerFactoryTest extends ResourceFileTestBase {
 
     private RandomAccessMemory workMemory;
 
-    private Terminal terminal;
+    int pendingInterruptTicks = -1;
 
-    static class Terminal implements Device {
+    private FakeTerminal fakeTerminal;
 
+    class FakeTerminal implements Device {
         private static final int READ_CONTROL_REGISTER_ADDRESS = 0177560;
         private static final int READ_DATA_REGISTER_ADDRESS = 0177562;
         private static final int WRITE_CONTROL_REGISTER_ADDRESS = 0177564;
@@ -61,7 +61,9 @@ public class ComputerFactoryTest extends ResourceFileTestBase {
 
         private final StringBuffer writtenData = new StringBuffer();
 
-        private final  int[] ADDRESSES = {
+        private boolean isWriting = false;
+
+        private final int[] ADDRESSES = {
             READ_CONTROL_REGISTER_ADDRESS, READ_DATA_REGISTER_ADDRESS,
             WRITE_CONTROL_REGISTER_ADDRESS, WRITE_DATA_REGISTER_ADDRESS
         };
@@ -77,7 +79,7 @@ public class ComputerFactoryTest extends ResourceFileTestBase {
 
         @Override
         public void init(long cpuTime) {
-            // Do nothing
+            isWriting = false;
         }
 
         @Override
@@ -92,22 +94,24 @@ public class ComputerFactoryTest extends ResourceFileTestBase {
 
         @Override
         public int read(long cpuTime, int address) {
-            switch (address) {
-                case WRITE_CONTROL_REGISTER_ADDRESS:
-                    return CONTROL_DATA_READY;
-                default:
-                    return 0;
+            if (address == WRITE_CONTROL_REGISTER_ADDRESS) {
+                return CONTROL_DATA_READY;
             }
+            return 0;
         }
 
         @Override
         public boolean write(long cpuTime, boolean isByteMode, int address, int value) {
-            switch (address) {
-                case WRITE_DATA_REGISTER_ADDRESS:
+            if (address == WRITE_DATA_REGISTER_ADDRESS) {
+                isWriting = true;
+                if (value > 0) {
                     writtenData.append((char) value);
-                    break;
-                default:
-                    break;
+                }
+            } else if (address == WRITE_CONTROL_REGISTER_ADDRESS) {
+                if ((value & 0100) != 0) {
+                    // Request pending terminal interrupt
+                    pendingInterruptTicks = isWriting ? 3 : 0;
+                }
             }
             return true;
         }
@@ -117,67 +121,77 @@ public class ComputerFactoryTest extends ResourceFileTestBase {
     public void setUp() {
         computer = new Computer();
         computer.setClockFrequency(Computer.CLOCK_FREQUENCY_BK0010);
-        workMemory = new RandomAccessMemory("TestWorkMemory", 0, 020000);
+        workMemory = new RandomAccessMemory("TestWorkMemory",
+                0, 020000, RandomAccessMemory.Type.K565RU6);
         computer.addMemory(workMemory);
-        RandomAccessMemory videoMemory = new RandomAccessMemory("TestVideoMemory", 040000, 020000);
+        RandomAccessMemory videoMemory = new RandomAccessMemory("TestVideoMemory",
+                040000, 020000, RandomAccessMemory.Type.K565RU6);
         computer.addMemory(videoMemory);
         computer.addMemory(new ReadOnlyMemory("TestReadOnlyMemory", 0100000, new byte[010000]));
-        terminal = new Terminal();
-        computer.addDevice(terminal);
+        fakeTerminal = new FakeTerminal();
+        computer.addDevice(fakeTerminal);
         computer.getCpu().setPswState(0);
         computer.getCpu().writeRegister(false, Cpu.SP, 020000);
         computer.getCpu().writeRegister(false, Cpu.PC, 4);
     }
-
     private void setupTestData(String testName) throws Exception {
         byte[] testData = FileUtils.readFileToByteArray(getTestResourceFile(testName));
-        for (int idx = 0; idx < testData.length; idx++) {
-            workMemory.write(true, workMemory.getStartAddress() + idx, testData[idx]);
-        }
+        workMemory.putData(testData);
     }
 
-    protected boolean execute(int address, String expectedOutput) {
+    protected String execute(int address, String expectedOutput) {
         boolean isSuccess = false;
         Cpu cpu = computer.getCpu();
         cpu.writeRegister(false, Cpu.PC, address);
         long startTime = System.currentTimeMillis();
         while ((System.currentTimeMillis() - startTime) < MAX_EXECUTION_TIME
-                    || terminal.getWrittenData().length() > Terminal.MAX_DATA_LENGTH) {
+                    || fakeTerminal.getWrittenData().length() > FakeTerminal.MAX_DATA_LENGTH) {
             try {
+                if (cpu.readMemory(false, cpu.readRegister(false, Cpu.PC)) == 0) {
+                    // Test error, halt opcode encountered
+                    break;
+                }
                 cpu.executeNextOperation();
-                if (cpu.isHaltMode()) {
-                    throw new IllegalStateException("HALT mode");
+                // Check fot pending terminal interrupt requested by the test fixture
+                if (pendingInterruptTicks >= 0 && --pendingInterruptTicks < 0) {
+                    computer.getCpu().requestVirq(064);
                 }
             } catch (Exception e) {
                 e.printStackTrace();
                 fail("can't execute operation, PC: 0" + Integer.toOctalString(cpu
                         .readRegister(false, Cpu.PC)));
             }
-            if (expectedOutput.equals(terminal.getWrittenData())) {
+            if (expectedOutput.equals(fakeTerminal.getWrittenData())) {
                 isSuccess = true;
                 break;
             }
         }
-        return isSuccess;
+        return isSuccess ? null : Integer.toOctalString(
+                computer.getCpu().readMemory(false, 0402));
     }
 
+    // General instructions test
     @Test
     public void test791401() throws Exception {
         setupTestData("791401");
-        assertTrue(execute(0200, "\r\n\016k prohod"));
+        assertNull("Failed fixture octal number",
+                execute(0200, "\r\n\016k prohod"));
     }
 
+    // Interrupts test
     @Test
-    @Ignore
     public void test791404() throws Exception {
         setupTestData("791404");
-        assertTrue(execute(0200, "\r\np"));
+        assertNull("Failed fixture octal number",
+                execute(0200, "\r\nK pPOXOd"));
     }
 
+    // Memory test
     @Test
     public void test791323() throws Exception {
         setupTestData("791323");
-        assertTrue(execute(0200, "\r\npAMqTx\r\n000000-077776\r\nTCT13 bAHK   00\r\n" +
+        assertNull("Failed fixture octal number",
+                execute(0200, "\r\npAMqTx\r\n000000-077776\r\nTCT13 bAHK   00\r\n" +
                         "TCT13 bAHK   01\r\nTCT13 bAHK   02\r\nTCT13 bAHK   03\r\n" +
                         "pEPEM\r\nTCT13 bAHK   00\r\nK pPOXOd #   01"));
     }

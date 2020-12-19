@@ -35,7 +35,8 @@ public class ComputerTest {
     public void testMemoryReading() {
         Computer computer = new Computer();
         byte[] ramData = new byte[] { 0, 1, 2, 3 };
-        RandomAccessMemory ram = new RandomAccessMemory("TestMemory", 01000, ramData);
+        RandomAccessMemory ram = new RandomAccessMemory("TestMemory",
+                01000, ramData, RandomAccessMemory.Type.K565RU6);
         computer.addMemory(ram);
         // Memory byte read operations
         assertEquals(0, computer.readMemory(true, 01000));
@@ -57,7 +58,8 @@ public class ComputerTest {
     public void testMemoryWriting() {
         Computer computer = new Computer();
         byte[] ramData = new byte[] { 0, 1, 2, 3 };
-        RandomAccessMemory ram = new RandomAccessMemory("TestMemory", 01000, ramData);
+        RandomAccessMemory ram = new RandomAccessMemory("TestMemory",
+                01000, ramData, RandomAccessMemory.Type.K565RU6);
         computer.addMemory(ram);
         // Memory byte write operations
         assertTrue(computer.writeMemory(true, 01000, 4));

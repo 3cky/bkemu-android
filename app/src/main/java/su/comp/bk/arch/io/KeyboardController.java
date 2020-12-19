@@ -467,12 +467,16 @@ public class KeyboardController implements Device, OnTouchListener {
         boolean isWritten = false;
         switch (address & 0177776) {
             case STATUS_REGISTER_ADDRESS:
+                if (isByteMode) {
+                    int reg = readStatusRegister();
+                    value |= (address & 1) == 0 ? reg & 0177400 : reg & 0377;
+                }
                 writeStatusRegister(value);
                 isWritten = true;
                 break;
             case Cpu.REG_SEL1:
                 // Check for BK-0011M STOP button enabled flag state if register is selected
-                if (isComputerBk11m && !isByteMode && (value & MemoryManager.ENABLE_BIT) == 0) {
+                if (isComputerBk11m && (value & MemoryManager.ENABLE_BIT) == 0) {
                     setStopButtonEnabled((value & SEL1_BK11M_STOP_BUTTON_ENABLED) == 0);
                     isWritten = true;
                 }

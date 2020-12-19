@@ -82,11 +82,8 @@ public class SystemTimer implements Device, VideoController.FrameSyncListener {
 
     @Override
     public boolean write(long cpuTime, boolean isByteMode, int address, int value) {
-        if (!isByteMode) {
-            setInterruptEnabled((value & STATE_ENABLED_FLAG) == 0);
-            return true;
-        }
-        return false;
+        setInterruptEnabled((value & STATE_ENABLED_FLAG) == 0);
+        return true;
     }
 
     @Override

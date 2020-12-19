@@ -462,17 +462,7 @@ public class VideoController implements Device, Computer.UptimeListener {
 
     @Override
     public boolean write(long cpuTime, boolean isByteMode, int address, int value) {
-        int registerValue;
-        if (isByteMode) {
-            if ((address & 1) != 0) {
-                registerValue = (value << 8) | (readScrollRegister() & 0377);
-            } else {
-                registerValue = (readScrollRegister() & 0177400) | (value & 0377);
-            }
-        } else {
-            registerValue = value;
-        }
-        writeScrollRegister(registerValue);
+        writeScrollRegister(value);
         return true;
     }
 }

@@ -138,9 +138,8 @@ public class PagedMemory implements Memory {
     }
 
     @Override
-    public int read(boolean isByteMode, int address) {
-        return (activePage != null) ? activePage.read(isByteMode,
-                address - startAddress) : Computer.BUS_ERROR;
+    public int read(int address) {
+        return (activePage != null) ? activePage.read(address - startAddress) : Computer.BUS_ERROR;
     }
 
     @Override

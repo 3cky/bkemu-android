@@ -32,7 +32,7 @@ public interface Memory {
 
     /**
      * Get memory address.
-     * @return memory absolute address (0000000-0177777)
+     * @return memory absolute address (0000000-0177776)
      */
     int getStartAddress();
 
@@ -49,20 +49,19 @@ public interface Memory {
     short[] getData();
 
     /**
-     * Read value from memory.
-     * @param isByteMode <code>true</code> to read byte value, <code>false</code> to read
-     * word value
-     * @param address absolute address to read (0000000-0177777)
-     * @return read value
+     * Read word value from the memory.
+     * @param address absolute address to read (0000000-0177776)
+     * @return read word value
      */
-    int read(boolean isByteMode, int address);
+    int read(int address);
 
     /**
-     * Write value to memory.
+     * Write word/byte value to the memory.
      * @param isByteMode <code>true</code> to write byte value, <code>false</code> to write
      * word value
      * @param address absolute address to write (0000000-0177777)
-     * @param value value to write to memory
+     * @param value data bus word value to write to the memory. In byte mode value is in word's
+     *              low byte for even addresses and in word's high byte for odd addresses)
      * @return <code>true</code> if value successfully written to memory,
      * <code>false</code> otherwise
      */

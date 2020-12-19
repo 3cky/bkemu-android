@@ -831,12 +831,10 @@ public class FloppyController implements Device {
                     ", value: " + Integer.toOctalString(value) + ", isByteMode: " + isByteMode);
         }
         setLastAccessCpuTime(cpuTime);
-        if (!isByteMode) {
-            if (address == CONTROL_REGISTER_ADDRESS) {
-                writeControlRegister(cpuTime, value);
-            } else {
-                writeDataRegister(cpuTime, value);
-            }
+        if ((address & 0177776) == CONTROL_REGISTER_ADDRESS) {
+            writeControlRegister(cpuTime, value);
+        } else {
+            writeDataRegister(cpuTime, value);
         }
         return true;
     }

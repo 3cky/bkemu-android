@@ -49,7 +49,8 @@ public class SingleOperandOpcodesTest {
      */
     @Test
     public void testClrInstructionExecute() {
-        computer.addMemory(new RandomAccessMemory("TestRam", 01000, 3));
+        computer.addMemory(new RandomAccessMemory("TestRam",
+                01000, 3, RandomAccessMemory.Type.K565RU6));
         computer.addMemory(new ReadOnlyMemory("TestRom", 0100000, new short[] {
                 ClrOpcode.OPCODE, // CLR R0
                 (short) (ClrOpcode.OPCODE | Opcode.BYTE_OPERATION_FLAG), // CLRB R0
@@ -187,7 +188,8 @@ public class SingleOperandOpcodesTest {
      */
     @Test
     public void testComInstructionExecute() {
-        computer.addMemory(new RandomAccessMemory("TestRam", 01000, 3));
+        computer.addMemory(new RandomAccessMemory("TestRam",
+                01000, 3, RandomAccessMemory.Type.K565RU6));
         computer.addMemory(new ReadOnlyMemory("TestRom", 0100000, new short[] {
                 ComOpcode.OPCODE, // COM R0
                 (short) (ComOpcode.OPCODE | Opcode.BYTE_OPERATION_FLAG), // COMB R0
@@ -742,7 +744,7 @@ public class SingleOperandOpcodesTest {
                 MarkOpcode.OPCODE + 1, // MARK 1
                 0, // skipped parameter
                 (short) 0123456, // R5 to restore
-                }));
+                }, RandomAccessMemory.Type.K565RU6));
         computer.reset();
         computer.getCpu().writeRegister(false, Cpu.R5, 0100000);
         computer.getCpu().executeSingleInstruction();

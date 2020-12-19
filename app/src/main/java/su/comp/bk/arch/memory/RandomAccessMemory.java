@@ -38,7 +38,8 @@ public class RandomAccessMemory implements Memory {
     public enum Type {
         K565RU6, // Dynamic RAM (clone of 4116)
         K565RU5, // Dynamic RAM (clone of 4164)
-        K537RU10 // Static RAM (clone of I6264)
+        K537RU10, // Static RAM (clone of I6264)
+        OTHER // Other memory types
     }
 
     /**
@@ -54,17 +55,7 @@ public class RandomAccessMemory implements Memory {
         this.endAddress = startAddress + (size << 1) - 1;
         this.size = size;
         this.data = new short[getSize()];
-        initMemoryData(type);
-    }
-
-    /**
-     * Create new dynamic RAM page.
-     * @param id RAM page ID
-     * @param startAddress RAM page starting address
-     * @param size RAM page size (in words)
-     */
-    public RandomAccessMemory(String id, int startAddress, int size) {
-        this(id, startAddress, size, Type.K565RU6);
+        initData(type);
     }
 
     /**
@@ -72,10 +63,11 @@ public class RandomAccessMemory implements Memory {
      * @param id RAM page ID
      * @param startAddress RAM page starting address
      * @param data data to copy into created RAM page
+     * @param type RAM {@link Type}
      */
-    public RandomAccessMemory(String id, int startAddress, short[] data) {
-        this(id, startAddress, data.length);
-        System.arraycopy(data, 0, this.data, 0, getSize());
+    public RandomAccessMemory(String id, int startAddress, short[] data, Type type) {
+        this(id, startAddress, data.length, type);
+        putData(data);
     }
 
     /**
@@ -83,15 +75,14 @@ public class RandomAccessMemory implements Memory {
      * @param id RAM page ID
      * @param startAddress RAM page starting address
      * @param data data to copy into created RAM page
+     * @param type RAM {@link Type}
      */
-    public RandomAccessMemory(String id, int startAddress, byte[] data) {
-        this(id, startAddress, data.length >> 1);
-        for (int idx = 0; idx < (getSize() << 1); idx++) {
-            writeByte(getStartAddress() + idx, data[idx]);
-        }
+    public RandomAccessMemory(String id, int startAddress, byte[] data, Type type) {
+        this(id, startAddress, data.length >> 1, type);
+        putData(data);
     }
 
-    protected void initMemoryData(Type type) {
+    protected void initData(Type type) {
         switch (type) {
             case K565RU6:
                 // K565RU6 power-on pattern: 0177777/0000000 sequence, order switched every 0100 words
@@ -102,7 +93,7 @@ public class RandomAccessMemory implements Memory {
             case K565RU5:
                 // FIXME K565RU5 power-on pattern
                 for (int idx = 0; idx < getSize(); idx++) {
-                    data[idx] = (short) (((idx & 4) == ((idx >> 6) & 1) ? 0177777 : 0));
+                    data[idx] = (short) (((idx & 1) == ((idx >> 7) & 1) ? 0177777 : 0));
                 }
                 break;
             default:
@@ -130,54 +121,48 @@ public class RandomAccessMemory implements Memory {
         return data;
     }
 
-    public void putData(short[] dataToPut) {
-        System.arraycopy(dataToPut, 0, data, 0, dataToPut.length);
+    public void putData(short[] wordData) {
+        System.arraycopy(wordData, 0, data, 0, wordData.length);
+    }
+
+    public void putData(byte[] byteData) {
+        int idx = 0;
+        while (idx < byteData.length) {
+            int wordIdx = idx >> 1;
+            int value = (byteData[idx++] & 0377) | ((byteData[idx++] << 8) & 0177400);
+            data[wordIdx] = (short) value;
+        }
     }
 
     private int getWordIndex(int address) {
         return (address - startAddress) >> 1;
     }
 
-    private int readByte(int address) {
-        int wordData = readWord(address);
-        // Little-endian byte order
-        return (address & 1) == 0 ? wordData & 0377 : wordData >> 8;
-    }
-
-    private int readWord(int address) {
+    protected int readWord(int address) {
         return data[getWordIndex(address)] & 0177777;
     }
 
-    private void writeByte(int address, int byteData) {
-        byteData &= 0377;
-        int wordData = readWord(address);
-        // Little-endian byte order
-        if ((address & 1) == 0) {
-            wordData &= 0177400;
-            wordData |= byteData;
-        } else {
-            wordData &= 0377;
-            wordData |= byteData << 8;
-        }
-        writeWord(address, wordData);
-    }
-
-    private void writeWord(int address, int wordData) {
+    protected void writeWord(int address, int wordData) {
         data[getWordIndex(address)] = (short) wordData;
     }
 
     @Override
-    public int read(boolean isByteMode, int address) {
-        return isByteMode ? readByte(address) : readWord(address);
+    public int read(int address) {
+        return readWord(address);
     }
 
     @Override
     public boolean write(boolean isByteMode, int address, int value) {
         if (isByteMode) {
-            writeByte(address, value);
-        } else {
-            writeWord(address, value);
+            int w = readWord(address);
+            // Little-endian byte order
+            if ((address & 1) == 0) {
+                value = (w & 0177400) | (value & 0377);
+            } else {
+                value = (value & 0177400) | (w & 0377);
+            }
         }
+        writeWord(address, value);
         return true;
     }
 

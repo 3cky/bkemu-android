@@ -88,9 +88,11 @@ public class FloppyControllerTest extends ResourceFileTestBase {
         // Set test computer configuration
         computer = new Computer();
         computer.setClockFrequency(Computer.CLOCK_FREQUENCY_BK0010);
-        RandomAccessMemory workMemory = new RandomAccessMemory("TestWorkMemory", 0, 020000);
+        RandomAccessMemory workMemory = new RandomAccessMemory("TestWorkMemory",
+                0, 020000, RandomAccessMemory.Type.K565RU6);
         computer.addMemory(workMemory);
-        RandomAccessMemory videoMemory = new RandomAccessMemory("TestVideoMemory", 040000, 020000);
+        RandomAccessMemory videoMemory = new RandomAccessMemory("TestVideoMemory",
+                040000, 020000, RandomAccessMemory.Type.K565RU6);
         computer.addMemory(videoMemory);
         computer.addMemory(new ReadOnlyMemory("TestMonitorRom", 0100000,
                 FileUtils.readFileToByteArray(getTestResourceFile(MONITOR_ROM_FILE_NAME))));

@@ -63,7 +63,8 @@ public class JumpSubroutineOpcodesTest {
 
     @Test
     public void testJsrRtsInstructionsExecute() {
-        computer.addMemory(new RandomAccessMemory("TestRam", 0776, 1));
+        computer.addMemory(new RandomAccessMemory("TestRam",
+                0776, 1, RandomAccessMemory.Type.K565RU6));
         computer.addMemory(new ReadOnlyMemory("TestRom", 0100000, new short[] {
                 JsrOpcode.OPCODE | 037,    // 0100000: JSR R0, @#0100010
                 (short) 0100010,

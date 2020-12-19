@@ -60,7 +60,8 @@ public interface Device {
      * Write value to I/O device.
      * @param cpuTime current CPU time (in clock ticks)
      * @param address absolute address to write (from address list this device is mapped to)
-     * @param value value to write to device
+     * @param value data bus word value to write to I/O device. In byte mode value is in word's
+     *              low byte for even addresses and in word's high byte for odd addresses
      * @param isByteMode <code>true</code> to write byte value, <code>false</code> to write
      * word value
      * @return <code>true</code> if value successfully written, <code>false</code> if not
