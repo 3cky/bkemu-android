@@ -206,7 +206,7 @@ public class Computer implements Runnable {
         addDevice(new Sel1RegisterSystemBits(!config.isMemoryManagerPresent() ? 0100000 : 0140000));
         keyboardController = new KeyboardController(this);
         addDevice(keyboardController);
-        peripheralPort = new PeripheralPort(this);
+        peripheralPort = new PeripheralPort();
         addDevice(peripheralPort);
         addDevice(new Timer());
         // Apply computer specific configuration

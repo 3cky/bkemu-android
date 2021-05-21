@@ -5,8 +5,9 @@
     <dimen name="btn_text_size">7dp</dimen>
     <dimen name="btn_image_padding">2dp</dimen>
 
-    <dimen name="joy_margin">10dp</dimen>
-    <dimen name="joy_size">40dp</dimen>
+    <dimen name="joy_btn_margin">5dp</dimen>
+    <dimen name="joy_btn_size">40dp</dimen>
+    <dimen name="joy_btn_half_size">20dp</dimen>
     <dimen name="joy_text_size">25dp</dimen>
     <dimen name="joy_image_padding">5dp</dimen>
 </resources>

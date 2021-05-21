@@ -30,55 +30,11 @@ import android.view.View.OnTouchListener;
 /**
  * BK-0010 peripheral port.
  */
-public class PeripheralPort implements Device, OnTouchListener {
-    public final static int JOYSTICK_BUTTON1 = 1;
-    public final static int JOYSTICK_BUTTON2 = 2;
-    public final static int JOYSTICK_BUTTON3 = 4;
-    public final static int JOYSTICK_BUTTON4 = 010;
-    public final static int JOYSTICK_LEFT = 01000;
-    public final static int JOYSTICK_DOWN = 040;
-    public final static int JOYSTICK_RIGHT = 020;
-    public final static int JOYSTICK_UP = 02000;
-
-    public enum JoystickButton {
-        ONE(JOYSTICK_BUTTON1),
-        TWO(JOYSTICK_BUTTON2),
-        LEFT(JOYSTICK_LEFT),
-        RIGHT(JOYSTICK_RIGHT),
-        UP(JOYSTICK_UP),
-        DOWN(JOYSTICK_DOWN);
-
-        private final int joystickButtonMask;
-
-        JoystickButton(int joystickButtonMask) {
-            this.joystickButtonMask = joystickButtonMask;
-        }
-
-        public int getJoystickButtonMask() {
-            return joystickButtonMask;
-        }
-    }
-
-    /** Joystick buttons pressing delay (in nanoseconds) */
-    public final static long JOYSTICK_PRESS_DELAY = (250L * Computer.NANOSECS_IN_MSEC);
-
-    /** Joystick buttons pressing scroll threshold (in pixels) */
-    public final static float JOYSTICK_PRESS_THRESHOLD = 1f;
-
+public class PeripheralPort implements Device {
     private final static int[] ADDRESSES = {Cpu.REG_SEL2 };
-
-    private final Computer computer;
-
-    private View[] onScreenJoystickViews;
-
-    private boolean isOnScreenJoystickVisible;
 
     // Current port state
     private int state;
-
-    public PeripheralPort(Computer computer) {
-        this.computer = computer;
-    }
 
     @Override
     public int[] getAddresses() {
@@ -115,65 +71,11 @@ public class PeripheralPort implements Device, OnTouchListener {
         setState(0);
     }
 
-    private synchronized int getState() {
+    public synchronized int getState() {
         return state;
     }
 
-    private synchronized void setState(int state) {
+    public synchronized void setState(int state) {
         this.state = state;
     }
-
-    public void setOnScreenJoystickViews(View... joystickViews) {
-        this.onScreenJoystickViews = joystickViews;
-        for (JoystickButton joystickButton : JoystickButton.values()) {
-            boolean isJoystickButtonFound = false;
-            for (View joystickView : joystickViews) {
-                if (joystickView != null) {
-                    View joystickButtonView = joystickView.findViewWithTag(joystickButton.name());
-                    if (joystickButtonView != null) {
-                        joystickButtonView.setOnTouchListener(this);
-                        isJoystickButtonFound = true;
-                        break;
-                    }
-                }
-            }
-            if (!isJoystickButtonFound) {
-                Timber.w("Can't find view for button: %s", joystickButton.name());
-            }
-        }
-    }
-
-    public void setOnScreenJoystickVisibility(boolean isVisible) {
-        this.isOnScreenJoystickVisible = isVisible;
-        for (View joystickView : onScreenJoystickViews) {
-            if (joystickView != null) {
-                joystickView.setVisibility(isVisible ? View.VISIBLE : View.GONE);
-            }
-        }
-    }
-
-    public boolean isOnScreenJoystickVisible() {
-        return isOnScreenJoystickVisible;
-    }
-
-    @Override
-    public boolean onTouch(View v, MotionEvent event) {
-        if (event.getAction() == MotionEvent.ACTION_UP
-                || event.getAction() == MotionEvent.ACTION_DOWN) {
-            JoystickButton joystickButton = JoystickButton.valueOf(v.getTag().toString());
-            boolean isPressed = event.getAction() == MotionEvent.ACTION_DOWN;
-            handleJoystickButton(joystickButton, isPressed);
-        }
-        return false;
-    }
-
-    private void handleJoystickButton(JoystickButton joystickButton, boolean isPressed) {
-        int currentState = getState();
-        if (isPressed) {
-            setState(currentState | joystickButton.getJoystickButtonMask());
-        } else {
-            setState(currentState & ~joystickButton.getJoystickButtonMask());
-        }
-    }
-
 }

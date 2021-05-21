@@ -83,12 +83,12 @@ import su.comp.bk.arch.cpu.Cpu;
 import su.comp.bk.arch.cpu.addressing.IndexDeferredAddressingMode;
 import su.comp.bk.arch.cpu.opcode.EmtOpcode;
 import su.comp.bk.arch.cpu.opcode.JmpOpcode;
-import su.comp.bk.arch.io.audio.AudioOutput;
 import su.comp.bk.arch.io.FloppyController;
 import su.comp.bk.arch.io.FloppyController.FloppyDriveIdentifier;
 import su.comp.bk.arch.io.KeyboardController;
-import su.comp.bk.arch.io.PeripheralPort;
 import su.comp.bk.arch.io.VideoController;
+import su.comp.bk.arch.io.audio.AudioOutput;
+import su.comp.bk.ui.joystick.JoystickManager;
 import su.comp.bk.util.FileUtils;
 import timber.log.Timber;
 
@@ -193,6 +193,8 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
     protected Handler activityHandler;
 
     private Toolbar toolbar;
+
+    private JoystickManager joystickManager;
 
     /**
      * Gesture listener
@@ -513,6 +515,8 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
 
         onScreenControlsTransition = ts;
 
+        joystickManager = new JoystickManager(this);
+
         setupOnScreenControls(true);
 
         // Show change log with latest changes once after application update
@@ -531,15 +535,10 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
         KeyboardController keyboardController = this.computer.getKeyboardController();
         ViewGroup keyboardView = findViewById(R.id.keyboard);
         keyboardController.setOnScreenKeyboardView(keyboardView);
-        View joystickView = findViewById(R.id.joystick);
-        View joystickDpadView = findViewById(R.id.joystick_dpad);
-        View joystickButtonsView = findViewById(R.id.joystick_buttons);
-        PeripheralPort peripheralPort = computer.getPeripheralPort();
-        peripheralPort.setOnScreenJoystickViews(joystickView, joystickDpadView,
-                joystickButtonsView);
+        joystickManager.setPeripheralPort(computer.getPeripheralPort());
         if (hideAllControls) {
             keyboardController.setOnScreenKeyboardVisibility(false);
-            peripheralPort.setOnScreenJoystickVisibility(false);
+            joystickManager.setOnScreenJoystickVisibility(false);
         }
     }
 
@@ -752,13 +751,12 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
     @Override
     public void onBackPressed() {
         KeyboardController keyboardController = this.computer.getKeyboardController();
-        PeripheralPort peripheralPort = this.computer.getPeripheralPort();
         if (keyboardController.isOnScreenKeyboardVisible()) {
             startOnScreenControlsTransition();
             keyboardController.setOnScreenKeyboardVisibility(false);
-        } else if (peripheralPort.isOnScreenJoystickVisible()) {
+        } else if (joystickManager.isOnScreenJoystickVisible()) {
             startOnScreenControlsTransition();
-            peripheralPort.setOnScreenJoystickVisibility(false);
+            joystickManager.setOnScreenJoystickVisibility(false);
         } else {
             this.computer.pause();
             AlertDialog exitConfirmDialog = new AlertDialog.Builder(this)
@@ -1592,7 +1590,7 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
     }
 
     protected boolean isOnScreenJoystickVisible() {
-        return computer.getPeripheralPort().isOnScreenJoystickVisible();
+        return joystickManager.isOnScreenJoystickVisible();
     }
 
     protected boolean isOnScreenKeyboardVisible() {
@@ -1607,8 +1605,7 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
 
     private void switchOnScreenJoystickVisibility(boolean isVisible) {
         Timber.d("switch on-screen joystick visibility state: %s", (isVisible ? "ON" : "OFF"));
-        PeripheralPort peripheralPort = computer.getPeripheralPort();
-        peripheralPort.setOnScreenJoystickVisibility(isVisible);
+        joystickManager.setOnScreenJoystickVisibility(isVisible);
     }
 
     protected void toggleOnScreenControlsVisibility() {

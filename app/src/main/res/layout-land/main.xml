@@ -20,9 +20,9 @@
         <include
             android:id="@+id/joystick_dpad"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_height="match_parent"
+            android:layout_margin="@dimen/joy_btn_margin"
             android:layout_alignParentLeft="true"
-            android:layout_centerVertical="true"
             layout="@layout/joystick_dpad" />
 
         <su.comp.bk.ui.BkEmuView
@@ -36,9 +36,9 @@
         <include
             android:id="@+id/joystick_buttons"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_height="match_parent"
+            android:layout_margin="@dimen/joy_btn_margin"
             android:layout_alignParentRight="true"
-            android:layout_centerVertical="true"
             layout="@layout/joystick_buttons" />
 
     </RelativeLayout>
