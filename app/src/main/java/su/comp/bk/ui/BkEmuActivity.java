@@ -464,11 +464,7 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
         Timber.d("onNewIntent(), Intent: %s", intent);
         super.onNewIntent(intent);
         setIntent(intent);
-        if (checkIntentData()) {
-            initializeComputer(null);
-            mountIntentDataDiskImage();
-            setupOnScreenControls(false);
-        }
+        restartActivity();
     }
 
     /** Called when the activity is first created. */
@@ -517,7 +513,7 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
 
         joystickManager = new JoystickManager(this);
 
-        setupOnScreenControls(true);
+        setupOnScreenControls();
 
         // Show change log with latest changes once after application update
         BkEmuChangeLog changeLog = new BkEmuChangeLog(this);
@@ -531,15 +527,13 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
         }
     }
 
-    private void setupOnScreenControls(boolean hideAllControls) {
+    private void setupOnScreenControls() {
         KeyboardController keyboardController = this.computer.getKeyboardController();
         ViewGroup keyboardView = findViewById(R.id.keyboard);
         keyboardController.setOnScreenKeyboardView(keyboardView);
         joystickManager.setPeripheralPort(computer.getPeripheralPort());
-        if (hideAllControls) {
-            keyboardController.setOnScreenKeyboardVisibility(false);
-            joystickManager.setOnScreenJoystickVisibility(false);
-        }
+        keyboardController.setOnScreenKeyboardVisibility(false);
+        joystickManager.setOnScreenJoystickVisibility(false);
     }
 
     // Check intent data for program/disk image to mount
@@ -1367,18 +1361,27 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
     }
 
     /**
-     * Do activity restart.
+     * Do activity restart with given emulator image file.
      * @param binImageFileUri emulator image file {@link Uri} to set to restarted activity
      * (or <code>null</code> to start activity without emulator image set)
      */
     protected void restartActivity(Uri binImageFileUri) {
         Intent intent = getIntent();
         intent.setData(binImageFileUri);
+        restartActivity();
+    }
+
+    /**
+     * Do activity restart.
+     */
+    protected void restartActivity() {
+        Intent intent = getIntent();
         // Pass last accessed program/disk image file paths to new activity
         intent.putExtra(LAST_BIN_IMAGE_FILE_URI, lastBinImageFileUri);
         intent.putExtra(LAST_DISK_IMAGE_FILE_PATH, lastDiskImageFilePath);
         finish();
         startActivity(intent);
+        overridePendingTransition(0, 0);
     }
 
     private SharedPreferences getPreferences() {
