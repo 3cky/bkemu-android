@@ -23,10 +23,12 @@ import android.content.Context;
 import android.util.AttributeSet;
 import android.widget.ToggleButton;
 
+import androidx.appcompat.widget.AppCompatToggleButton;
+
 /**
  * {@link ToggleButton} with overridden toggle() method used for keyboard modifier buttons.
  */
-public class ModifierButton extends ToggleButton {
+public class ModifierButton extends AppCompatToggleButton {
 
     public ModifierButton(Context context) {
         super(context);
@@ -44,5 +46,4 @@ public class ModifierButton extends ToggleButton {
     public void toggle() {
         // Do nothing, button state is controlled programmatically
     }
-
 }

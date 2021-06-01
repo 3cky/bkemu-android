@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@drawable/btn_toggle_bg" />
+    <item>
+        <nine-patch android:src="@drawable/arrow_shift" />
+    </item>
+</layer-list>

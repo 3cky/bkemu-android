@@ -124,7 +124,7 @@ public class KeyboardController implements Device, OnTouchListener {
 
     private ModifierButton ar2Button;
     private ModifierButton ctrlSymbolButton;
-    private ImageButton lowRegisterButton;
+    private ModifierButton lowRegisterButton;
 
     static {
         initializeLookupTables();
@@ -406,8 +406,7 @@ public class KeyboardController implements Device, OnTouchListener {
 
     private void setLowRegisterPressed(boolean isLowRegisterPressed) {
         this.isLowRegisterPressed = isLowRegisterPressed;
-        this.lowRegisterButton.setImageResource(isLowRegisterPressed
-                ? R.drawable.arrow_shift_on : R.drawable.arrow_shift);
+        this.lowRegisterButton.setChecked(isLowRegisterPressed);
     }
 
     private void setStatusRegisterDataReadyFlag(boolean isDataReady) {

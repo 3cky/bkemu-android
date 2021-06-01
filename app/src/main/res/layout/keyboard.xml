@@ -143,16 +143,15 @@
         android:gravity="center_horizontal"
         android:weightSum="31">
 
-        <ImageButton
+        <su.comp.bk.ui.keyboard.ModifierButton
             android:id="@+id/btn_low_register"
             android:tag="LOW_REGISTER"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="2"
-            android:background="@drawable/btn_gray"
-            android:padding="@dimen/btn_image_padding"
-            android:src="@drawable/arrow_shift"
-            android:scaleType="fitCenter"
+			android:background="@drawable/btn_low_register_bg"
+			android:textOn=""
+			android:textOff=""
             android:contentDescription="@string/desc_shift" />
 
         <Button
