@@ -85,10 +85,10 @@ import su.comp.bk.arch.cpu.opcode.EmtOpcode;
 import su.comp.bk.arch.cpu.opcode.JmpOpcode;
 import su.comp.bk.arch.io.FloppyController;
 import su.comp.bk.arch.io.FloppyController.FloppyDriveIdentifier;
-import su.comp.bk.arch.io.KeyboardController;
 import su.comp.bk.arch.io.VideoController;
 import su.comp.bk.arch.io.audio.AudioOutput;
 import su.comp.bk.ui.joystick.JoystickManager;
+import su.comp.bk.ui.keyboard.KeyboardManager;
 import su.comp.bk.util.FileUtils;
 import timber.log.Timber;
 
@@ -194,6 +194,7 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
 
     private Toolbar toolbar;
 
+    private KeyboardManager keyboardManager;
     private JoystickManager joystickManager;
 
     /**
@@ -511,6 +512,7 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
 
         onScreenControlsTransition = ts;
 
+        keyboardManager = new KeyboardManager(this);
         joystickManager = new JoystickManager(this);
 
         setupOnScreenControls();
@@ -528,11 +530,10 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
     }
 
     private void setupOnScreenControls() {
-        KeyboardController keyboardController = this.computer.getKeyboardController();
-        ViewGroup keyboardView = findViewById(R.id.keyboard);
-        keyboardController.setOnScreenKeyboardView(keyboardView);
+        keyboardManager.setKeyboardController(computer.getKeyboardController());
         joystickManager.setPeripheralPort(computer.getPeripheralPort());
-        keyboardController.setOnScreenKeyboardVisibility(false);
+
+        keyboardManager.setOnScreenKeyboardVisibility(false);
         joystickManager.setOnScreenJoystickVisibility(false);
     }
 
@@ -732,22 +733,21 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
 
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
-        return this.computer.getKeyboardController().handleKeyCode(keyCode, true)
+        return keyboardManager.handleKeyCode(keyCode, true)
                 || super.onKeyDown(keyCode, event);
     }
 
     @Override
     public boolean onKeyUp(int keyCode, KeyEvent event) {
-        return this.computer.getKeyboardController().handleKeyCode(keyCode, false)
+        return keyboardManager.handleKeyCode(keyCode, false)
                 || super.onKeyUp(keyCode, event);
     }
 
     @Override
     public void onBackPressed() {
-        KeyboardController keyboardController = this.computer.getKeyboardController();
-        if (keyboardController.isOnScreenKeyboardVisible()) {
+        if (keyboardManager.isOnScreenKeyboardVisible()) {
             startOnScreenControlsTransition();
-            keyboardController.setOnScreenKeyboardVisibility(false);
+            keyboardManager.setOnScreenKeyboardVisibility(false);
         } else if (joystickManager.isOnScreenJoystickVisible()) {
             startOnScreenControlsTransition();
             joystickManager.setOnScreenJoystickVisibility(false);
@@ -1597,13 +1597,12 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
     }
 
     protected boolean isOnScreenKeyboardVisible() {
-        return computer.getKeyboardController().isOnScreenKeyboardVisible();
+        return keyboardManager.isOnScreenKeyboardVisible();
     }
 
     private void switchOnScreenKeyboardVisibility(boolean isVisible) {
         Timber.d("switch on-screen keyboard visibility state: %s", (isVisible ? "ON" : "OFF"));
-        KeyboardController keyboardController = computer.getKeyboardController();
-        keyboardController.setOnScreenKeyboardVisibility(isVisible);
+        keyboardManager.setOnScreenKeyboardVisibility(isVisible);
     }
 
     private void switchOnScreenJoystickVisibility(boolean isVisible) {
