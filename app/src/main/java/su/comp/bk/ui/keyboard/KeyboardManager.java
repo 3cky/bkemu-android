@@ -18,6 +18,7 @@
 
 package su.comp.bk.ui.keyboard;
 
+import android.os.Bundle;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
@@ -32,6 +33,20 @@ import timber.log.Timber;
  * On-screen and hardware keyboards manager.
  */
 public class KeyboardManager implements OnTouchListener {
+    // State save/restore key prefix
+    private static final String STATE_PREFIX = KeyboardManager.class.getName();
+    // State save/restore: On-screen keyboard is visible flag state
+    private static final String STATE_KEYBOARD_VISIBLE = STATE_PREFIX + "#keyboard_visible";
+    // State save/restore: Latin mode flag state
+    private static final String STATE_LATIN_MODE = STATE_PREFIX + "#latin_mode";
+    // State save/restore: Uppercase mode flag state
+    private static final String STATE_UPPERCASE_MODE = STATE_PREFIX + "#uppercase_mode";
+    // State save/restore: Low register key pressed flag state
+    private static final String STATE_KEY_LOW_REGISTER_PRESSED = STATE_PREFIX + "#key_low_register_pressed";
+    // State save/restore: AR2 key pressed flag state
+    private static final String STATE_KEY_AR2_PRESSED = STATE_PREFIX + "#key_ar2_pressed";
+    // State save/restore: Control symbol key pressed flag state
+    private static final String STATE_KEY_CTRL_PRESSED = STATE_PREFIX + "#key_ctrl_pressed";
 
     // Constant: No android keyboard button for given BK key
     private final static int KEY_CODE_NONE = -1;
@@ -259,6 +274,24 @@ public class KeyboardManager implements OnTouchListener {
             handleBkButton(bkButton, isPressed);
         }
         return false;
+    }
+
+    public void saveState(Bundle outState) {
+        outState.putBoolean(STATE_KEYBOARD_VISIBLE, isOnScreenKeyboardVisible);
+        outState.putBoolean(STATE_LATIN_MODE, isLatinMode);
+        outState.putBoolean(STATE_UPPERCASE_MODE, isUppercaseMode);
+        outState.putBoolean(STATE_KEY_LOW_REGISTER_PRESSED, isLowRegisterPressed);
+        outState.putBoolean(STATE_KEY_AR2_PRESSED, isAr2Pressed);
+        outState.putBoolean(STATE_KEY_CTRL_PRESSED, isCtrlSymbolPressed);
+    }
+
+    public void restoreState(Bundle inState) {
+        setCtrlSymbolPressed(inState.getBoolean(STATE_KEY_CTRL_PRESSED));
+        setAr2Pressed(inState.getBoolean(STATE_KEY_AR2_PRESSED));
+        setLowRegisterPressed(inState.getBoolean(STATE_KEY_LOW_REGISTER_PRESSED));
+        setUppercaseMode(inState.getBoolean(STATE_UPPERCASE_MODE, true));
+        setLatinMode(inState.getBoolean(STATE_LATIN_MODE, true));
+        setOnScreenKeyboardVisibility(inState.getBoolean(STATE_KEYBOARD_VISIBLE));
     }
 
     private boolean isUppercaseMode() {

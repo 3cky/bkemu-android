@@ -708,9 +708,9 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
         outState.putInt(TAPE_PARAMS_BLOCK_ADDRESS, tapeParamsBlockAddr);
         // Save on-screen control states
         outState.putBoolean(ON_SCREEN_JOYSTICK_VISIBLE, isOnScreenJoystickVisible());
-        outState.putBoolean(ON_SCREEN_KEYBOARD_VISIBLE, isOnScreenKeyboardVisible());
+        keyboardManager.saveState(outState);
         // Save computer state
-        this.computer.saveState(getResources(), outState);
+        computer.saveState(getResources(), outState);
         super.onSaveInstanceState(outState);
     }
 
@@ -727,7 +727,7 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
         tapeParamsBlockAddr = inState.getInt(TAPE_PARAMS_BLOCK_ADDRESS);
         // Restore on-screen control states
         switchOnScreenJoystickVisibility(inState.getBoolean(ON_SCREEN_JOYSTICK_VISIBLE));
-        switchOnScreenKeyboardVisibility(inState.getBoolean(ON_SCREEN_KEYBOARD_VISIBLE));
+        keyboardManager.restoreState(inState);
         super.onRestoreInstanceState(inState);
     }
 
