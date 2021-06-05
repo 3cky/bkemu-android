@@ -69,14 +69,14 @@ public class KeyboardController implements Device {
     // Pressed key code data register value
     private int dataRegister;
 
-    /** Key pressing delay (in nanoseconds) */
-    private final static long KEY_PRESS_DELAY = (100L * Computer.NANOSECS_IN_MSEC);
+    /** Minimum key press time (in nanoseconds) */
+    private final static long MIN_KEY_PRESS_TIME = (100L * Computer.NANOSECS_IN_MSEC);
     // Button pressed state flag in SEL1 register
     private boolean isButtonPressed;
-    // Non-modifier button was pressed flag
-    private boolean wasButtonPressed;
     // Last button press timestamp (in CPU clock ticks)
     private long lastButtonPressTimestamp = -1L;
+    // Last pressed button keycode
+    private int lastPressedButtonKeyCode;
 
     private final Computer computer;
 
@@ -100,41 +100,55 @@ public class KeyboardController implements Device {
         writeStatusRegister(STATUS_VIRQ_MASK);
     }
 
-    public boolean isStopButtonEnabled() {
+    private boolean isStopButtonEnabled() {
         return isStopButtonEnabled;
     }
 
-    private void setStopButtonEnabled(boolean isStopButtonEnabled) {
-        this.isStopButtonEnabled = isStopButtonEnabled;
+    private void setStopButtonEnabled(boolean isEnabled) {
+        isStopButtonEnabled = isEnabled;
     }
 
     public void stopButtonPressed() {
-        computer.getCpu().requestIrq1();
+        if (isStopButtonEnabled()) {
+            computer.getCpu().requestIrq1();
+        }
     }
 
-    private boolean isButtonPressed(long cpuTime) {
-        return (lastButtonPressTimestamp >= 0 && computer.cpuTimeToNanos(cpuTime -
-                lastButtonPressTimestamp) <= KEY_PRESS_DELAY) || isButtonPressed;
+    private boolean isButtonPressed() {
+        return isButtonPressed;
+    }
+
+    // Check button was pressed in last MIN_KEY_PRESS_TIME
+    private boolean checkButtonPressed(long cpuTime) {
+        return isButtonPressed() || (lastButtonPressTimestamp >= 0 && computer.cpuTimeToNanos(
+                cpuTime - lastButtonPressTimestamp) <= MIN_KEY_PRESS_TIME);
     }
 
     private void setButtonPressed(long cpuTime, boolean isPressed) {
         isButtonPressed = isPressed;
         if (isPressed) {
-            wasButtonPressed = true;
             lastButtonPressTimestamp = cpuTime;
         }
     }
 
-    public void setButtonPressed(boolean isPressed) {
+    private void setButtonPressed(boolean isPressed) {
         setButtonPressed(computer.getCpu().getTime(), isPressed);
     }
 
-    public void setWasButtonPressed(boolean wasButtonPressed) {
-        this.wasButtonPressed = wasButtonPressed;
-    }
-
-    public boolean wasButtonPressed() {
-        return wasButtonPressed;
+    public void handleButton(int keyCode, boolean isPressed) {
+        if (isPressed) {
+            // Ignore repeated button press events if already in pressed state
+            if (!isButtonPressed()) {
+                // Write new key code to data register only if previous key code was read
+                if (!isStatusRegisterDataReady()) {
+                    writeDataRegister(keyCode);
+                }
+                lastPressedButtonKeyCode = keyCode;
+                setButtonPressed(true);
+            }
+        } else if (keyCode == lastPressedButtonKeyCode) {
+            setButtonPressed(false);
+        }
     }
 
     private void setStatusRegisterDataReadyFlag(boolean isDataReady) {
@@ -184,7 +198,7 @@ public class KeyboardController implements Device {
             case DATA_REGISTER_ADDRESS:
                 return readDataRegister();
             default:
-                return isButtonPressed(cpuTime) ? 0 : SEL1_REGISTER_BUTTON_PRESSED;
+                return checkButtonPressed(cpuTime) ? 0 : SEL1_REGISTER_BUTTON_PRESSED;
         }
     }
 

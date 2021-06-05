@@ -41,12 +41,12 @@ public class KeyboardManager implements OnTouchListener {
     private static final String STATE_LATIN_MODE = STATE_PREFIX + "#latin_mode";
     // State save/restore: Uppercase mode flag state
     private static final String STATE_UPPERCASE_MODE = STATE_PREFIX + "#uppercase_mode";
-    // State save/restore: Low register key pressed flag state
-    private static final String STATE_KEY_LOW_REGISTER_PRESSED = STATE_PREFIX + "#key_low_register_pressed";
-    // State save/restore: AR2 key pressed flag state
-    private static final String STATE_KEY_AR2_PRESSED = STATE_PREFIX + "#key_ar2_pressed";
-    // State save/restore: Control symbol key pressed flag state
-    private static final String STATE_KEY_CTRL_PRESSED = STATE_PREFIX + "#key_ctrl_pressed";
+    // State save/restore: Low register key sticky mode flag
+    private static final String STATE_LOW_REGISTER_STICKY_MODE = STATE_PREFIX + "#low_register_sticky_mode";
+    // State save/restore: AR2 key sticky mode flag
+    private static final String STATE_AR2_STICKY_MODE = STATE_PREFIX + "#ar2_sticky_mode";
+    // State save/restore: Control symbol key sticky mode flag
+    private static final String STATE_CTRL_STICKY_MODE = STATE_PREFIX + "#ctrl_sticky_mode";
 
     // Constant: No android keyboard button for given BK key
     private final static int KEY_CODE_NONE = -1;
@@ -58,8 +58,8 @@ public class KeyboardManager implements OnTouchListener {
 
     private View onScreenKeyboardView;
 
-    // Low register modifier key codes lookup table
-    private static final byte[] lowRegisterKeyCodeTable = new byte[256];
+    // Low register BK key codes lookup table
+    private static final byte[] lowRegisterBkKeyCodeTable = new byte[256];
 
     // Latin mode flag
     private boolean isLatinMode;
@@ -69,12 +69,18 @@ public class KeyboardManager implements OnTouchListener {
 
     // Low register modifier key is pressed flag
     private boolean isLowRegisterPressed;
+    // Low register modifier key is pressed sticky flag
+    private boolean isLowRegisterPressedSticky;
 
     // AR2 (Alternative Register 2) key is pressed flag
     private boolean isAr2Pressed;
+    // AR2 (Alternative Register 2) key is pressed sticky flag
+    private boolean isAr2PressedSticky;
 
     // Control symbol key is pressed flag
     private boolean isCtrlSymbolPressed;
+    // Control symbol key is pressed sticky flag
+    private boolean isCtrlSymbolPressedSticky;
 
     private ModifierButton ar2Button;
     private ModifierButton ctrlSymbolButton;
@@ -205,27 +211,27 @@ public class KeyboardManager implements OnTouchListener {
     private static void initializeLookupTables() {
         // Initialize low register modifier key codes lookup table
         for (int i = 0; i < 256; i++) {
-            lowRegisterKeyCodeTable[i] = (byte) i;
+            lowRegisterBkKeyCodeTable[i] = (byte) i;
         }
         for (int i = 0100; i <= 0137; i++) {
-            lowRegisterKeyCodeTable[i] = (byte) (i + 040);
+            lowRegisterBkKeyCodeTable[i] = (byte) (i + 040);
         }
-        lowRegisterKeyCodeTable[';'] = '+';
-        lowRegisterKeyCodeTable['1'] = '!';
-        lowRegisterKeyCodeTable['2'] = '"';
-        lowRegisterKeyCodeTable['3'] = '#';
-        lowRegisterKeyCodeTable['4'] = '$';
-        lowRegisterKeyCodeTable['5'] = '%';
-        lowRegisterKeyCodeTable['6'] = '&';
-        lowRegisterKeyCodeTable['7'] = '\'';
-        lowRegisterKeyCodeTable['8'] = '(';
-        lowRegisterKeyCodeTable['9'] = ')';
-        lowRegisterKeyCodeTable['0'] = '{';
-        lowRegisterKeyCodeTable['-'] = '=';
-        lowRegisterKeyCodeTable['/'] = '?';
-        lowRegisterKeyCodeTable[':'] = '*';
-        lowRegisterKeyCodeTable['.'] = '>';
-        lowRegisterKeyCodeTable[','] = '<';
+        lowRegisterBkKeyCodeTable[';'] = '+';
+        lowRegisterBkKeyCodeTable['1'] = '!';
+        lowRegisterBkKeyCodeTable['2'] = '"';
+        lowRegisterBkKeyCodeTable['3'] = '#';
+        lowRegisterBkKeyCodeTable['4'] = '$';
+        lowRegisterBkKeyCodeTable['5'] = '%';
+        lowRegisterBkKeyCodeTable['6'] = '&';
+        lowRegisterBkKeyCodeTable['7'] = '\'';
+        lowRegisterBkKeyCodeTable['8'] = '(';
+        lowRegisterBkKeyCodeTable['9'] = ')';
+        lowRegisterBkKeyCodeTable['0'] = '{';
+        lowRegisterBkKeyCodeTable['-'] = '=';
+        lowRegisterBkKeyCodeTable['/'] = '?';
+        lowRegisterBkKeyCodeTable[':'] = '*';
+        lowRegisterBkKeyCodeTable['.'] = '>';
+        lowRegisterBkKeyCodeTable[','] = '<';
     }
 
     public KeyboardManager(BkEmuActivity bkEmuActivity) {
@@ -247,7 +253,7 @@ public class KeyboardManager implements OnTouchListener {
         ctrlSymbolButton = onScreenKeyboardView.findViewById(R.id.btn_ctrl_symbol);
         ar2Button = onScreenKeyboardView.findViewById(R.id.btn_ar2);
         lowRegisterButton = onScreenKeyboardView.findViewById(R.id.btn_low_register);
-        clearModifierFlags();
+        releaseStickyButtons();
     }
 
     public void setOnScreenKeyboardVisibility(boolean isVisible) {
@@ -271,7 +277,7 @@ public class KeyboardManager implements OnTouchListener {
             boolean isPressed = event.getAction() == MotionEvent.ACTION_DOWN;
             Timber.d("handle button touch event " + (isPressed ? "press" : "release") +
                     ", button: " + bkButton);
-            handleBkButton(bkButton, isPressed);
+            handleBkButton(bkButton, isPressed, true);
         }
         return false;
     }
@@ -280,15 +286,15 @@ public class KeyboardManager implements OnTouchListener {
         outState.putBoolean(STATE_KEYBOARD_VISIBLE, isOnScreenKeyboardVisible);
         outState.putBoolean(STATE_LATIN_MODE, isLatinMode);
         outState.putBoolean(STATE_UPPERCASE_MODE, isUppercaseMode);
-        outState.putBoolean(STATE_KEY_LOW_REGISTER_PRESSED, isLowRegisterPressed);
-        outState.putBoolean(STATE_KEY_AR2_PRESSED, isAr2Pressed);
-        outState.putBoolean(STATE_KEY_CTRL_PRESSED, isCtrlSymbolPressed);
+        outState.putBoolean(STATE_LOW_REGISTER_STICKY_MODE, isLowRegisterPressedSticky);
+        outState.putBoolean(STATE_AR2_STICKY_MODE, isAr2PressedSticky);
+        outState.putBoolean(STATE_CTRL_STICKY_MODE, isCtrlSymbolPressedSticky);
     }
 
     public void restoreState(Bundle inState) {
-        setCtrlSymbolPressed(inState.getBoolean(STATE_KEY_CTRL_PRESSED));
-        setAr2Pressed(inState.getBoolean(STATE_KEY_AR2_PRESSED));
-        setLowRegisterPressed(inState.getBoolean(STATE_KEY_LOW_REGISTER_PRESSED));
+        setCtrlSymbolPressedSticky(inState.getBoolean(STATE_CTRL_STICKY_MODE));
+        setAr2PressedSticky(inState.getBoolean(STATE_AR2_STICKY_MODE));
+        setLowRegisterPressedSticky(inState.getBoolean(STATE_LOW_REGISTER_STICKY_MODE));
         setUppercaseMode(inState.getBoolean(STATE_UPPERCASE_MODE, true));
         setLatinMode(inState.getBoolean(STATE_LATIN_MODE, true));
         setOnScreenKeyboardVisibility(inState.getBoolean(STATE_KEYBOARD_VISIBLE));
@@ -310,40 +316,64 @@ public class KeyboardManager implements OnTouchListener {
         this.isLatinMode = isLatinMode;
     }
 
-    private void clearModifierFlags() {
-        setLowRegisterPressed(false);
-        setCtrlSymbolPressed(false);
-        setAr2Pressed(false);
-        if (keyboardController != null) {
-            keyboardController.setWasButtonPressed(false);
-        }
+    private void releaseStickyButtons() {
+        setLowRegisterPressedSticky(false);
+        setCtrlSymbolPressedSticky(false);
+        setAr2PressedSticky(false);
     }
 
     private boolean isCtrlSymbolPressed() {
         return isCtrlSymbolPressed;
     }
 
-    private void setCtrlSymbolPressed(boolean isCtrlSymbolPressed) {
-        this.isCtrlSymbolPressed = isCtrlSymbolPressed;
-        ctrlSymbolButton.setChecked(isCtrlSymbolPressed);
+    private void setCtrlSymbolPressed(boolean isPressed) {
+        isCtrlSymbolPressed = isPressed;
+    }
+
+    private boolean isCtrlSymbolPressedSticky() {
+        return isCtrlSymbolPressedSticky;
+    }
+
+    private void setCtrlSymbolPressedSticky(boolean isPressed) {
+        isCtrlSymbolPressedSticky = isPressed;
+        setCtrlSymbolPressed(isPressed);
+        ctrlSymbolButton.setChecked(isPressed);
     }
 
     private boolean isAr2Pressed() {
         return isAr2Pressed;
     }
 
-    private void setAr2Pressed(boolean isAr2Pressed) {
-        this.isAr2Pressed = isAr2Pressed;
-        ar2Button.setChecked(isAr2Pressed);
+    private void setAr2Pressed(boolean isPressed) {
+        isAr2Pressed = isPressed;
+    }
+
+    public boolean isAr2PressedSticky() {
+        return isAr2PressedSticky;
+    }
+
+    private void setAr2PressedSticky(boolean isPressed) {
+        isAr2PressedSticky = isPressed;
+        setAr2Pressed(isPressed);
+        ar2Button.setChecked(isPressed);
     }
 
     private boolean isLowRegisterPressed() {
         return isLowRegisterPressed;
     }
 
-    private void setLowRegisterPressed(boolean isLowRegisterPressed) {
-        this.isLowRegisterPressed = isLowRegisterPressed;
-        lowRegisterButton.setChecked(isLowRegisterPressed);
+    private void setLowRegisterPressed(boolean isPressed) {
+        isLowRegisterPressed = isPressed;
+    }
+
+    private boolean isLowRegisterPressedSticky() {
+        return isLowRegisterPressedSticky;
+    }
+
+    private void setLowRegisterPressedSticky(boolean isPressed) {
+        isLowRegisterPressedSticky = isPressed;
+        setLowRegisterPressed(isPressed);
+        lowRegisterButton.setChecked(isPressed);
     }
 
     /**
@@ -363,21 +393,39 @@ public class KeyboardManager implements OnTouchListener {
             keyCode = KeyEvent.KEYCODE_2;
         }
         BkButton bkButton = BkButton.getByAndroidKeyCode(keyCode);
-        return handleBkButton(bkButton, isKeyPress);
+        showOnScreenKeyboardButtonState(bkButton, isKeyPress);
+        return handleBkButton(bkButton, isKeyPress, false);
     }
 
-    private int getLowRegisterKeyCode(int keyCode) {
-        return lowRegisterKeyCodeTable[keyCode] & 0377;
+    private void showOnScreenKeyboardButtonState(BkButton bkButton, boolean isPressed) {
+        if (bkButton == null || onScreenKeyboardView == null) {
+            return;
+        }
+        View buttonView = onScreenKeyboardView.findViewWithTag(bkButton.name());
+        if (buttonView != null) {
+            buttonView.setPressed(isPressed);
+        }
+    }
+
+    private static int getLowRegisterBkKeyCode(int keyCode) {
+        return lowRegisterBkKeyCodeTable[keyCode] & 0377;
+    }
+
+    private static boolean isLetterBkButton(int bkKeyCode) {
+        return (0100 <= bkKeyCode && bkKeyCode <= 0137);
     }
 
     /**
      * Handle BK keyboard button key press/release.
      * @param bkButton {@link BkButton} to handle
      * @param isPressed <code>true</code> if button was pressed, <code>false</code> if released
+     * @param isOnScreenKeyboard <code>true</code> if pressed/released on-screen keyboard button,
+     *                         <code>false</code> if pressed/released physical (USB) keyboard button
      * @return <code>true</code> if key code was handled by keyboard controller,
      * <code>false</code> otherwise
      */
-    private synchronized boolean handleBkButton(BkButton bkButton, boolean isPressed) {
+    private synchronized boolean handleBkButton(BkButton bkButton, boolean isPressed,
+                                                boolean isOnScreenKeyboard) {
         boolean isKeyCodeHandled = false;
         if (bkButton != null) {
             int bkKeyCode = bkButton.getBkKeyCode();
@@ -393,45 +441,68 @@ public class KeyboardManager implements OnTouchListener {
                         bkKeyCode &= 037;
                     }
                     // Check Low Register modifier and uppercase mode states
-                    boolean isLowRegister = !isLetterButton(bkKeyCode) ? isLowRegisterPressed() :
+                    boolean isLowRegister = !isLetterBkButton(bkKeyCode) ? isLowRegisterPressed() :
                             isLatinMode() ^ (isUppercaseMode() || isLowRegisterPressed());
                     if (isLowRegister) {
-                        bkKeyCode = getLowRegisterKeyCode(bkKeyCode);
+                        bkKeyCode = getLowRegisterBkKeyCode(bkKeyCode);
                     }
                 }
-                // Set button pressed state
-                keyboardController.setButtonPressed(isPressed);
-                // Write new key code to data register only if previous key code was read
-                if (isPressed && !keyboardController.isStatusRegisterDataReady()) {
-                    keyboardController.writeDataRegister(isAr2Pressed() ? (bkKeyCode | 0200) : bkKeyCode);
+                // Apply AR2 modifier state
+                bkKeyCode = isAr2Pressed() ? (bkKeyCode | 0200) : bkKeyCode;
+                // Handle button press or release in keyboard controller
+                keyboardController.handleButton(bkKeyCode, isPressed);
+                // Release sticky buttons on non-modifier on-screen keyboard button release
+                if (isOnScreenKeyboard && !isPressed) {
+                    releaseStickyButtons();
                 }
             } else {
                 // Handle special buttons
                 switch (bkButton) {
                     case STOP:
-                        if (isPressed && keyboardController.isStopButtonEnabled()) {
+                        if (isPressed) {
                             keyboardController.stopButtonPressed();
                         }
                         break;
                     case LOW_REGISTER:
-                        boolean lowRegisterModifierState = isLowRegisterPressed();
-                        if (isPressed || keyboardController.wasButtonPressed()) {
-                            clearModifierFlags();
-                            setLowRegisterPressed(!lowRegisterModifierState);
+                        if (isOnScreenKeyboard) {
+                            if (isPressed) {
+                                setLowRegisterPressed(true);
+                            } else {
+                                setLowRegisterPressedSticky(!isLowRegisterPressedSticky());
+                            }
+                        } else {
+                            if (!isPressed) {
+                                releaseStickyButtons();
+                            }
+                            setLowRegisterPressed(isPressed);
                         }
                         break;
                     case AR2:
-                        boolean ar2ModifierState = isAr2Pressed();
-                        if (isPressed || keyboardController.wasButtonPressed()) {
-                            clearModifierFlags();
-                            setAr2Pressed(!ar2ModifierState);
+                        if (isOnScreenKeyboard) {
+                            if (isPressed) {
+                                setAr2Pressed(true);
+                            } else {
+                                setAr2PressedSticky(!isAr2PressedSticky());
+                            }
+                        } else {
+                            if (!isPressed) {
+                                releaseStickyButtons();
+                            }
+                            setAr2Pressed(isPressed);
                         }
                         break;
                     case CTRL_SYMBOL:
-                        boolean ctrlSymbolrState = isCtrlSymbolPressed();
-                        if (isPressed || keyboardController.wasButtonPressed()) {
-                            clearModifierFlags();
-                            setCtrlSymbolPressed(!ctrlSymbolrState);
+                        if (isOnScreenKeyboard) {
+                            if (isPressed) {
+                                setCtrlSymbolPressed(true);
+                            } else {
+                                setCtrlSymbolPressedSticky(!isCtrlSymbolPressedSticky());
+                            }
+                        } else {
+                            if (!isPressed) {
+                                releaseStickyButtons();
+                            }
+                            setCtrlSymbolPressed(isPressed);
                         }
                         break;
                     case UPPERCASE:
@@ -451,9 +522,5 @@ public class KeyboardManager implements OnTouchListener {
             isKeyCodeHandled = true;
         }
         return isKeyCodeHandled;
-    }
-
-    private static boolean isLetterButton(int bkKeyCode) {
-        return (0100 <= bkKeyCode && bkKeyCode <= 0137);
     }
 }
