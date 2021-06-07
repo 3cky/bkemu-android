@@ -82,6 +82,9 @@ public class KeyboardManager implements OnTouchListener {
     // Control symbol key is pressed sticky flag
     private boolean isCtrlSymbolPressedSticky;
 
+    // Non-modifier button was pressed
+    private boolean wasNonModifierButtonPressed;
+
     private ModifierButton ar2Button;
     private ModifierButton ctrlSymbolButton;
     private ModifierButton lowRegisterButton;
@@ -335,8 +338,10 @@ public class KeyboardManager implements OnTouchListener {
     }
 
     private void setCtrlSymbolPressedSticky(boolean isPressed) {
+        if (isPressed || isCtrlSymbolPressedSticky) {
+            setCtrlSymbolPressed(isPressed);
+        }
         isCtrlSymbolPressedSticky = isPressed;
-        setCtrlSymbolPressed(isPressed);
         ctrlSymbolButton.setChecked(isPressed);
     }
 
@@ -353,8 +358,10 @@ public class KeyboardManager implements OnTouchListener {
     }
 
     private void setAr2PressedSticky(boolean isPressed) {
+        if (isPressed || isAr2PressedSticky) {
+            setAr2Pressed(isPressed);
+        }
         isAr2PressedSticky = isPressed;
-        setAr2Pressed(isPressed);
         ar2Button.setChecked(isPressed);
     }
 
@@ -371,9 +378,19 @@ public class KeyboardManager implements OnTouchListener {
     }
 
     private void setLowRegisterPressedSticky(boolean isPressed) {
+        if (isPressed || isLowRegisterPressedSticky) {
+            setLowRegisterPressed(isPressed);
+        }
         isLowRegisterPressedSticky = isPressed;
-        setLowRegisterPressed(isPressed);
         lowRegisterButton.setChecked(isPressed);
+    }
+
+    private boolean isWasNonModifierButtonPressed() {
+        return wasNonModifierButtonPressed;
+    }
+
+    private void setWasNonModifierButtonPressed(boolean wasPressed) {
+        wasNonModifierButtonPressed = wasPressed;
     }
 
     /**
@@ -451,6 +468,8 @@ public class KeyboardManager implements OnTouchListener {
                 bkKeyCode = isAr2Pressed() ? (bkKeyCode | 0200) : bkKeyCode;
                 // Handle button press or release in keyboard controller
                 keyboardController.handleButton(bkKeyCode, isPressed);
+                // Set non-modifier button pressed flag
+                setWasNonModifierButtonPressed(true);
                 // Release sticky buttons on non-modifier on-screen keyboard button release
                 if (isOnScreenKeyboard && !isPressed) {
                     releaseStickyButtons();
@@ -467,8 +486,11 @@ public class KeyboardManager implements OnTouchListener {
                         if (isOnScreenKeyboard) {
                             if (isPressed) {
                                 setLowRegisterPressed(true);
-                            } else {
-                                setLowRegisterPressedSticky(!isLowRegisterPressedSticky());
+                                setWasNonModifierButtonPressed(false);
+                            } else if (isLowRegisterPressedSticky()) {
+                                setLowRegisterPressedSticky(false);
+                            } else if (!isWasNonModifierButtonPressed()) {
+                                setLowRegisterPressedSticky(true);
                             }
                         } else {
                             if (!isPressed) {
@@ -481,8 +503,11 @@ public class KeyboardManager implements OnTouchListener {
                         if (isOnScreenKeyboard) {
                             if (isPressed) {
                                 setAr2Pressed(true);
-                            } else {
-                                setAr2PressedSticky(!isAr2PressedSticky());
+                                setWasNonModifierButtonPressed(false);
+                            } else if (isAr2PressedSticky()) {
+                                setAr2PressedSticky(false);
+                            } else if (!isWasNonModifierButtonPressed()) {
+                                setAr2PressedSticky(true);
                             }
                         } else {
                             if (!isPressed) {
@@ -495,8 +520,11 @@ public class KeyboardManager implements OnTouchListener {
                         if (isOnScreenKeyboard) {
                             if (isPressed) {
                                 setCtrlSymbolPressed(true);
-                            } else {
-                                setCtrlSymbolPressedSticky(!isCtrlSymbolPressedSticky());
+                                setWasNonModifierButtonPressed(false);
+                            } else if (isCtrlSymbolPressedSticky()) {
+                                setCtrlSymbolPressedSticky(false);
+                            } else if (!isWasNonModifierButtonPressed()) {
+                                setCtrlSymbolPressedSticky(true );
                             }
                         } else {
                             if (!isPressed) {
