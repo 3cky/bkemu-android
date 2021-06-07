@@ -39,7 +39,6 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
-import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -48,7 +47,6 @@ import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.widget.SwitchCompat;
 import androidx.appcompat.widget.Toolbar;
 import androidx.transition.ChangeBounds;
 import androidx.transition.Explode;
@@ -115,9 +113,6 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
     // State save/restore: On-screen joystick visibility state
     private static final String ON_SCREEN_JOYSTICK_VISIBLE = BkEmuActivity.class.getName() +
             "#on_screen_joystick_visible";
-    // State save/restore: On-screen keyboard visibility state
-    private static final String ON_SCREEN_KEYBOARD_VISIBLE =  BkEmuActivity.class.getName() +
-            "#on_screen_keyboard_visible";
 
     public final static int STACK_TOP_ADDRESS = 01000;
 
@@ -125,7 +120,6 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
     private static final int DIALOG_COMPUTER_MODEL = 1;
     private static final int DIALOG_ABOUT = 2;
     private static final int DIALOG_DISK_MOUNT_ERROR = 3;
-    private static final int DIALOG_DISK_MANAGER = 4;
 
     // Intent request IDs
     private static final int REQUEST_MENU_BIN_IMAGE_FILE_LOAD = 1;
@@ -138,9 +132,6 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
             "/store/apps/details?id=su.comp.bk";
 
     public static final int MAX_TAPE_FILE_NAME_LENGTH = 16;
-
-    private static final int MAX_FILE_NAME_DISPLAY_LENGTH = 15;
-    private static final int FILE_NAME_DISPLAY_SUFFIX_LENGTH = 3;
 
     private static final String PREFS_KEY_COMPUTER_CONFIGURATION = "su.comp.bk.a.c";
     private static final String PREFS_KEY_FLOPPY_DRIVE_PREFIX =
@@ -814,7 +805,7 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
                 showBinImageFileLoadDialog(REQUEST_MENU_BIN_IMAGE_FILE_LOAD, null);
                 return true;
             case R.id.menu_disk_manager:
-                showDialog(DIALOG_DISK_MANAGER);
+                showDiskManagerDialog();
                 return true;
             case R.id.menu_about:
                 showDialog(DIALOG_ABOUT);
@@ -839,8 +830,6 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
                 return createComputerModelDialog();
             case DIALOG_ABOUT:
                 return createAboutDialog();
-            case DIALOG_DISK_MANAGER:
-                return createDiskManagerDialog();
             case DIALOG_DISK_MOUNT_ERROR:
                 return createDiskMountErrorDialog();
         }
@@ -854,13 +843,6 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
             .setMessage(R.string.dialog_disk_mount_error)
             .setPositiveButton(R.string.ok, null)
             .create();
-    }
-
-    private Dialog createDiskManagerDialog() {
-        Dialog fddManagerDialog = new Dialog(this);
-        fddManagerDialog.setTitle(R.string.menu_disk_manager);
-        fddManagerDialog.setContentView(R.layout.fdd_mgr_dialog);
-        return fddManagerDialog;
     }
 
     private Dialog createAboutDialog() {
@@ -935,76 +917,10 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
 
     @Override
     protected void onPrepareDialog(int id, Dialog dialog) {
-        switch (id) {
-            case DIALOG_DISK_MANAGER:
-                prepareDiskManagerDialog(dialog);
-                break;
-            case DIALOG_ABOUT:
-                prepareAboutDialog(dialog);
-                break;
+        if (id == DIALOG_ABOUT) {
+            prepareAboutDialog(dialog);
         }
         super.onPrepareDialog(id, dialog);
-    }
-
-    protected void prepareDiskManagerDialog(Dialog dialog) {
-        prepareFloppyDriveView(dialog.findViewById(R.id.fdd_layout_a),
-                FloppyDriveIdentifier.A);
-        prepareFloppyDriveView(dialog.findViewById(R.id.fdd_layout_b),
-                FloppyDriveIdentifier.B);
-        prepareFloppyDriveView(dialog.findViewById(R.id.fdd_layout_c),
-                FloppyDriveIdentifier.C);
-        prepareFloppyDriveView(dialog.findViewById(R.id.fdd_layout_d),
-                FloppyDriveIdentifier.D);
-    }
-
-    protected void prepareFloppyDriveView(final View fddView,
-            final FloppyDriveIdentifier fddIdentifier) {
-        updateFloppyDriveView(fddView, fddIdentifier);
-        fddView.setOnClickListener(v -> showMountDiskImageFileDialog(fddIdentifier));
-        fddView.setOnLongClickListener(v -> {
-            unmountFddImage(fddIdentifier);
-            updateFloppyDriveView(v, fddIdentifier);
-            return true;
-        });
-    }
-
-    protected void updateFloppyDriveView(final View fddView,
-            final FloppyDriveIdentifier fddIdentifier) {
-        TextView fddLabelView = fddView.findViewWithTag("fdd_label");
-        fddLabelView.setText(fddIdentifier.name());
-        FloppyController fddController = computer.getFloppyController();
-        SwitchCompat fddWriteProtectSwitch = fddView.findViewWithTag("fdd_wp_switch");
-        fddWriteProtectSwitch.setOnCheckedChangeListener((buttonView, isChecked) ->
-                setFddWriteProtectMode(fddController, fddIdentifier, isChecked));
-        boolean isFddMounted = fddController.isFloppyDriveMounted(fddIdentifier);
-        ImageView fddImageView = fddView.findViewWithTag("fdd_image");
-        fddImageView.setImageResource(isFddMounted ? R.drawable.floppy_drive_loaded
-                : R.drawable.floppy_drive);
-        TextView fddFileTextView = fddView.findViewWithTag("fdd_file");
-        if (isFddMounted) {
-            fddWriteProtectSwitch.setClickable(true);
-            fddWriteProtectSwitch.setChecked(fddController.isFloppyDriveInWriteProtectMode(fddIdentifier));
-            fddFileTextView.setTextColor(getResources().getColor(R.color.fdd_loaded));
-            String fddImageFileName = fddController.getFloppyDriveImageFile(fddIdentifier).getName();
-            if (fddImageFileName.length() > MAX_FILE_NAME_DISPLAY_LENGTH) {
-                // Trim file name to display
-                int nameDotIndex = fddImageFileName.lastIndexOf('.');
-                if (nameDotIndex < 0) {
-                    nameDotIndex = fddImageFileName.length();
-                }
-                int nameSuffixIndex = nameDotIndex - FILE_NAME_DISPLAY_SUFFIX_LENGTH;
-                int namePrefixIndex = MAX_FILE_NAME_DISPLAY_LENGTH - (fddImageFileName.length()
-                        - nameSuffixIndex);
-                fddImageFileName = fddImageFileName.substring(0, namePrefixIndex)
-                        .concat("...").concat(fddImageFileName.substring(nameSuffixIndex));
-            }
-            fddFileTextView.setText(fddImageFileName);
-        } else {
-            fddWriteProtectSwitch.setClickable(false);
-            fddWriteProtectSwitch.setChecked(false);
-            fddFileTextView.setTextColor(getResources().getColor(R.color.fdd_empty));
-            fddFileTextView.setText(R.string.fdd_empty);
-        }
     }
 
     protected void prepareAboutDialog(Dialog aboutDialog) {
@@ -1164,10 +1080,18 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
     }
 
     /**
+     * Show disk manager dialog.
+     */
+    private void showDiskManagerDialog() {
+        BkEmuDiskManagerDialog bkEmuDiskManagerDialog = BkEmuDiskManagerDialog.newInstance();
+        bkEmuDiskManagerDialog.show(getSupportFragmentManager(), "disk_manager");
+    }
+
+    /**
      * Show audio devices volume adjustment dialog.
      */
     private void showVolumeDialog() {
-        BkEmuVolumeDialog bkEmuVolumeDialogFragment = new BkEmuVolumeDialog(this);
+        BkEmuVolumeDialog bkEmuVolumeDialogFragment = BkEmuVolumeDialog.newInstance();
         bkEmuVolumeDialogFragment.show(getSupportFragmentManager(), "volume");
     }
 
@@ -1219,7 +1143,7 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
                             .valueOf(data.getStringExtra(FloppyDriveIdentifier.class.getName()));
                     if (mountFddImage(driveIdentifier, diskImageFile, false)) {
                         lastDiskImageFilePath = diskImageFilePath;
-                        showDialog(DIALOG_DISK_MANAGER);
+                        showDiskManagerDialog();
                     } else {
                         Timber.e("can't mount disk image %s'", diskImageFilePath);
                         showDialog(DIALOG_DISK_MOUNT_ERROR);
@@ -1407,13 +1331,6 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
         SharedPreferences.Editor prefsEditor = prefs.edit();
         prefsEditor.putString(PREFS_KEY_COMPUTER_CONFIGURATION, configuration.name());
         prefsEditor.apply();
-    }
-
-    protected void setFddWriteProtectMode(FloppyController fddController,
-                                          FloppyDriveIdentifier fddIdentifier,
-                                          boolean isWriteProtectMode) {
-        fddController.setFloppyDriveWriteProtectMode(fddIdentifier, isWriteProtectMode);
-        storeFddWriteProtectMode(fddIdentifier, isWriteProtectMode);
     }
 
     private String getPrefsFddImageKey(FloppyDriveIdentifier fddIdentifier) {

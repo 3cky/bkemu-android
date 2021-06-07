@@ -1120,11 +1120,11 @@ public class FloppyController implements Device {
         this.isWriteOperation = isWriteOperation;
     }
 
-    public int getLastMarkerPosition() {
+    private int getLastMarkerPosition() {
         return lastMarkerPosition;
     }
 
-    public void setLastMarkerPosition(int position) {
+    private void setLastMarkerPosition(int position) {
         this.lastMarkerPosition = position;
     }
 
@@ -1229,7 +1229,7 @@ public class FloppyController implements Device {
      * @return selected floppy drive identifier or <code>null</code> if no floppy drive
      * currently selected
      */
-    protected FloppyDriveIdentifier getSelectedFloppyDriveIdentifier() {
+    public FloppyDriveIdentifier getSelectedFloppyDriveIdentifier() {
         return selectedFloppyDriveIdentifier;
     }
 

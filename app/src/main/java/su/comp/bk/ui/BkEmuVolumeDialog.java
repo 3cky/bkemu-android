@@ -43,19 +43,27 @@ import su.comp.bk.arch.io.audio.Ay8910;
 import su.comp.bk.arch.io.audio.Covox;
 import su.comp.bk.arch.io.audio.Speaker;
 
+/**
+ * Sound device volumes control dialog.
+ */
 public class BkEmuVolumeDialog extends DialogFragment implements SeekBar.OnSeekBarChangeListener,
         View.OnClickListener {
 
     private static final int VOLUME_MUTE = AudioOutput.MIN_VOLUME;
     private static final int VOLUME_UNMUTE = AudioOutput.MAX_VOLUME / 5;
 
-    private final BkEmuActivity bkEmuActivity;
+    private final Map<String, SeekBar> volumeSeekBars = new ArrayMap<>();
+    private final Map<String, ImageView> muteImageViews = new ArrayMap<>();
 
-    private Map<String, SeekBar> volumeSeekBars = new ArrayMap<>();
-    private Map<String, ImageView> muteImageViews = new ArrayMap<>();
+    public static BkEmuVolumeDialog newInstance() {
+        return new BkEmuVolumeDialog();
+    }
 
-    BkEmuVolumeDialog(BkEmuActivity bkEmuActivity) {
-        this.bkEmuActivity = bkEmuActivity;
+    public BkEmuVolumeDialog() {
+    }
+
+    private BkEmuActivity getBkEmuActivity() {
+        return (BkEmuActivity) requireActivity();
     }
 
     @NonNull
@@ -127,7 +135,7 @@ public class BkEmuVolumeDialog extends DialogFragment implements SeekBar.OnSeekB
     }
 
     private List<AudioOutput> getAudioOutputs() {
-        return bkEmuActivity.getComputer().getAudioOutputs();
+        return getBkEmuActivity().getComputer().getAudioOutputs();
     }
 
     private AudioOutput getAudioOutput(String outputName) {
@@ -161,7 +169,7 @@ public class BkEmuVolumeDialog extends DialogFragment implements SeekBar.OnSeekB
     }
 
     private void storeVolume(String outputName) {
-        bkEmuActivity.storeAudioOutputVolume(outputName, getVolume(outputName));
+        getBkEmuActivity().storeAudioOutputVolume(outputName, getVolume(outputName));
     }
 
     private void updateVolumeSeekBar(String outputName) {
