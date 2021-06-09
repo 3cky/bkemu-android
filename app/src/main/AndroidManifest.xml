@@ -9,6 +9,17 @@
         android:label="@string/app_name"
         android:theme="@style/AppTheme"
         android:requestLegacyExternalStorage="true">
+
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="su.comp.bk.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
         <activity android:label="@string/app_name" android:name=".ui.BkEmuActivity"
                 android:windowSoftInputMode="adjustResize"
                 android:launchMode="singleTask">

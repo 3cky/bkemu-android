@@ -25,6 +25,7 @@ import android.app.Dialog;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager.NameNotFoundException;
+import android.graphics.Bitmap;
 import android.graphics.Rect;
 import android.net.Uri;
 import android.os.Build;
@@ -48,6 +49,7 @@ import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
+import androidx.core.content.FileProvider;
 import androidx.transition.ChangeBounds;
 import androidx.transition.Explode;
 import androidx.transition.Transition;
@@ -785,42 +787,44 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        switch (item.getItemId()) {
-            case R.id.menu_toggle_keyboard:
-                toggleOnScreenKeyboardVisibility();
-                return true;
-            case R.id.menu_toggle_joystick:
-                toggleOnScreenJoystickVisibility();
-                return true;
-            case R.id.menu_switch_display_mode:
-                switchDisplayMode();
-                return true;
-            case R.id.menu_reset:
-                resetComputer();
-                return true;
-            case R.id.menu_change_model:
-                showDialog(DIALOG_COMPUTER_MODEL);
-                return true;
-            case R.id.menu_open_image:
-                showBinImageFileLoadDialog(REQUEST_MENU_BIN_IMAGE_FILE_LOAD, null);
-                return true;
-            case R.id.menu_disk_manager:
-                showDiskManagerDialog();
-                return true;
-            case R.id.menu_about:
-                showDialog(DIALOG_ABOUT);
-                return true;
-            case R.id.menu_volume:
-                showVolumeDialog();
-                return true;
-            case R.id.menu_fullscreen_mode:
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
-                    enterFullscreenMode();
-                }
-                return true;
-            default:
-                return super.onOptionsItemSelected(item);
+        int itemId = item.getItemId();
+        if (itemId == R.id.menu_toggle_keyboard) {
+            toggleOnScreenKeyboardVisibility();
+            return true;
+        } else if (itemId == R.id.menu_toggle_joystick) {
+            toggleOnScreenJoystickVisibility();
+            return true;
+        } else if (itemId == R.id.menu_switch_display_mode) {
+            switchDisplayMode();
+            return true;
+        } else if (itemId == R.id.menu_reset) {
+            resetComputer();
+            return true;
+        } else if (itemId == R.id.menu_change_model) {
+            showDialog(DIALOG_COMPUTER_MODEL);
+            return true;
+        } else if (itemId == R.id.menu_open_image) {
+            showBinImageFileLoadDialog(REQUEST_MENU_BIN_IMAGE_FILE_LOAD, null);
+            return true;
+        } else if (itemId == R.id.menu_disk_manager) {
+            showDiskManagerDialog();
+            return true;
+        } else if (itemId == R.id.menu_about) {
+            showDialog(DIALOG_ABOUT);
+            return true;
+        } else if (itemId == R.id.menu_volume) {
+            showVolumeDialog();
+            return true;
+        } else if (itemId == R.id.menu_fullscreen_mode) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+                enterFullscreenMode();
+            }
+            return true;
+        } else if (itemId == R.id.menu_screenshot) {
+            takeScreenshot();
+            return true;
         }
+        return super.onOptionsItemSelected(item);
     }
 
     @Override
@@ -1606,5 +1610,42 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
         } else {
             computer.reset();
         }
+    }
+
+    private void takeScreenshot() {
+        Timber.d("taking screenshot");
+
+        // Take screenshot to bitmap
+        Bitmap screenshotBitmap = Bitmap.createBitmap(VideoController.VIDEO_BUFFER_WIDTH * 2,
+                VideoController.VIDEO_BUFFER_HEIGHT * 3, Bitmap.Config.ARGB_8888);
+        getComputer().getVideoController().drawLastRenderedVideoBuffer(screenshotBitmap);
+
+        // Store screenshot bitmap to png file
+        Uri screenshotBitmapUri = null;
+        File screenshotsFolder = new File(getCacheDir(), "screenshots");
+        try {
+            screenshotsFolder.mkdirs();
+            File screenshotFile = new File(screenshotsFolder, "BkEmu_screenshot.png");
+            try (FileOutputStream stream = new FileOutputStream(screenshotFile)) {
+                screenshotBitmap.compress(Bitmap.CompressFormat.PNG, 90, stream);
+            }
+            screenshotBitmapUri = FileProvider.getUriForFile(this,
+                    "su.comp.bk.fileprovider", screenshotFile);
+        } catch (Exception e) {
+            Timber.e(e,  "Can't store screenshot file");
+        }
+
+        if (screenshotBitmapUri == null) {
+            Toast.makeText(getApplicationContext(), R.string.toast_take_screenshot_error,
+                    Toast.LENGTH_LONG)
+                    .show();
+            return;
+        }
+
+        // Share screenshot png file
+        Intent intent = new Intent(Intent.ACTION_SEND);
+        intent.setType("image/png");
+        intent.putExtra(Intent.EXTRA_STREAM, screenshotBitmapUri);
+        startActivity(Intent.createChooser(intent, "Share"));
     }
 }

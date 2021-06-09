@@ -21,7 +21,9 @@ package su.comp.bk.arch.io;
 import su.comp.bk.arch.Computer;
 import su.comp.bk.arch.memory.Memory;
 import android.graphics.Bitmap;
+import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.Rect;
 import android.os.Bundle;
 
 import java.util.ArrayList;
@@ -339,7 +341,6 @@ public class VideoController implements Device, Computer.UptimeListener {
         synchronized (lastDisplayedFrameData) {
             lastRenderedFrameData.copyFrom(lastDisplayedFrameData);
         }
-        videoBuffer.eraseColor(Color.BLACK);
         short[] videoData = lastRenderedFrameData.getPixelData();
         int videoDataOffset;
         int scrollShift;
@@ -351,26 +352,37 @@ public class VideoController implements Device, Computer.UptimeListener {
             scrollShift = (SCROLL_EXTMEM_VALUE - SCROLL_BASE_VALUE) & 0377;
         }
         int videoBufferX, videoBufferY;
-        synchronized (videoDataToPixelsTable) {
-            for (int videoDataIdx = videoDataOffset; videoDataIdx < videoData.length; videoDataIdx++) {
-                int videoDataWord = videoData[videoDataIdx];
-                if (videoDataWord != 0) {
-                    int lineNum = videoDataIdx / SCREEN_SCANLINE_LENGTH;
-                    int paletteOffset = lastDisplayedFrameData.getPaletteIndex(lineNum)
-                            * (videoDataToPixelsTable.length >>> 4);
-                    videoBufferX = (videoDataIdx % SCREEN_SCANLINE_LENGTH) * VIDEO_BUFFER_PIXELS_PER_WORD;
-                    videoBufferY = (lineNum - scrollShift) & (VIDEO_BUFFER_HEIGHT - 1);
-                    videoBuffer.setPixels(videoDataToPixelsTable,
-                            paletteOffset + ((videoDataWord & 0377) << 3),
-                            VIDEO_BUFFER_WIDTH, videoBufferX, videoBufferY, 8, 1);
-                    videoBufferX += 8;
-                    videoBuffer.setPixels(videoDataToPixelsTable,
-                            paletteOffset + (((videoDataWord >> 8) & 0377) << 3),
-                            VIDEO_BUFFER_WIDTH, videoBufferX, videoBufferY, 8, 1);
+        synchronized (videoBuffer) {
+            videoBuffer.eraseColor(Color.BLACK);
+            synchronized (videoDataToPixelsTable) {
+                for (int videoDataIdx = videoDataOffset; videoDataIdx < videoData.length; videoDataIdx++) {
+                    int videoDataWord = videoData[videoDataIdx];
+                    if (videoDataWord != 0) {
+                        int lineNum = videoDataIdx / SCREEN_SCANLINE_LENGTH;
+                        int paletteOffset = lastDisplayedFrameData.getPaletteIndex(lineNum)
+                                * (videoDataToPixelsTable.length >>> 4);
+                        videoBufferX = (videoDataIdx % SCREEN_SCANLINE_LENGTH) * VIDEO_BUFFER_PIXELS_PER_WORD;
+                        videoBufferY = (lineNum - scrollShift) & (VIDEO_BUFFER_HEIGHT - 1);
+                        videoBuffer.setPixels(videoDataToPixelsTable,
+                                paletteOffset + ((videoDataWord & 0377) << 3),
+                                VIDEO_BUFFER_WIDTH, videoBufferX, videoBufferY, 8, 1);
+                        videoBufferX += 8;
+                        videoBuffer.setPixels(videoDataToPixelsTable,
+                                paletteOffset + (((videoDataWord >> 8) & 0377) << 3),
+                                VIDEO_BUFFER_WIDTH, videoBufferX, videoBufferY, 8, 1);
+                    }
                 }
             }
         }
         return videoBuffer;
+    }
+
+    public void drawLastRenderedVideoBuffer(Bitmap dest) {
+        Canvas destCanvas = new Canvas(dest);
+        Rect destRect = new Rect(0, 0, dest.getWidth(), dest.getHeight());
+        synchronized (videoBuffer) {
+            destCanvas.drawBitmap(videoBuffer, null, destRect, null);
+        }
     }
 
     @Override

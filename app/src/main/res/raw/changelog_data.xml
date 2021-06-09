@@ -1,10 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <releases>
-    <release version="0.9.0-dev1">
+    <release version="0.9.0-dev2">
         <changes>
             <change>Improved handling of physical and on-screen keyboards.</change>
             <change>Fixed on-screen joystick layout.</change>
             <change>Implemented disk activity displaying in Disk Manager dialog.</change>
+            <change>Added take screenshot option.</change>
             <change>Fixed application crash when screen is rotated in Audio Volume dialog.</change>
         </changes>
     </release>

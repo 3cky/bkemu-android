@@ -29,6 +29,10 @@
         android:icon="@drawable/ic_volume_white_24"
         android:title="@string/volume"
         app:showAsAction="ifRoom" />
+    <item android:id="@+id/menu_screenshot"
+        android:icon="@drawable/ic_photo_camera_white_24"
+        android:title="@string/menu_screenshot"
+        app:showAsAction="ifRoom" />
     <item android:id="@+id/menu_open_image"
         android:title="@string/menu_open_image" />
     <item android:id="@+id/menu_change_model"
