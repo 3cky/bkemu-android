@@ -2,22 +2,22 @@ apply plugin: 'com.android.application'
 
 ext {
     // App version in semver format (https://semver.org/)
-    versionMajor = 0
-    versionMinor = 9
+    versionMajor = 1
+    versionMinor = 0
     versionPatch = 0
 }
 
 project.version = "${versionMajor}.${versionMinor}.${versionPatch}"
 
 android {
-    compileSdkVersion 29
+    compileSdkVersion 30
     buildToolsVersion '29.0.2'
 
     defaultConfig {
         applicationId "su.comp.bk"
 
         minSdkVersion 14
-        targetSdkVersion 29
+        targetSdkVersion 30
 
         compileOptions {
             sourceCompatibility JavaVersion.VERSION_1_8
