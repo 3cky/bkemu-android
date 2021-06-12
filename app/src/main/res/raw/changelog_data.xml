@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <releases>
-    <release version="0.9.0-dev2">
+    <release version="0.9.0" date="2021-06-12">
         <changes>
             <change>Improved handling of physical and on-screen keyboards.</change>
             <change>Fixed on-screen joystick layout.</change>
