@@ -41,16 +41,18 @@ public class VideoController implements Device, Computer.UptimeListener {
 
     // Scroll/mode register: scroll base value in normal mode
     private final static int SCROLL_BASE_VALUE = 0330;
-    // Scroll/mode register: scroll value in extended memory mode
-    private final static int SCROLL_EXTMEM_VALUE = 0230;
     // Scroll/mode register: extended memory mode disable bit
     // (0 - extended memory mode, 1 - normal mode)
     private final static int EXTMEM_CONTROL_BIT = 01000;
 
+    // Screen height (in lines) in normal mode
+    private final static int SCREEN_HEIGHT_NORMAL = 256;
     // Screen height (in lines) in extended memory mode
     private final static int SCREEN_HEIGHT_EXTMEM = 64;
     // Screen scan line length (in words)
     private final static int SCREEN_SCANLINE_LENGTH = 040;
+    // Screen data length (in words)
+    public final static int SCREEN_DATA_LENGTH = SCREEN_HEIGHT_NORMAL * SCREEN_SCANLINE_LENGTH;
     // VideoRAM bits per screen pixel in black and white mode
     private final static int SCREEN_BPP_BW = 1;
     // VideoRAM bits per screen pixel in color mode
@@ -176,8 +178,8 @@ public class VideoController implements Device, Computer.UptimeListener {
 
     // Video buffer width (in pixels)
     public final static int VIDEO_BUFFER_WIDTH = 512;
-    // Video buffer height (in pixels)
-    public final static int VIDEO_BUFFER_HEIGHT = 256;
+    // Video buffer height (in lines)
+    public final static int VIDEO_BUFFER_HEIGHT = SCREEN_HEIGHT_NORMAL;
     // Video buffer pixels per videoRAM word
     private final static int VIDEO_BUFFER_PIXELS_PER_WORD = Short.SIZE;
     // Video buffer bitmap object
@@ -186,7 +188,7 @@ public class VideoController implements Device, Computer.UptimeListener {
     // Total lines per frame (including vertical sync)
     private final static int FRAME_LINES_TOTAL = 320;
     // Visible lines per frame
-    private final static int FRAME_LINES_VISIBLE = 256;
+    private final static int FRAME_LINES_VISIBLE = SCREEN_HEIGHT_NORMAL;
     // Frame horizontal sync period (64 uS, in nanoseconds)
     private final static long FRAME_SYNC_PERIOD_HORIZONTAL = 64 * 1000L;
     // Frame vertical sync line number
@@ -218,7 +220,7 @@ public class VideoController implements Device, Computer.UptimeListener {
         private boolean isFullScreenMode;
 
         FrameData() {
-            pixelData = new short[VIDEO_BUFFER_HEIGHT * SCREEN_SCANLINE_LENGTH];
+            pixelData = new short[SCREEN_DATA_LENGTH];
             linePaletteIndexes = new int[FRAME_LINES_VISIBLE];
         }
 
@@ -272,7 +274,7 @@ public class VideoController implements Device, Computer.UptimeListener {
         this.videoMemory = videoMemory;
         this.videoBuffer = Bitmap.createBitmap(VIDEO_BUFFER_WIDTH, VIDEO_BUFFER_HEIGHT,
                 Bitmap.Config.ARGB_8888);
-        writeScrollRegister(SCROLL_EXTMEM_VALUE);
+        writeScrollRegister(EXTMEM_CONTROL_BIT | SCROLL_BASE_VALUE);
         setDisplayMode(DisplayMode.COLOR);
     }
 
@@ -342,34 +344,32 @@ public class VideoController implements Device, Computer.UptimeListener {
             lastRenderedFrameData.copyFrom(lastDisplayedFrameData);
         }
         short[] videoData = lastRenderedFrameData.getPixelData();
-        int videoDataOffset;
-        int scrollShift;
-        if (lastRenderedFrameData.isFullScreenMode()) {
-            videoDataOffset = 0;
-            scrollShift = (readScrollRegister() - SCROLL_BASE_VALUE) & 0377;
-        } else {
-            videoDataOffset = videoData.length - SCREEN_HEIGHT_EXTMEM * SCREEN_SCANLINE_LENGTH;
-            scrollShift = (SCROLL_EXTMEM_VALUE - SCROLL_BASE_VALUE) & 0377;
-        }
+        int numLines = lastRenderedFrameData.isFullScreenMode() ? SCREEN_HEIGHT_NORMAL
+                : SCREEN_HEIGHT_EXTMEM;
+        int scrollShift = (readScrollRegister() - SCROLL_BASE_VALUE) & 0377;
+        int videoDataIdx = scrollShift * SCREEN_SCANLINE_LENGTH;
         int videoBufferX, videoBufferY;
         synchronized (videoBuffer) {
             videoBuffer.eraseColor(Color.BLACK);
             synchronized (videoDataToPixelsTable) {
-                for (int videoDataIdx = videoDataOffset; videoDataIdx < videoData.length; videoDataIdx++) {
-                    int videoDataWord = videoData[videoDataIdx];
-                    if (videoDataWord != 0) {
-                        int lineNum = videoDataIdx / SCREEN_SCANLINE_LENGTH;
-                        int paletteOffset = lastDisplayedFrameData.getPaletteIndex(lineNum)
-                                * (videoDataToPixelsTable.length >>> 4);
-                        videoBufferX = (videoDataIdx % SCREEN_SCANLINE_LENGTH) * VIDEO_BUFFER_PIXELS_PER_WORD;
-                        videoBufferY = (lineNum - scrollShift) & (VIDEO_BUFFER_HEIGHT - 1);
-                        videoBuffer.setPixels(videoDataToPixelsTable,
-                                paletteOffset + ((videoDataWord & 0377) << 3),
-                                VIDEO_BUFFER_WIDTH, videoBufferX, videoBufferY, 8, 1);
-                        videoBufferX += 8;
-                        videoBuffer.setPixels(videoDataToPixelsTable,
-                                paletteOffset + (((videoDataWord >> 8) & 0377) << 3),
-                                VIDEO_BUFFER_WIDTH, videoBufferX, videoBufferY, 8, 1);
+                for (int lineIdx = 0; lineIdx < numLines; lineIdx++) {
+                    for (int lineWordIdx = 0; lineWordIdx < SCREEN_SCANLINE_LENGTH; lineWordIdx++) {
+                        int videoDataWord = videoData[videoDataIdx % SCREEN_DATA_LENGTH];
+                        if (videoDataWord != 0) {
+                            int paletteOffset = lastDisplayedFrameData.getPaletteIndex(lineIdx)
+                                    * (videoDataToPixelsTable.length >>> 4);
+                            videoBufferX = (videoDataIdx % SCREEN_SCANLINE_LENGTH)
+                                    * VIDEO_BUFFER_PIXELS_PER_WORD;
+                            videoBufferY = lineIdx;
+                            videoBuffer.setPixels(videoDataToPixelsTable,
+                                    paletteOffset + ((videoDataWord & 0377) << 3),
+                                    VIDEO_BUFFER_WIDTH, videoBufferX, videoBufferY, 8, 1);
+                            videoBufferX += 8;
+                            videoBuffer.setPixels(videoDataToPixelsTable,
+                                    paletteOffset + (((videoDataWord >> 8) & 0377) << 3),
+                                    VIDEO_BUFFER_WIDTH, videoBufferX, videoBufferY, 8, 1);
+                        }
+                        videoDataIdx++;
                     }
                 }
             }
