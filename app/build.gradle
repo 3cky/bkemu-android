@@ -1,31 +1,17 @@
 apply plugin: 'com.android.application'
-
-ext {
-    // App version in semver format (https://semver.org/)
-    versionMajor = 1
-    versionMinor = 0
-    versionPatch = 0
-}
-
-project.version = "${versionMajor}.${versionMinor}.${versionPatch}"
+apply plugin: 'maven-publish'
 
 android {
-    compileSdkVersion 30
-    buildToolsVersion '29.0.2'
+    compileSdkVersion versions.sdk.compile
 
     defaultConfig {
         applicationId "su.comp.bk"
 
-        minSdkVersion 14
-        targetSdkVersion 30
+        minSdkVersion versions.sdk.min
+        targetSdkVersion versions.sdk.target
 
-        compileOptions {
-            sourceCompatibility JavaVersion.VERSION_1_8
-            targetCompatibility JavaVersion.VERSION_1_8
-        }
-
-        versionCode versionMajor * 1000000 + versionMinor * 1000 + versionPatch
-        versionName "${project.version}"
+        versionCode versions.project.major * 1000000 + versions.project.minor * 1000 + versions.project.patch
+        versionName versions.project.number
 
         buildConfigField "long", "BUILD_TIMESTAMP", System.currentTimeMillis() + "L"
     }
@@ -65,26 +51,32 @@ android {
             signingConfig signingConfigs.release
         }
     }
+}
 
-    // Release artifacts management
-    def apk = file('build/outputs/apk/release/app-release.apk')
-    def mapping = file('build/outputs/mapping/release/mapping.txt')
-    repositories {
-        flatDir {
-            name "buildArchive"
-            dirs "${project.buildDir}/archive"
+// Release artifacts management
+afterEvaluate {
+    publishing {
+        publications {
+            releaseApk(MavenPublication) {
+                from components.release_apk
+
+                groupId 'com.github.3cky'
+                artifactId 'bkemu-android'
+                version versions.project.number
+
+                artifact source: file('build/outputs/apk/release/app-release.apk'),
+                        classifier: 'signed', extension: 'apk'
+                artifact source: file('build/outputs/mapping/release/mapping.txt'),
+                        classifier: 'mapping', extension: 'txt'
+            }
         }
-    }
-    uploadArchives {
         repositories {
-            add project.repositories.buildArchive
+            maven {
+                name "archive"
+                url = layout.buildDirectory.dir('archive')
+            }
         }
     }
-    artifacts {
-        archives file: apk, name: "bkemu-release"
-        archives file: mapping, name: "bkemu-release-mapping"
-    }
-    task archiveBuild(dependsOn:uploadArchives)
 }
 
 dependencies {

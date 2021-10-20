@@ -1,10 +1,15 @@
+// Project semantic versioning components (https://semver.org/)
+def projectVersionMajor = 1
+def projectVersionMinor = 0
+def projectVersionPatch = 0
+
 buildscript {
     repositories {
         google()
         mavenCentral()
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:4.2.1'
+        classpath 'com.android.tools.build:gradle:7.0.3'
     }
 }
 
@@ -13,4 +18,17 @@ allprojects {
         google()
         mavenCentral()
     }
+}
+
+ext {
+    versions = [
+            sdk: [min: 14, target: 30, compile: 30],
+            project: [major: projectVersionMajor,
+                      minor: projectVersionMinor,
+                      patch: projectVersionPatch,
+                      number: "${projectVersionMajor}.${projectVersionMinor}.${projectVersionPatch}"]]
+}
+
+task clean(type: Delete) {
+    delete rootProject.buildDir
 }
