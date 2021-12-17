@@ -37,7 +37,7 @@ import androidx.core.content.ContextCompat;
 
 import su.comp.bk.R;
 import su.comp.bk.arch.Computer;
-import su.comp.bk.arch.io.FloppyController;
+import su.comp.bk.arch.io.disk.FloppyController;
 import su.comp.bk.arch.io.VideoController;
 import su.comp.bk.arch.io.VideoController.DisplayMode;
 import su.comp.bk.ui.BkEmuActivity.GestureListener;

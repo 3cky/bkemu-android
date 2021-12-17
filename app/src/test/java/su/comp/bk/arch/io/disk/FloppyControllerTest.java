@@ -1,12 +1,10 @@
 /*
- * Created: 25.10.2012
+ * Copyright (C) 2021 Victor Antonovich (v.antonovich@gmail.com)
  *
- * Copyright (C) 2012 Victor Antonovich (v.antonovich@gmail.com)
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -14,10 +12,10 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
  */
-package su.comp.bk.arch.io;
+package su.comp.bk.arch.io.disk;
 
 import android.util.Log;
 
@@ -32,15 +30,18 @@ import org.junit.runner.RunWith;
 import org.robolectric.RobolectricTestRunner;
 
 import java.io.File;
-import java.nio.ByteBuffer;
 import java.util.Arrays;
 
 import su.comp.bk.ResourceFileTestBase;
 import su.comp.bk.arch.Computer;
 import su.comp.bk.arch.cpu.Cpu;
-import su.comp.bk.arch.io.FloppyController.FloppyDrive;
-import su.comp.bk.arch.io.FloppyController.FloppyDriveIdentifier;
-import su.comp.bk.arch.io.FloppyController.FloppyDriveSide;
+import su.comp.bk.arch.io.Sel1RegisterSystemBits;
+import su.comp.bk.arch.io.disk.FloppyController;
+import su.comp.bk.arch.io.disk.FloppyController.FloppyDrive;
+import su.comp.bk.arch.io.disk.FloppyController.FloppyDriveIdentifier;
+import su.comp.bk.arch.io.disk.FloppyController.FloppyDriveSide;
+import su.comp.bk.arch.io.disk.DiskImage;
+import su.comp.bk.arch.io.disk.FileDiskImage;
 import su.comp.bk.arch.memory.RandomAccessMemory;
 import su.comp.bk.arch.memory.ReadOnlyMemory;
 import su.comp.bk.util.Crc16;
@@ -110,7 +111,7 @@ public class FloppyControllerTest extends ResourceFileTestBase {
     }
 
     /**
-     * Test method for {@link su.comp.bk.arch.io.FloppyController#FloppyController(su.comp.bk.arch.Computer)}.
+     * Test method for {@link FloppyController#FloppyController(su.comp.bk.arch.Computer)}.
      * @throws Exception in case of error
      */
     @Test
@@ -283,6 +284,7 @@ public class FloppyControllerTest extends ResourceFileTestBase {
 //        floppyController.setDebugEnabled(true);
         // Mount disk image file
         byte[] testDiskImageData = mountTestDiskImage(false);
+        DiskImage testDiskImage = floppyController.getFloppyDrive(FloppyDriveIdentifier.A).getMountedDiskImage();
         Cpu cpu = computer.getCpu();
         // Initialize FDD
         cpu.writeRegister(false, Cpu.R3, FDD_BLOCK_START_ADDR);
@@ -290,7 +292,6 @@ public class FloppyControllerTest extends ResourceFileTestBase {
         cpu.writeMemory(true, FDD_BLOCK_DRIVE_NUM, FloppyDriveIdentifier.A.ordinal()); // Select drive
         // Track formatting
         FloppyDrive drive = floppyController.getFloppyDrive(FloppyDriveIdentifier.A);
-        ByteBuffer buf = drive.getMountedDiskImageBuffer();
         cpu.writeMemory(true, FDD_BLOCK_FLAGS_A, 0); // Standard disk format
         cpu.writeMemory(true, FDD_BLOCK_FORMAT_BYTE, 0x42); // Byte to write
         cpu.writeMemory(true, FDD_BLOCK_DISK_SIDE, 0); // Select side
@@ -304,7 +305,7 @@ public class FloppyControllerTest extends ResourceFileTestBase {
         checkCurrentTrackData(drive, trackData, 0);
         for (int i = 0; i < FloppyController.SECTORS_PER_TRACK * FloppyController.BYTES_PER_SECTOR; i++) {
             assertEquals("track formatting error at " + i,
-                    trackData[i] & 0377, buf.get(i) & 0377);
+                    trackData[i] & 0377, testDiskImage.readByte(i) & 0377);
         }
         // Multisector write
         for (int i = 0; i < 020000; i++) {
@@ -318,14 +319,15 @@ public class FloppyControllerTest extends ResourceFileTestBase {
                 cpu.isPswFlagSet(Cpu.PSW_FLAG_C));
         for (int i = 0; i < 020000; i++) {
             assertEquals("block write error at " + i,
-                    testDiskImageData[i] & 0377, buf.get(i) & 0377);
+                    testDiskImageData[i] & 0377, testDiskImage.readByte(i) & 0377);
         }
     }
 
     private byte[] mountTestDiskImage(boolean isWriteProtected) throws Exception {
         File testDiskImageFile = getTestResourceFile(TEST_DISK_IMAGE_FILE_NAME);
         byte[] testDiskImageData = FileUtils.readFileToByteArray(testDiskImageFile);
-        floppyController.mountDiskImage(testDiskImageFile, FloppyDriveIdentifier.A, isWriteProtected);
+        FileDiskImage testDiskImage = new FileDiskImage(testDiskImageFile);
+        floppyController.mountDiskImage(testDiskImage, FloppyDriveIdentifier.A, isWriteProtected);
         return testDiskImageData;
     }
 

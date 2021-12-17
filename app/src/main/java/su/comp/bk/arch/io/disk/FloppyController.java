@@ -1,12 +1,10 @@
 /*
- * Created: 11.10.2012
+ * Copyright (C) 2021 Victor Antonovich (v.antonovich@gmail.com)
  *
- * Copyright (C) 2012 Victor Antonovich (v.antonovich@gmail.com)
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -14,29 +12,26 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
  */
-package su.comp.bk.arch.io;
+package su.comp.bk.arch.io.disk;
 
+import static su.comp.bk.arch.Computer.NANOSECS_IN_MSEC;
+
+import android.net.Uri;
 import android.os.Bundle;
 import android.util.SparseBooleanArray;
 
 import androidx.annotation.NonNull;
 
-import java.io.File;
-import java.io.RandomAccessFile;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-import java.nio.MappedByteBuffer;
-import java.nio.channels.FileChannel;
+import java.io.IOException;
 import java.util.ArrayList;
 
 import su.comp.bk.arch.Computer;
+import su.comp.bk.arch.io.Device;
 import su.comp.bk.util.Crc16;
 import timber.log.Timber;
-
-import static su.comp.bk.arch.Computer.NANOSECS_IN_MSEC;
 
 /**
  * Floppy drive controller (К1801ВП1-128).
@@ -149,9 +144,6 @@ public class FloppyController implements Device {
     private static final String STATE_MOTOR_STARTED = FloppyController.class.getName() +
             "#motor_started";
 
-    // State save/restore: Drive disk image file name
-    private static final String STATE_DRIVE_IMAGE_FILE_NAME = FloppyDrive.class.getName() +
-            "#image_file_name";
     // State save/restore: Drive current track data
     private static final String STATE_DRIVE_CURRENT_TRACK_DATA = FloppyDrive.class.getName() +
             "#current_track_data";
@@ -250,11 +242,8 @@ public class FloppyController implements Device {
         // This floppy drive identifier
         private final FloppyDriveIdentifier driveIdentifier;
 
-        // Mounted disk image file (null if no disk image mounted)
-        private File mountedDiskImageFile;
-
-        private RandomAccessFile mountedDiskImageRandomAccessFile;
-        private MappedByteBuffer mountedDiskImageBuffer;
+        // Mounted disk image (null if no disk image mounted)
+        private DiskImage mountedDiskImage;
 
         private boolean isWriteProtectMode;
 
@@ -282,7 +271,7 @@ public class FloppyController implements Device {
             return currentTrackData;
         }
 
-        private void loadCurrentTrackData() {
+        private void loadCurrentTrackData() throws IOException {
             clearCurrentTrackDataMarkerPositions();
             int position = 0;
             // GAP1
@@ -329,16 +318,15 @@ public class FloppyController implements Device {
             return dataIndex;
         }
 
-        private int writeCurrentTrackSectorData(int position, int sectorNumber) {
+        private int writeCurrentTrackSectorData(int position, int sectorNumber) throws IOException {
             int dataIndex = position;
             // DATA AM
             writeCurrentTrackData(dataIndex++, SEQ_MARK, true);
             writeCurrentTrackData(dataIndex++, SEQ_MARK_DATA);
             // Sector data
-            ByteBuffer diskImageBuffer = getMountedDiskImageBuffer();
             int imageBufferOffset = getImageSectorOffset(currentTrackSide, currentTrackNumber, sectorNumber);
             for (int wordIndex = 0; wordIndex < WORDS_PER_SECTOR; wordIndex++) {
-                writeCurrentTrackData(dataIndex++, diskImageBuffer.getShort(
+                writeCurrentTrackData(dataIndex++, mountedDiskImage.readWord(
                         imageBufferOffset + wordIndex * 2));
             }
             // CRC value (big endian)
@@ -347,7 +335,7 @@ public class FloppyController implements Device {
             return dataIndex;
         }
 
-        private void saveCurrentTrackData() {
+        private void saveCurrentTrackData() throws IOException {
             int position = 0;
             short[] trackData = getCurrentTrackData();
 
@@ -432,12 +420,11 @@ public class FloppyController implements Device {
 
                 // Save sector data to image
                 Timber.d("Saving sector data, sector number: %d", sectorNumber);
-                ByteBuffer diskImageBuffer = getMountedDiskImageBuffer();
                 int imageBufferOffset = getImageSectorOffset(currentTrackSide, currentTrackNumber,
                         sectorNumber);
                 for (int wordIndex = 0; wordIndex < WORDS_PER_SECTOR; wordIndex++) {
                     data = readCurrentTrackData(dataPosition + 2 + wordIndex);
-                    diskImageBuffer.putShort(imageBufferOffset + wordIndex * 2, (short) data);
+                    mountedDiskImage.writeWord(imageBufferOffset + wordIndex * 2, (short) data);
                 }
             }
             setCurrentTrackDataModified(false);
@@ -445,7 +432,12 @@ public class FloppyController implements Device {
 
         void flushCurrentTrackData() {
             if (isDiskImageMounted() && isCurrentTrackDataModified()) {
-                saveCurrentTrackData();
+                try {
+                    saveCurrentTrackData();
+                } catch (IOException e) {
+                    Timber.e(e, "Can't flush track data: drive %s, track %d, side %s",
+                            driveIdentifier, getCurrentTrackNumber(), getCurrentTrackSide());
+                }
             }
         }
 
@@ -568,7 +560,12 @@ public class FloppyController implements Device {
 
             // Load current track data if disk image mounted
             if (isDiskImageMounted()) {
-                loadCurrentTrackData();
+                try {
+                    loadCurrentTrackData();
+                } catch (IOException e) {
+                    Timber.e(e, "Can't load track data: drive %s, track %d, side %s",
+                            driveIdentifier, getCurrentTrackNumber(), getCurrentTrackSide());
+                }
             }
         }
 
@@ -608,11 +605,11 @@ public class FloppyController implements Device {
         }
 
         /**
-         * Get mounted disk image file.
-         * @return mounted disk image file or <code>null</code> if no disk image mounted
+         * Get mounted disk image.
+         * @return mounted disk image or <code>null</code> if no disk image mounted
          */
-        File getMountedDiskImageFile() {
-            return mountedDiskImageFile;
+        DiskImage getMountedDiskImage() {
+            return mountedDiskImage;
         }
 
         /**
@@ -621,7 +618,7 @@ public class FloppyController implements Device {
          * <code>false</code> if not mounted
          */
         boolean isDiskImageMounted() {
-            return (getMountedDiskImageFile() != null);
+            return (getMountedDiskImage() != null);
         }
 
         /**
@@ -642,29 +639,25 @@ public class FloppyController implements Device {
 
         /**
          * Mount disk image to this drive.
-         * @param diskImageFile Disk image file to mount
+         * @param diskImage Disk image to mount
          * @param isWriteProtectMode <code>true</code> to mount disk image in write protect mode
          * @throws Exception in case of mounting error
          */
-        void mountDiskImage(@NonNull File diskImageFile, boolean isWriteProtectMode)
+        void mountDiskImage(@NonNull DiskImage diskImage, boolean isWriteProtectMode)
                 throws Exception {
             // Check disk image
-            if (diskImageFile.length() > MAX_BYTES_PER_DISK) {
+            if (diskImage.length() > MAX_BYTES_PER_DISK) {
                 throw new IllegalArgumentException("Invalid disk image size: " +
-                            diskImageFile.length());
+                            diskImage.length());
             }
             if (isDiskImageMounted()) {
                 unmountDiskImage();
             }
             setWriteProtectMode(isWriteProtectMode);
-            int lastDiskImageTrackNumber = (int) (diskImageFile.length()
+            int lastDiskImageTrackNumber = (int) (diskImage.length()
                     / (SECTORS_PER_TRACK * BYTES_PER_SECTOR * 2) - 1);
             setLastTrackNumber(lastDiskImageTrackNumber);
-            mountedDiskImageRandomAccessFile = new RandomAccessFile(diskImageFile, "rw");
-            mountedDiskImageBuffer = mountedDiskImageRandomAccessFile.getChannel().map(
-                    FileChannel.MapMode.READ_WRITE,0, diskImageFile.length());
-            mountedDiskImageBuffer.order(ByteOrder.BIG_ENDIAN);
-            this.mountedDiskImageFile = diskImageFile;
+            this.mountedDiskImage = diskImage;
             // Reload track data
             setCurrentTrack(getCurrentTrackNumber(), getCurrentTrackSide());
         }
@@ -675,13 +668,8 @@ public class FloppyController implements Device {
          */
         void unmountDiskImage() throws Exception {
             flushCurrentTrackData();
-            mountedDiskImageFile = null;
-            mountedDiskImageBuffer.force();
-            mountedDiskImageRandomAccessFile.close();
-        }
-
-        ByteBuffer getMountedDiskImageBuffer() {
-            return mountedDiskImageBuffer;
+            mountedDiskImage.close();
+            mountedDiskImage = null;
         }
     }
 
@@ -733,9 +721,6 @@ public class FloppyController implements Device {
         outState.putBoolean(STATE_MOTOR_STARTED, isMotorStarted());
         for (FloppyDriveIdentifier driveIdentifier : FloppyDriveIdentifier.values()) {
             FloppyDrive drive = getFloppyDrive(driveIdentifier);
-            File mountedDiskImageFile = drive.getMountedDiskImageFile();
-            outState.putString(getFloppyDriveStateKey(STATE_DRIVE_IMAGE_FILE_NAME, driveIdentifier),
-                    (mountedDiskImageFile != null) ? mountedDiskImageFile.toString() : null);
             outState.putShortArray(getFloppyDriveStateKey(STATE_DRIVE_CURRENT_TRACK_DATA,
                     driveIdentifier), drive.getCurrentTrackData());
             outState.putBoolean(getFloppyDriveStateKey(STATE_DRIVE_CURRENT_TRACK_DATA_MODIFIED,
@@ -781,33 +766,19 @@ public class FloppyController implements Device {
             drive.setCurrentTrack(driveTrackNumber, driveTrackSide);
             drive.setWriteProtectMode(inState.getBoolean(getFloppyDriveStateKey(
                     STATE_DRIVE_WRITE_PROTECT_MODE, driveIdentifier)));
-            String diskImageFileName = inState.getString(getFloppyDriveStateKey(
-                    STATE_DRIVE_IMAGE_FILE_NAME, driveIdentifier));
-            if (diskImageFileName != null) {
-                try {
-                    drive.mountDiskImage(new File(diskImageFileName), drive.isWriteProtectMode());
-                    short[] currentTrackData = inState.getShortArray(getFloppyDriveStateKey(
-                            STATE_DRIVE_CURRENT_TRACK_DATA, driveIdentifier));
-                    System.arraycopy(currentTrackData, 0, drive.getCurrentTrackData(),
-                            0, currentTrackData.length);
-                    ArrayList<Integer> markerPositions = inState.getIntegerArrayList(
-                            getFloppyDriveStateKey(STATE_DRIVE_CURRENT_TRACK_DATA_MARKER_POSITIONS,
-                                    driveIdentifier));
-                    drive.clearCurrentTrackDataMarkerPositions();
-                    for (int markerPosition: markerPositions) {
-                        drive.setCurrentTrackDataMarkerPosition(markerPosition, true);
-                    }
-                    drive.setCurrentTrackDataModified(inState.getBoolean(getFloppyDriveStateKey(
-                            STATE_DRIVE_CURRENT_TRACK_DATA_MODIFIED, driveIdentifier)));
-                } catch (Exception e) {
-                    Timber.e(e, "can't remount disk file image: %s", diskImageFileName);
-                    try {
-                        drive.unmountDiskImage();
-                    } catch (Exception e1) {
-                        // Do nothing
-                    }
-                }
+            short[] currentTrackData = inState.getShortArray(getFloppyDriveStateKey(
+                    STATE_DRIVE_CURRENT_TRACK_DATA, driveIdentifier));
+            System.arraycopy(currentTrackData, 0, drive.getCurrentTrackData(),
+                    0, currentTrackData.length);
+            ArrayList<Integer> markerPositions = inState.getIntegerArrayList(
+                    getFloppyDriveStateKey(STATE_DRIVE_CURRENT_TRACK_DATA_MARKER_POSITIONS,
+                            driveIdentifier));
+            drive.clearCurrentTrackDataMarkerPositions();
+            for (int markerPosition: markerPositions) {
+                drive.setCurrentTrackDataMarkerPosition(markerPosition, true);
             }
+            drive.setCurrentTrackDataModified(inState.getBoolean(getFloppyDriveStateKey(
+                    STATE_DRIVE_CURRENT_TRACK_DATA_MODIFIED, driveIdentifier)));
         }
     }
 
@@ -1010,7 +981,6 @@ public class FloppyController implements Device {
                 drive.setCurrentTrack(trackNumber, trackSide);
             }
 
-
             // Process GOR flag
             if ((value & GOR) != 0) {
                 startSynchronousRead();
@@ -1181,14 +1151,14 @@ public class FloppyController implements Device {
 
     /**
      * Mount floppy drive disk image to given drive.
-     * @param diskImageFile floppy drive disk image file
+     * @param diskImage floppy drive disk image
      * @param drive {@link FloppyDriveIdentifier} of drive to mount disk image
      * @param isWriteProtectMode <code>true</code> to mount disk image in write protect mode
      * @throws Exception in case of disk image mounting error
      */
-    public synchronized void mountDiskImage(File diskImageFile, FloppyDriveIdentifier drive,
+    public synchronized void mountDiskImage(DiskImage diskImage, FloppyDriveIdentifier drive,
             boolean isWriteProtectMode) throws Exception {
-        getFloppyDrive(drive).mountDiskImage(diskImageFile, isWriteProtectMode);
+        getFloppyDrive(drive).mountDiskImage(diskImage, isWriteProtectMode);
     }
 
     /**
@@ -1281,12 +1251,13 @@ public class FloppyController implements Device {
     }
 
     /**
-     * Get mounted floppy drive image file.
+     * Get mounted floppy drive image URI.
      * @param driveIdentifier {@link FloppyDriveIdentifier} of drive to get mounted disk image URI
-     * @return mounted floppy drive image file or <code>null</code> if no floppy drive image mounted
+     * @return mounted floppy drive image URI or <code>null</code> if no floppy drive image mounted
      */
-    public synchronized File getFloppyDriveImageFile(FloppyDriveIdentifier driveIdentifier) {
-        return getFloppyDrive(driveIdentifier).getMountedDiskImageFile();
+    public synchronized Uri getFloppyDriveImageUri(FloppyDriveIdentifier driveIdentifier) {
+        DiskImage mountedDiskImage = getFloppyDrive(driveIdentifier).getMountedDiskImage();
+        return mountedDiskImage != null ? mountedDiskImage.getUri() : null;
     }
 
     /**

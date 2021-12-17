@@ -37,8 +37,8 @@ import androidx.fragment.app.DialogFragment;
 import java.util.Objects;
 
 import su.comp.bk.R;
-import su.comp.bk.arch.io.FloppyController;
-import su.comp.bk.arch.io.FloppyController.FloppyDriveIdentifier;
+import su.comp.bk.arch.io.disk.FloppyController;
+import su.comp.bk.arch.io.disk.FloppyController.FloppyDriveIdentifier;
 
 /**
  * Disk drives manager dialog.
@@ -170,7 +170,7 @@ public class BkEmuDiskManagerDialog extends DialogFragment {
             fddWriteProtectSwitch.setClickable(true);
             fddWriteProtectSwitch.setChecked(fddController.isFloppyDriveInWriteProtectMode(fddIdentifier));
             fddFileTextView.setTextColor(getResources().getColor(R.color.fdd_loaded));
-            String fddImageFileName = fddController.getFloppyDriveImageFile(fddIdentifier).getName();
+            String fddImageFileName = fddController.getFloppyDriveImageUri(fddIdentifier).getLastPathSegment();
             if (fddImageFileName.length() > MAX_FILE_NAME_DISPLAY_LENGTH) {
                 // Trim file name to display
                 int nameDotIndex = fddImageFileName.lastIndexOf('.');

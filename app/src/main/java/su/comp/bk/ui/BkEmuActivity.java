@@ -83,10 +83,11 @@ import su.comp.bk.arch.cpu.Cpu;
 import su.comp.bk.arch.cpu.addressing.IndexDeferredAddressingMode;
 import su.comp.bk.arch.cpu.opcode.EmtOpcode;
 import su.comp.bk.arch.cpu.opcode.JmpOpcode;
-import su.comp.bk.arch.io.FloppyController;
-import su.comp.bk.arch.io.FloppyController.FloppyDriveIdentifier;
+import su.comp.bk.arch.io.disk.FloppyController;
+import su.comp.bk.arch.io.disk.FloppyController.FloppyDriveIdentifier;
 import su.comp.bk.arch.io.VideoController;
 import su.comp.bk.arch.io.audio.AudioOutput;
+import su.comp.bk.arch.io.disk.FileDiskImage;
 import su.comp.bk.ui.joystick.JoystickManager;
 import su.comp.bk.ui.keyboard.KeyboardManager;
 import su.comp.bk.util.FileUtils;
@@ -581,17 +582,25 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
     }
 
     private void initializeComputer(Bundle savedInstanceState) {
-        this.computer = new Computer();
+        computer = new Computer();
+
         boolean isComputerInitialized = false;
+
         if (savedInstanceState != null) {
             // Trying to restore computer state
             try {
-                this.computer.restoreState(getResources(), savedInstanceState);
-                isComputerInitialized = true;
+                Configuration storedConfiguration = Computer.getStoredConfiguration(savedInstanceState);
+                if (storedConfiguration != null) {
+                    computer.configure(getResources(), storedConfiguration);
+                    initializeComputerDisks();
+                    computer.restoreState(getResources(), savedInstanceState);
+                    isComputerInitialized = true;
+                }
             } catch (Exception e) {
                 Timber.e(e, "Can't restore computer state");
             }
         }
+
         if (!isComputerInitialized) {
             // Computer state can't be restored, do startup initialization
             try {
@@ -604,19 +613,18 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
                 } else {
                     startupConfiguration = currentConfiguration;
                 }
-                this.computer.configure(getResources(), startupConfiguration);
+                computer.configure(getResources(), startupConfiguration);
                 if (startupConfiguration != currentConfiguration) {
                     setComputerConfiguration(startupConfiguration);
                 }
-                if (this.computer.getFloppyController() != null) {
-                    mountAvailableFddImages();
-                }
-                this.computer.reset();
+                initializeComputerDisks();
+                computer.reset();
                 isComputerInitialized = true;
             } catch (Exception e) {
                 Timber.e(e, "Error while computer configuring");
             }
         }
+
         if (isComputerInitialized) {
             if (!computer.getConfiguration().isMemoryManagerPresent()) {
                 computer.getCpu().setOnTrapListener(new TapeOperations10Handler());
@@ -633,6 +641,12 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
             bkEmuView.setComputer(computer);
         } else {
             throw new IllegalStateException("Can't initialize computer state");
+        }
+    }
+
+    private void initializeComputerDisks() {
+        if (computer.getFloppyController() != null) {
+            mountAvailableFddImages();
         }
     }
 
@@ -975,11 +989,12 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
         try {
             if (fddImageFile != null && fddController != null) {
                 for (FloppyDriveIdentifier d : FloppyDriveIdentifier.values()) {
-                    if (fddImageFile.equals(fddController.getFloppyDriveImageFile(d))) {
+                    if (Uri.fromFile(fddImageFile).equals(fddController.getFloppyDriveImageUri(d))) {
                         unmountFddImage(d);
                     }
                 }
-                fddController.mountDiskImage(fddImageFile, fddIdentifier, isWriteProtectMode);
+                FileDiskImage fddImage = new FileDiskImage(fddImageFile);
+                fddController.mountDiskImage(fddImage, fddIdentifier, isWriteProtectMode);
                 Timber.d("Mounted floppy disk image %s to drive %s in %s mode",
                         fddImageFile, fddIdentifier, (isWriteProtectMode ? "write protect" : "normal"));
                 return true;

@@ -32,7 +32,7 @@ import su.comp.bk.R;
 import su.comp.bk.arch.cpu.Cpu;
 import su.comp.bk.arch.io.audio.AudioOutput;
 import su.comp.bk.arch.io.Device;
-import su.comp.bk.arch.io.FloppyController;
+import su.comp.bk.arch.io.disk.FloppyController;
 import su.comp.bk.arch.io.KeyboardController;
 import su.comp.bk.arch.io.MemoryManager;
 import su.comp.bk.arch.io.PeripheralPort;
@@ -371,10 +371,6 @@ public class Computer implements Runnable {
      * @throws Exception in case of error while state restoring
      */
     public void restoreState(Resources resources, Bundle inState) throws Exception {
-        // Restore computer configuration
-        Configuration config = Configuration.valueOf(inState
-                .getString(Configuration.class.getName()));
-        configure(resources, config);
         // Restore computer system uptime
         setSystemUptime(inState.getLong(STATE_SYSTEM_UPTIME));
         // Initialize CPU and devices
@@ -389,6 +385,11 @@ public class Computer implements Runnable {
         for (Device device : deviceList) {
             device.restoreState(inState);
         }
+    }
+
+    public static Configuration getStoredConfiguration(Bundle inState) {
+        return (inState != null) ? Configuration.valueOf(inState.getString(
+                Configuration.class.getName())) : null;
     }
 
     /**
