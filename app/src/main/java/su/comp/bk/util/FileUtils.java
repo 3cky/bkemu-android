@@ -20,8 +20,10 @@ package su.comp.bk.util;
 
 import android.content.ContentResolver;
 import android.content.Context;
+import android.database.Cursor;
 import android.net.Uri;
 import android.os.Environment;
+import android.provider.OpenableColumns;
 
 import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
@@ -125,25 +127,16 @@ public class FileUtils {
     }
 
     /**
-     * Get local file for given URI. If URI scheme is not "file',
+     * Get local file URI for given URI. If URI is not local,
      * its content will be cached to local file.
      * @param context context reference
      * @param uriString URI as string
-     * @return local file for given URI
+     * @return local file URI for given URI
      * @throws IOException if given URI content can't be read
      */
-    public static File getUriLocalFile(Context context, String uriString)
-            throws IOException {
-        File file = null;
-        Uri uri = Uri.parse(uriString);
-        if ("file".equals(uri.getScheme())) {
-            // Open file directly
-            file = new File(URI.create(uriString));
-        } else {
-            // Cache resource from given URI to file
-            file = getUriCachedContentFile(context, uri);
-        }
-        return file;
+    public static Uri getLocalFileUri(Context context, String uriString) throws IOException {
+        // TODO check URI is local, cache locally otherwise
+        return Uri.parse(uriString);
     }
 
     private static File getUriCachedContentFile(Context context, Uri uri)
@@ -161,7 +154,6 @@ public class FileUtils {
             }
         }
         File fileDir = context.getCacheDir();
-        System.out.println("getCacheDir: " + fileDir);
         File file = File.createTempFile(filePrefix, fileSuffix, fileDir);
         writeUriContentToFile(context, uri, file);
         return file;
@@ -222,13 +214,15 @@ public class FileUtils {
      */
     public static boolean isFileNameExtensionMatched(final String fileName,
                                                      final String[] fileExtensions) {
-        final String fileNameLwr = fileName.toLowerCase();
         boolean isMatched = false;
-        for (String fileExtension : fileExtensions) {
-            final String formatLwr = fileExtension.toLowerCase();
-            if (fileNameLwr.endsWith(formatLwr)) {
-                isMatched = true;
-                break;
+        if (fileName != null) {
+            final String fileNameLwr = fileName.toLowerCase();
+            for (String fileExtension : fileExtensions) {
+                final String formatLwr = fileExtension.toLowerCase();
+                if (fileNameLwr.endsWith(formatLwr)) {
+                    isMatched = true;
+                    break;
+                }
             }
         }
         return isMatched;
@@ -251,5 +245,25 @@ public class FileUtils {
         String[] fileNames = new String[fileNameList.size()];
         fileNameList.toArray(fileNames);
         return fileNames;
+    }
+
+    /**
+     * Resolve file name for given URI.
+     * @param context context reference
+     * @param uri file URI
+     * @return resolved file name or null if file name can't be resolved
+     */
+    public static String resolveUriFileName(Context context, Uri uri) {
+        String result = null;
+        String uriScheme = uri.getScheme();
+        if (uriScheme != null && uriScheme.equals("content")) {
+            try (Cursor cursor = context.getContentResolver().query(uri,
+                    null, null, null, null)) {
+                if (cursor != null && cursor.moveToFirst()) {
+                    result = cursor.getString(cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME));
+                }
+            }
+        }
+        return (result != null) ? result : uri.getLastPathSegment();
     }
 }

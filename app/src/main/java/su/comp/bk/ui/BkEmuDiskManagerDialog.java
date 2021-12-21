@@ -37,6 +37,7 @@ import androidx.fragment.app.DialogFragment;
 import java.util.Objects;
 
 import su.comp.bk.R;
+import su.comp.bk.arch.io.disk.DiskImage;
 import su.comp.bk.arch.io.disk.FloppyController;
 import su.comp.bk.arch.io.disk.FloppyController.FloppyDriveIdentifier;
 
@@ -167,10 +168,11 @@ public class BkEmuDiskManagerDialog extends DialogFragment {
         fddImageView.setSelected(false);
         TextView fddFileTextView = fddView.findViewWithTag("fdd_file");
         if (isFddMounted) {
-            fddWriteProtectSwitch.setClickable(true);
+            DiskImage mountedDiskImage = fddController.getFloppyDriveImage(fddIdentifier);
             fddWriteProtectSwitch.setChecked(fddController.isFloppyDriveInWriteProtectMode(fddIdentifier));
+            fddWriteProtectSwitch.setClickable(!mountedDiskImage.isReadOnly());
             fddFileTextView.setTextColor(getResources().getColor(R.color.fdd_loaded));
-            String fddImageFileName = fddController.getFloppyDriveImageUri(fddIdentifier).getLastPathSegment();
+            String fddImageFileName = mountedDiskImage.getName();
             if (fddImageFileName.length() > MAX_FILE_NAME_DISPLAY_LENGTH) {
                 // Trim file name to display
                 int nameDotIndex = fddImageFileName.lastIndexOf('.');
@@ -196,6 +198,6 @@ public class BkEmuDiskManagerDialog extends DialogFragment {
                                         FloppyDriveIdentifier fddIdentifier,
                                         boolean isWriteProtectMode) {
         fddController.setFloppyDriveWriteProtectMode(fddIdentifier, isWriteProtectMode);
-        getBkEmuActivity().storeFddWriteProtectMode(fddIdentifier, isWriteProtectMode);
+        getBkEmuActivity().setLastFloppyDriveWriteProtectMode(fddIdentifier, isWriteProtectMode);
     }
 }

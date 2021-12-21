@@ -20,12 +20,14 @@ package su.comp.bk.arch.io.disk;
 
 import android.net.Uri;
 
+import androidx.annotation.NonNull;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 
 /**
- * File-based {@link DiskImage}.
+ * File-backed {@link DiskImage}.
  */
 public class FileDiskImage implements DiskImage {
     private final File diskImageFile;
@@ -38,8 +40,18 @@ public class FileDiskImage implements DiskImage {
     }
 
     @Override
-    public Uri getUri() {
+    public String getName() {
+        return diskImageFile.getName();
+    }
+
+    @Override
+    public Uri getLocation() {
         return Uri.fromFile(diskImageFile);
+    }
+
+    @Override
+    public boolean isReadOnly() {
+        return !diskImageFile.canWrite();
     }
 
     @Override
@@ -74,5 +86,11 @@ public class FileDiskImage implements DiskImage {
     public void writeWord(long offset, short value) throws IOException {
         diskImageRandomAccessFile.seek(offset);
         diskImageRandomAccessFile.writeShort(value);
+    }
+
+    @NonNull
+    @Override
+    public String toString() {
+        return "FileDiskImage{" + diskImageFile + '}';
     }
 }

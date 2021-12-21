@@ -83,11 +83,13 @@ import su.comp.bk.arch.cpu.Cpu;
 import su.comp.bk.arch.cpu.addressing.IndexDeferredAddressingMode;
 import su.comp.bk.arch.cpu.opcode.EmtOpcode;
 import su.comp.bk.arch.cpu.opcode.JmpOpcode;
+import su.comp.bk.arch.io.disk.DiskImage;
 import su.comp.bk.arch.io.disk.FloppyController;
 import su.comp.bk.arch.io.disk.FloppyController.FloppyDriveIdentifier;
 import su.comp.bk.arch.io.VideoController;
 import su.comp.bk.arch.io.audio.AudioOutput;
 import su.comp.bk.arch.io.disk.FileDiskImage;
+import su.comp.bk.arch.io.disk.SafDiskImage;
 import su.comp.bk.ui.joystick.JoystickManager;
 import su.comp.bk.ui.keyboard.KeyboardManager;
 import su.comp.bk.util.FileUtils;
@@ -539,11 +541,13 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
         // Check for program/disk image file to run
         String intentDataString = getIntent().getDataString();
         if (intentDataString != null) {
-            if (FileUtils.isFileNameExtensionMatched(intentDataString,
+            String intentDataFileName = FileUtils.resolveUriFileName(this,
+                    Uri.parse(intentDataString));
+            if (FileUtils.isFileNameExtensionMatched(intentDataFileName,
                     FileUtils.FILE_EXT_BINARY_IMAGES)) {
                 this.intentDataProgramImageUri = intentDataString;
                 return true;
-            } else if (FileUtils.isFileNameExtensionMatched(intentDataString,
+            } else if (FileUtils.isFileNameExtensionMatched(intentDataFileName,
                     FileUtils.FILE_EXT_FLOPPY_DISK_IMAGES)) {
                 this.intentDataDiskImageUri = intentDataString;
                 return true;
@@ -557,16 +561,27 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
         if (intentDataDiskImageUri == null) {
             return;
         }
-        File intentDataDiskImageFile = null;
+        Uri intentDataDiskImageLocalUri = null;
         try {
-            intentDataDiskImageFile = FileUtils.getUriLocalFile(getApplicationContext(),
+            intentDataDiskImageLocalUri = FileUtils.getLocalFileUri(getApplicationContext(),
                     intentDataDiskImageUri);
         } catch (IOException e) {
-            Timber.e(e, "Can't get local file for floppy disk image %s",
+            Timber.e(e, "Can't get local file URI for floppy disk intent image %s",
                     intentDataDiskImageUri);
         }
-        if (intentDataDiskImageFile == null || !mountFddImage(FloppyDriveIdentifier.A,
-                intentDataDiskImageFile, true)) {
+        boolean isIntentDataDiskImageMounted = false;
+        if (intentDataDiskImageLocalUri != null) {
+            try {
+                DiskImage intentDataDiskImage = new SafDiskImage(getApplicationContext(),
+                        intentDataDiskImageLocalUri);
+                isIntentDataDiskImageMounted = mountFddImage(FloppyDriveIdentifier.A,
+                        intentDataDiskImage);
+            } catch (IOException e) {
+                Timber.e(e, "Can't get mount floppy disk intent image %s",
+                        intentDataDiskImageUri);
+            }
+        }
+        if (!isIntentDataDiskImageMounted) {
             intentDataDiskImageUri = null;
         }
     }
@@ -956,11 +971,40 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
         Timber.d("Mounting all available floppy disk images");
         FloppyController fddController = computer.getFloppyController();
         for (FloppyDriveIdentifier fddIdentifier : FloppyDriveIdentifier.values()) {
-            String fddImagePath = readFddImagePath(fddIdentifier);
-            boolean fddWriteProtectMode = readFddWriteProtectMode(fddIdentifier);
-            if (fddImagePath != null) {
-                doMountFddImage(fddController, fddIdentifier, new File(fddImagePath),
-                        fddWriteProtectMode);
+            String fddImageLocation = getLastMountedFloppyDiskImageLocation(fddIdentifier);
+            boolean fddWriteProtectMode = getLastMountedFloppyDiskImageWriteProtectMode(fddIdentifier);
+            if (fddImageLocation != null) {
+                DiskImage fddImage = null;
+                Uri fddImageLocationUri = Uri.parse(fddImageLocation);
+                String fddImageLocationUriScheme = fddImageLocationUri.getScheme();
+                if ("content".equals(fddImageLocationUriScheme)) {
+                    // Open as SAF disk image
+                    try {
+                        fddImage = new SafDiskImage(getApplicationContext(), fddImageLocationUri);
+                    } catch (IOException e) {
+                        Timber.i(e, "Can't open floppy disk %s as SAF image: %s",
+                                fddIdentifier, fddImageLocation);
+                    }
+                } else if (fddImageLocationUriScheme == null
+                        || "file".equals(fddImageLocationUriScheme)) {
+                    // Open as file disk image
+                    String fddImageFilePath = fddImageLocationUri.getPath();
+                    if (fddImageFilePath != null) {
+                        try {
+                            fddImage = new FileDiskImage(new File(fddImageFilePath));
+                        } catch (IOException e) {
+                            Timber.i(e, "Can't open floppy disk %s as file image: %s",
+                                    fddIdentifier, fddImageLocation);
+                        }
+                    }
+                } else {
+                    Timber.w("Unknown floppy disk image location: %s", fddImageLocation);
+                }
+                if (fddImage != null) {
+                    doMountFddImage(fddController, fddIdentifier, fddImage);
+                } else {
+                    resetLastFloppyDriveMountData(fddIdentifier);
+                }
             }
         }
     }
@@ -968,16 +1012,14 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
     /**
      * Try to mount disk image to given floppy drive.
      * @param fddIdentifier floppy drive identifier to mount image
-     * @param fddImageFile disk image file
-     * @param isWriteProtectMode <code>true</code> to mount floppy disk image in write protect mode
+     * @param fddImage disk image
      * @return true if image successfully mounted, false otherwise
      */
-    protected boolean mountFddImage(FloppyDriveIdentifier fddIdentifier, File fddImageFile,
-                                    boolean isWriteProtectMode) {
+    protected boolean mountFddImage(FloppyDriveIdentifier fddIdentifier, DiskImage fddImage) {
         FloppyController fddController = computer.getFloppyController();
-        if (doMountFddImage(fddController, fddIdentifier, fddImageFile, isWriteProtectMode)) {
-            storeFddImagePath(fddIdentifier, fddImageFile.getPath());
-            storeFddWriteProtectMode(fddIdentifier, isWriteProtectMode);
+        if (doMountFddImage(fddController, fddIdentifier, fddImage)) {
+            setLastMountedFloppyDiskImageLocation(fddIdentifier, fddImage.getLocation().toString());
+            setLastFloppyDriveWriteProtectMode(fddIdentifier, fddImage.isReadOnly());
             return true;
         }
         return false;
@@ -985,23 +1027,25 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
 
     private boolean doMountFddImage(FloppyController fddController,
                                     FloppyDriveIdentifier fddIdentifier,
-                                    File fddImageFile, boolean isWriteProtectMode) {
+                                    DiskImage fddImage) {
         try {
-            if (fddImageFile != null && fddController != null) {
+            if (fddImage != null && fddController != null) {
                 for (FloppyDriveIdentifier d : FloppyDriveIdentifier.values()) {
-                    if (Uri.fromFile(fddImageFile).equals(fddController.getFloppyDriveImageUri(d))) {
+                    DiskImage mountedDiskImage = fddController.getFloppyDriveImage(d);
+                    if (mountedDiskImage != null && fddImage.getLocation().equals(
+                            mountedDiskImage.getLocation())) {
                         unmountFddImage(d);
                     }
                 }
-                FileDiskImage fddImage = new FileDiskImage(fddImageFile);
+                boolean isWriteProtectMode = fddImage.isReadOnly();
                 fddController.mountDiskImage(fddImage, fddIdentifier, isWriteProtectMode);
                 Timber.d("Mounted floppy disk image %s to drive %s in %s mode",
-                        fddImageFile, fddIdentifier, (isWriteProtectMode ? "write protect" : "normal"));
+                        fddImage, fddIdentifier, (isWriteProtectMode ? "read only" : "read/write"));
                 return true;
             }
         } catch (Exception e) {
             Timber.e(e, "Can't mount floppy disk image %s to drive %s",
-                    fddImageFile, fddIdentifier);
+                    fddImage, fddIdentifier);
         }
         return false;
     }
@@ -1013,7 +1057,7 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
     protected void unmountFddImage(FloppyDriveIdentifier fddIdentifier) {
         FloppyController fddController = computer.getFloppyController();
         if (doUnmountFddImage(fddController, fddIdentifier)) {
-            storeFddImagePath(fddIdentifier, null);
+            resetLastFloppyDriveMountData(fddIdentifier);
         }
     }
 
@@ -1157,14 +1201,19 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
                     if (diskImageFilePath == null) {
                         break;
                     }
-                    File diskImageFile = new File(diskImageFilePath);
                     FloppyDriveIdentifier driveIdentifier = FloppyDriveIdentifier
                             .valueOf(data.getStringExtra(FloppyDriveIdentifier.class.getName()));
-                    if (mountFddImage(driveIdentifier, diskImageFile, false)) {
+                    File diskImageFile = new File(diskImageFilePath);
+                    boolean isDiskImageMounted = false;
+                    try {
+                        FileDiskImage diskImage = new FileDiskImage(diskImageFile);
+                        isDiskImageMounted = mountFddImage(driveIdentifier, diskImage);
+                    } catch (IOException e) {
+                        Timber.e(e,"can't mount floppy disk image %s'", diskImageFilePath);
+                    }
+                    if (isDiskImageMounted) {
                         lastDiskImageFilePath = diskImageFilePath;
-                        showDiskManagerDialog();
                     } else {
-                        Timber.e("can't mount disk image %s'", diskImageFilePath);
                         showDialog(DIALOG_DISK_MOUNT_ERROR);
                     }
                 }
@@ -1352,58 +1401,71 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
         prefsEditor.apply();
     }
 
-    private String getPrefsFddImageKey(FloppyDriveIdentifier fddIdentifier) {
+    private String getLastMountedFloppyDiskImageLocationPrefsKey(
+            FloppyDriveIdentifier fddIdentifier) {
         return PREFS_KEY_FLOPPY_DRIVE_IMAGE + fddIdentifier.name();
     }
 
     /**
-     * Read floppy drive image path from shared preferences.
+     * Get last mounted floppy disk image location for given floppy drive.
      * @param fddIdentifier floppy drive identifier
-     * @return stored floppy drive image path (null if no floppy drive image was mounted)
+     * @return last mounted floppy disk image location
+     * (null if no floppy disk image was mounted in this drive)
      */
-    protected String readFddImagePath(FloppyDriveIdentifier fddIdentifier) {
+    protected String getLastMountedFloppyDiskImageLocation(FloppyDriveIdentifier fddIdentifier) {
         SharedPreferences prefs = getPreferences();
-        return prefs.getString(getPrefsFddImageKey(fddIdentifier), null);
+        return prefs.getString(getLastMountedFloppyDiskImageLocationPrefsKey(fddIdentifier),
+                null);
     }
 
     /**
-     * Store floppy drive image path to shared preferences.
+     * Set last mounted floppy disk image location for given floppy drive.
      * @param fddIdentifier floppy drive identifier
-     * @param floppyDriveImagePath floppy drive image path
+     * @param floppyDiskImageLocation mounted floppy disk image location
+     * (null if no floppy disk image is mounted in this drive)
      */
-    protected void storeFddImagePath(FloppyDriveIdentifier fddIdentifier,
-                                     String floppyDriveImagePath) {
+    protected void setLastMountedFloppyDiskImageLocation(FloppyDriveIdentifier fddIdentifier,
+                                                         String floppyDiskImageLocation) {
         SharedPreferences prefs = getPreferences();
         SharedPreferences.Editor prefsEditor = prefs.edit();
-        prefsEditor.putString(getPrefsFddImageKey(fddIdentifier), floppyDriveImagePath);
+        prefsEditor.putString(getLastMountedFloppyDiskImageLocationPrefsKey(fddIdentifier),
+                floppyDiskImageLocation);
         prefsEditor.apply();
     }
 
-    private String getFddWriteProtectModePrefsKey(FloppyDriveIdentifier fddIdentifier) {
+    private String getLastFloppyDriveWriteProtectModePrefsKey(
+            FloppyDriveIdentifier fddIdentifier) {
         return PREFS_KEY_FLOPPY_DRIVE_WRITE_PROTECT_MODE + fddIdentifier.name();
     }
 
     /**
-     * Read floppy drive write protect mode from shared preferences.
+     * Get last floppy drive write protect mode.
      * @param fddIdentifier floppy drive identifier
      * @return <code>true</code> if floppy drive is in write protect mode
      */
-    protected boolean readFddWriteProtectMode(FloppyDriveIdentifier fddIdentifier) {
+    protected boolean getLastMountedFloppyDiskImageWriteProtectMode(
+            FloppyDriveIdentifier fddIdentifier) {
         SharedPreferences prefs = getPreferences();
-        return prefs.getBoolean(getFddWriteProtectModePrefsKey(fddIdentifier), false);
+        return prefs.getBoolean(getLastFloppyDriveWriteProtectModePrefsKey(fddIdentifier), false);
     }
 
     /**
-     * Store floppy drive write protect mode to shared preferences.
+     * Set last floppy drive write protect mode.
      * @param fddIdentifier floppy drive identifier
-     * @param isWriteProtectMode <code>true</code> if floppy drive is in write protect mode
+     * @param isWriteProtectMode <code>true</code> to set floppy drive in write protect mode
      */
-    protected void storeFddWriteProtectMode(FloppyDriveIdentifier fddIdentifier,
-                                            boolean isWriteProtectMode) {
+    protected void setLastFloppyDriveWriteProtectMode(FloppyDriveIdentifier fddIdentifier,
+                                                      boolean isWriteProtectMode) {
         SharedPreferences prefs = getPreferences();
         SharedPreferences.Editor prefsEditor = prefs.edit();
-        prefsEditor.putBoolean(getFddWriteProtectModePrefsKey(fddIdentifier), isWriteProtectMode);
+        prefsEditor.putBoolean(getLastFloppyDriveWriteProtectModePrefsKey(fddIdentifier),
+                isWriteProtectMode);
         prefsEditor.apply();
+    }
+
+    private void resetLastFloppyDriveMountData(FloppyDriveIdentifier fddIdentifier) {
+        setLastMountedFloppyDiskImageLocation(fddIdentifier, null);
+        setLastFloppyDriveWriteProtectMode(fddIdentifier, false);
     }
 
     private String getPrefsAudioOutputKey(String audioOutputName) {

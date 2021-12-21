@@ -1251,13 +1251,12 @@ public class FloppyController implements Device {
     }
 
     /**
-     * Get mounted floppy drive image URI.
-     * @param driveIdentifier {@link FloppyDriveIdentifier} of drive to get mounted disk image URI
-     * @return mounted floppy drive image URI or <code>null</code> if no floppy drive image mounted
+     * Get mounted floppy drive image.
+     * @param driveIdentifier {@link FloppyDriveIdentifier} of drive to get mounted disk image
+     * @return mounted floppy drive image or <code>null</code> if no floppy drive image mounted
      */
-    public synchronized Uri getFloppyDriveImageUri(FloppyDriveIdentifier driveIdentifier) {
-        DiskImage mountedDiskImage = getFloppyDrive(driveIdentifier).getMountedDiskImage();
-        return mountedDiskImage != null ? mountedDiskImage.getUri() : null;
+    public synchronized DiskImage getFloppyDriveImage(FloppyDriveIdentifier driveIdentifier) {
+        return getFloppyDrive(driveIdentifier).getMountedDiskImage();
     }
 
     /**

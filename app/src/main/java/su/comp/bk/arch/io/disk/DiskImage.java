@@ -23,14 +23,26 @@ import android.net.Uri;
 import java.io.IOException;
 
 /**
- * Disk image operations interface.
+ * Disk image abstraction interface.
  */
 public interface DiskImage {
     /**
-     * Get disk image location URI.
+     * Get disk image name.
+     * @return disk image name
+     */
+    String getName();
+
+    /**
+     * Get disk image location.
      * @return disk image location {@link Uri}
      */
-    Uri getUri();
+    Uri getLocation();
+
+    /**
+     * Check disk image is read only.
+     * @return true if disk image is read only, false if read/write
+     */
+    boolean isReadOnly();
 
     /**
      * Get disk image length (in bytes).
