@@ -2,7 +2,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
         package="su.comp.bk">
 
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="28" />
 
     <application
         android:icon="@drawable/icon"
@@ -63,6 +65,5 @@
                 <data android:pathPattern=".*\\..*\\..*\\..*\\.BKD"/>
             </intent-filter>
         </activity>
-        <activity android:label="@string/fd_label" android:name=".ui.BkEmuFileDialog"/>
     </application>
 </manifest>

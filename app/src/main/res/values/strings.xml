@@ -13,7 +13,7 @@
     <string name="menu_about">About</string>
     <string name="menu_fullscreen_mode">Fullscreen mode</string>
     <string name="menu_screenshot">Screenshot</string>
-    <string name="dialog_disk_mount_error">Disk image mount error!</string>
+    <string name="dialog_floppy_disk_mount_error">Floppy disk image mount error!</string>
     <string name="ok">OK</string>
     <string name="cancel">Cancel</string>
     <string name="bk_0010_monitor">BK 0010&#8211;01 (Monitor only)</string>
@@ -32,21 +32,6 @@
     <string name="desc_down">Down</string>
     <string name="desc_right">Right</string>
     <string name="desc_enter">Enter</string>
-    <string name="fd_label">File manager</string>
-    <string name="fd_title_load">Open file (%s)</string>
-    <string name="fd_title_save">Save file (%s)</string>
-    <string name="fd_location">Location</string>
-    <string name="fd_cant_read_dir">Can\'t read directory!</string>
-    <string name="fd_cant_create_dir">Can\'t create directory</string>
-    <string name="fd_new_file">New</string>
-    <string name="fd_select">Select</string>
-    <string name="fd_file_name">File name:</string>
-    <string name="fd_save">Save</string>
-    <string name="fd_create_dir">New Folder</string>
-    <string name="fd_create_dir_title">New directory</string>
-    <string name="fd_create_dir_label">Directory name:</string>
-    <string name="fd_no_data">No Data</string>
-    <string name="fd_permissions_rationale">SD card access should be allowed</string>
     <string name="err">Error</string>
     <string name="exit_confirm_title">Quit emulator</string>
     <string name="exit_confirm_message">Do you really want to quit?</string>
@@ -62,11 +47,12 @@
     <string name="changelog_title_full">Changelog</string>
     <string name="changelog_show_full">Full changelog</string>
     <string name="fdd_empty">(Empty)</string>
-    <string name="toast_image_load_info">%1s: address 0%2$o, length %3$d</string>
+    <string name="toast_image_load_info">File to load: %1s</string>
+    <string name="toast_image_load_success">%1s: address 0%2$o, length %3$d</string>
     <string name="toast_image_load_error">Can\'t load file \'%s\'</string>
     <string name="toast_image_save_info">File \'%s\' saved</string>
     <string name="toast_image_save_error">Can\'t save file \'%s\'</string>
-    <string name="toast_take_screenshot_error">Can\'t take screenshot</string>
+    <string name="toast_take_screenshot_error">Can\'t take a screenshot</string>
     <string name="volume">Audio volume</string>
     <string name="speaker">Speaker</string>
     <string name="covox" translatable="false">Covox</string>
