@@ -20,7 +20,7 @@
 package su.comp.bk.arch.io;
 
 import su.comp.bk.arch.cpu.Cpu;
-import su.comp.bk.arch.memory.PagedMemory;
+import su.comp.bk.arch.memory.BankedMemory;
 import android.os.Bundle;
 
 /**
@@ -33,26 +33,26 @@ public class MemoryManager implements Device {
     // BK-0011M write enable bit (1 enables memory configuration change)
     public final static int ENABLE_BIT = (1 << 11);
 
-    /** Number of RAM pages in each paged memory space */
-    public final static int NUM_RAM_PAGES = 8;
+    /** Number of RAM banks in each banked memory window */
+    public final static int NUM_RAM_BANKS = 8;
 
-    /** Number of ROM pages in second paged memory space */
-    public final static int NUM_ROM_PAGES = 4;
+    /** Number of ROM banks in second banked memory window */
+    public final static int NUM_ROM_BANKS = 4;
 
-    // First paged memory space (addresses 040000-0100000)
-    private final PagedMemory firstPagedMemory;
+    // First banked memory window (addresses 040000-0100000)
+    private final BankedMemory firstBankedMemory;
 
-    // Second paged memory space (addresses 0100000-0140000)
-    private final PagedMemory secondPagedMemory;
+    // Second banked memory window (addresses 0100000-0140000)
+    private final BankedMemory secondBankedMemory;
 
     /**
-     * Create memory manager with given memory pages.
-     * @param firstPagedMemory first paged memory space (addresses 040000-0100000)
-     * @param secondPagedMemory second paged memory space (addresses 0100000-0140000)
+     * Create memory manager with given memory banks.
+     * @param firstBankedMemory first banked memory window (addresses 040000-0100000)
+     * @param secondBankedMemory second banked memory window (addresses 0100000-0140000)
      */
-    public MemoryManager(PagedMemory firstPagedMemory, PagedMemory secondPagedMemory) {
-        this.firstPagedMemory = firstPagedMemory;
-        this.secondPagedMemory = secondPagedMemory;
+    public MemoryManager(BankedMemory firstBankedMemory, BankedMemory secondBankedMemory) {
+        this.firstBankedMemory = firstBankedMemory;
+        this.secondBankedMemory = secondBankedMemory;
         setMemoryConfiguration(0);
     }
 
@@ -94,29 +94,29 @@ public class MemoryManager implements Device {
     }
 
     private void setMemoryConfiguration(int value) {
-        // Set first memory page configuration
-        firstPagedMemory.setActivePageIndex((value >> 12) & 7);
-        // Set second memory page configuration
-        int romPageMask = value & 033;
-        int romPageIndex = -1;
-        if (romPageMask != 0) {
-            // Get ROM page index
-            switch (romPageMask) {
+        // Set first memory bank configuration
+        firstBankedMemory.setActiveBankIndex((value >> 12) & 7);
+        // Set second memory bank configuration
+        int romBankMask = value & 033;
+        int romBankIndex = -1;
+        if (romBankMask != 0) {
+            // Get ROM bank index
+            switch (romBankMask) {
                 case 001:
-                    romPageIndex = NUM_RAM_PAGES;
+                    romBankIndex = NUM_RAM_BANKS;
                     break;
                 case 002:
-                    romPageIndex = (NUM_RAM_PAGES + 1);
+                    romBankIndex = (NUM_RAM_BANKS + 1);
                     break;
                 case 010:
-                    romPageIndex = (NUM_RAM_PAGES + 2);
+                    romBankIndex = (NUM_RAM_BANKS + 2);
                     break;
                 case 020:
-                    romPageIndex = (NUM_RAM_PAGES + 3);
+                    romBankIndex = (NUM_RAM_BANKS + 3);
                     break;
             }
         }
-        secondPagedMemory.setActivePageIndex((romPageIndex < 0) ? (value >> 8) & 7 : romPageIndex);
+        secondBankedMemory.setActiveBankIndex((romBankIndex < 0) ? (value >> 8) & 7 : romBankIndex);
     }
 
 }

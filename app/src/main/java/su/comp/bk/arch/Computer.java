@@ -45,7 +45,7 @@ import su.comp.bk.arch.io.audio.Ay8910;
 import su.comp.bk.arch.io.audio.Covox;
 import su.comp.bk.arch.io.audio.Speaker;
 import su.comp.bk.arch.memory.Memory;
-import su.comp.bk.arch.memory.PagedMemory;
+import su.comp.bk.arch.memory.BankedMemory;
 import su.comp.bk.arch.memory.RandomAccessMemory;
 import su.comp.bk.arch.memory.RandomAccessMemory.Type;
 import su.comp.bk.arch.memory.ReadOnlyMemory;
@@ -86,10 +86,10 @@ public class Computer implements Runnable {
     // Floppy controller reference (<code>null</code> if no floppy controller attached)
     private FloppyController floppyController;
 
-    /** BK0011 first paged memory block address */
-    public static final int BK0011_PAGED_MEMORY_0_ADDRESS = 040000;
-    /** BK0011 second paged memory block address */
-    public static final int BK0011_PAGED_MEMORY_1_ADDRESS = 0100000;
+    /** BK0011 first banked memory block address */
+    public static final int BK0011_BANKED_MEMORY_0_ADDRESS = 040000;
+    /** BK0011 second banked memory block address */
+    public static final int BK0011_BANKED_MEMORY_1_ADDRESS = 0100000;
 
     /** I/O registers space min start address */
     public final static int IO_REGISTERS_MIN_ADDRESS = 0170000;
@@ -246,24 +246,25 @@ public class Computer implements Runnable {
             // BK-0011 configurations
             setClockFrequency(CLOCK_FREQUENCY_BK0011);
             // Set RAM configuration
-            PagedMemory firstPagedMemory = new PagedMemory("PagedMemory0", BK0011_PAGED_MEMORY_0_ADDRESS, 020000,
-                    MemoryManager.NUM_RAM_PAGES);
-            PagedMemory secondPagedMemory = new PagedMemory("PagedMemory1", BK0011_PAGED_MEMORY_1_ADDRESS, 020000,
-                    MemoryManager.NUM_RAM_PAGES + MemoryManager.NUM_ROM_PAGES);
-            for (int memoryPageIndex = 0; memoryPageIndex < MemoryManager.NUM_RAM_PAGES;
-                    memoryPageIndex++) {
-                Memory memoryPage = new RandomAccessMemory("MemoryPage" + memoryPageIndex,
+            BankedMemory firstBankedMemory = new BankedMemory("BankedMemory0",
+                    BK0011_BANKED_MEMORY_0_ADDRESS, 020000, MemoryManager.NUM_RAM_BANKS);
+            BankedMemory secondBankedMemory = new BankedMemory("BankedMemory1",
+                    BK0011_BANKED_MEMORY_1_ADDRESS, 020000,
+                    MemoryManager.NUM_RAM_BANKS + MemoryManager.NUM_ROM_BANKS);
+            for (int memoryBankIndex = 0; memoryBankIndex < MemoryManager.NUM_RAM_BANKS;
+                    memoryBankIndex++) {
+                Memory memoryBank = new RandomAccessMemory("MemoryBank" + memoryBankIndex,
                         0, 020000, Type.K565RU5);
-                firstPagedMemory.setPage(memoryPageIndex, memoryPage);
-                secondPagedMemory.setPage(memoryPageIndex, memoryPage);
+                firstBankedMemory.setBank(memoryBankIndex, memoryBank);
+                secondBankedMemory.setBank(memoryBankIndex, memoryBank);
             }
-            addMemory(firstPagedMemory.getPage(6)); // Static RAM page at address 0
-            addMemory(firstPagedMemory); // First paged memory space at address 040000
-            addMemory(secondPagedMemory); // Second paged memory space at address 0100000
+            addMemory(firstBankedMemory.getBank(6)); // Fixed RAM page at address 0
+            addMemory(firstBankedMemory); // First banked memory window at address 040000
+            addMemory(secondBankedMemory); // Second banked memory window at address 0100000
             // Set ROM configuration
-            secondPagedMemory.setPage(MemoryManager.NUM_RAM_PAGES, new ReadOnlyMemory(
+            secondBankedMemory.setBank(MemoryManager.NUM_RAM_BANKS, new ReadOnlyMemory(
                     "Basic11M:0", 0, loadReadOnlyMemoryData(resources, R.raw.basic11m_0)));
-            secondPagedMemory.setPage(MemoryManager.NUM_RAM_PAGES + 1, new ReadOnlyMemory(
+            secondBankedMemory.setBank(MemoryManager.NUM_RAM_BANKS + 1, new ReadOnlyMemory(
                     "Basic11M:1/ExtBOS11M", 0, loadReadOnlyMemoryData(resources,
                             R.raw.basic11m_1, R.raw.ext11m)));
             addReadOnlyMemory(resources, R.raw.bos11m, "BOS11M", 0140000);
@@ -286,14 +287,14 @@ public class Computer implements Runnable {
                     break;
             }
             // Configure memory manager
-            addDevice(new MemoryManager(firstPagedMemory, secondPagedMemory));
+            addDevice(new MemoryManager(firstBankedMemory, secondBankedMemory));
             // Add video controller with palette/screen manager
-            PagedMemory pagedVideoMemory = new PagedMemory("PagedVideoMemory", 0, 020000, 2);
-            pagedVideoMemory.setPage(0, firstPagedMemory.getPage(1));
-            pagedVideoMemory.setPage(1, firstPagedMemory.getPage(7));
-            videoController = new VideoController(pagedVideoMemory);
+            BankedMemory videoMemory = new BankedMemory("VideoPagesMemory", 0, 020000, 2);
+            videoMemory.setBank(0, firstBankedMemory.getBank(1));
+            videoMemory.setBank(1, firstBankedMemory.getBank(7));
+            videoController = new VideoController(videoMemory);
             addDevice(videoController);
-            addDevice(new VideoControllerManager(videoController, pagedVideoMemory));
+            addDevice(new VideoControllerManager(videoController, videoMemory));
             // Add system timer
             SystemTimer systemTimer = new SystemTimer(this);
             addDevice(systemTimer);
@@ -331,15 +332,15 @@ public class Computer implements Runnable {
                     if (!statefulMemoryList.contains(memoryBlock)) {
                         statefulMemoryList.add(memoryBlock);
                     }
-                } else if (memoryBlock instanceof PagedMemory) {
-                    PagedMemory pagedMemory = (PagedMemory) memoryBlock;
-                    for (Memory memoryPage : pagedMemory.getPages()) {
-                        if (memoryPage != null && !(memoryPage instanceof ReadOnlyMemory)
-                                && !statefulMemoryList.contains(memoryPage)) {
-                            statefulMemoryList.add(memoryPage);
+                } else if (memoryBlock instanceof BankedMemory) {
+                    BankedMemory bankedMemory = (BankedMemory) memoryBlock;
+                    for (Memory memoryBank : bankedMemory.getBanks()) {
+                        if (memoryBank != null && !(memoryBank instanceof ReadOnlyMemory)
+                                && !statefulMemoryList.contains(memoryBank)) {
+                            statefulMemoryList.add(memoryBank);
                         }
                     }
-                    statefulMemoryList.add(pagedMemory);
+                    statefulMemoryList.add(bankedMemory);
                 }
             }
         }

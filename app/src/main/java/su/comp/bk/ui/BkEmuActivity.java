@@ -166,10 +166,10 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
     private static final int BK11_BMB10_EXIT_ADDRESS = 0155026;
     // BK0011M .BMB10 syscall parameters block address
     private static final int BK11_BMB10_PARAMS_ADDRESS = 042602;
-    // BK0011M memory pages config address
-    private static final int BK11_PAGES_CONFIG_ADDRESS = 0114;
-    // BK0011M memory pages default config
-    private static final int BK11_PAGES_DEFAULT_CONFIG = 054002;
+    // BK0011M memory banks config address
+    private static final int BK11_BANKS_CONFIG_ADDRESS = 0114;
+    // BK0011M memory banks default config
+    private static final int BK11_BANKS_DEFAULT_CONFIG = 054002;
 
     // Tape parameters block address
     protected int tapeParamsBlockAddr;
@@ -398,7 +398,7 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
                         tapeOperationTask = new TapeLoaderTask(tapeFileName);
                     }
                     // Setup memory map
-                    int memoryMapConfig = computer.readMemory(false, BK11_PAGES_CONFIG_ADDRESS);
+                    int memoryMapConfig = computer.readMemory(false, BK11_BANKS_CONFIG_ADDRESS);
                     computer.writeMemory(false, Cpu.REG_SEL1, memoryMapConfig);
                     // Execute tape operation task
                     activityHandler.post(tapeOperationTask);
@@ -1242,7 +1242,7 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
             comp.getCpu().returnFromTrap(false);
         } else { // BK0011
             // Restore memory map
-            comp.writeMemory(false, Cpu.REG_SEL1, BK11_PAGES_DEFAULT_CONFIG);
+            comp.writeMemory(false, Cpu.REG_SEL1, BK11_BANKS_DEFAULT_CONFIG);
             // Set result code
             if (isSuccess) {
                 comp.getCpu().clearPswFlagC();
@@ -1278,7 +1278,7 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
         boolean isBk10 = !comp.getConfiguration().isMemoryManagerPresent();
         if (!isBk10) {
             // Restore BK0011 default memory map
-            comp.writeMemory(false, Cpu.REG_SEL1, BK11_PAGES_DEFAULT_CONFIG);
+            comp.writeMemory(false, Cpu.REG_SEL1, BK11_BANKS_DEFAULT_CONFIG);
         }
         if (!isSuccess) {
             // In case of error we just return to tape loader subroutine, because actually it's

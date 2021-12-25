@@ -19,7 +19,7 @@
  */
 package su.comp.bk.arch.io;
 
-import su.comp.bk.arch.memory.PagedMemory;
+import su.comp.bk.arch.memory.BankedMemory;
 import android.os.Bundle;
 
 /**
@@ -43,16 +43,16 @@ public class VideoControllerManager implements Device {
 
     private final VideoController videoController;
 
-    private final PagedMemory pagedVideoMemory;
+    private final BankedMemory videoMemory;
 
     /**
      * Video output controller manager constructor.
      * @param videoController {@link VideoController} to manage
-     * @param pagedVideoMemory video output controller manager video memory to manage
+     * @param videoMemory video output controller manager video memory to manage
      */
-    public VideoControllerManager(VideoController videoController, PagedMemory pagedVideoMemory) {
+    public VideoControllerManager(VideoController videoController, BankedMemory videoMemory) {
         this.videoController = videoController;
-        this.pagedVideoMemory = pagedVideoMemory;
+        this.videoMemory = videoMemory;
         setVideoControllerConfiguration(0);
     }
 
@@ -68,12 +68,12 @@ public class VideoControllerManager implements Device {
 
     @Override
     public void saveState(Bundle outState) {
-        outState.putInt(STATE_VIDEO_PAGE_INDEX, pagedVideoMemory.getActivePageIndex());
+        outState.putInt(STATE_VIDEO_PAGE_INDEX, videoMemory.getActiveBankIndex());
     }
 
     @Override
     public void restoreState(Bundle inState) {
-        pagedVideoMemory.setActivePageIndex(inState.getInt(STATE_VIDEO_PAGE_INDEX));
+        videoMemory.setActiveBankIndex(inState.getInt(STATE_VIDEO_PAGE_INDEX));
     }
 
     @Override
@@ -90,11 +90,10 @@ public class VideoControllerManager implements Device {
 
     private void setVideoControllerConfiguration(int paletteRegisterValue) {
         synchronized (videoController) {
-            pagedVideoMemory.setActivePageIndex((paletteRegisterValue
+            videoMemory.setActiveBankIndex((paletteRegisterValue
                     & SCREEN_PAGE_SELECT_BIT) != 0 ? 1 : 0);
             videoController.setColorPaletteIndex((paletteRegisterValue
                     >> SCREEN_PALETTE_MASK_SHIFT_BITS) & 017);
         }
     }
-
 }

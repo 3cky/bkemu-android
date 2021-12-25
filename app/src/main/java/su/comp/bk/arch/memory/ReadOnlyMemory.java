@@ -24,10 +24,10 @@ package su.comp.bk.arch.memory;
 public class ReadOnlyMemory extends RandomAccessMemory {
 
     /**
-     * Create new ROM page initialized from given data.
-     * @param id ROM page ID
-     * @param startAddress ROM page starting address
-     * @param data data to copy into created ROM page
+     * Create new ROM initialized from given data.
+     * @param id ROM ID
+     * @param startAddress ROM starting address
+     * @param data data to copy into created ROM
      */
     public ReadOnlyMemory(String id, int startAddress, short[] data) {
         super(id, startAddress, data, Type.OTHER);

@@ -43,10 +43,10 @@ public class RandomAccessMemory implements Memory {
     }
 
     /**
-     * Create new RAM page of given type (dynamic/static).
-     * @param id RAM page ID
-     * @param startAddress RAM page starting address
-     * @param size RAM page size (in words)
+     * Create new RAM of given type (dynamic/static).
+     * @param id RAM ID
+     * @param startAddress RAM starting address
+     * @param size RAM size (in words)
      * @param type RAM {@link Type}
      */
     public RandomAccessMemory(String id, int startAddress, int size, Type type) {
@@ -59,10 +59,10 @@ public class RandomAccessMemory implements Memory {
     }
 
     /**
-     * Create new RAM page initialized from given data.
-     * @param id RAM page ID
-     * @param startAddress RAM page starting address
-     * @param data data to copy into created RAM page
+     * Create new RAM initialized from given data.
+     * @param id RAM ID
+     * @param startAddress RAM starting address
+     * @param data data to copy into created RAM
      * @param type RAM {@link Type}
      */
     public RandomAccessMemory(String id, int startAddress, short[] data, Type type) {
@@ -71,10 +71,10 @@ public class RandomAccessMemory implements Memory {
     }
 
     /**
-     * Create new RAM page initialized from given data.
-     * @param id RAM page ID
-     * @param startAddress RAM page starting address
-     * @param data data to copy into created RAM page
+     * Create new RAM initialized from given data.
+     * @param id RAM ID
+     * @param startAddress RAM starting address
+     * @param data data to copy into created RAM
      * @param type RAM {@link Type}
      */
     public RandomAccessMemory(String id, int startAddress, byte[] data, Type type) {
