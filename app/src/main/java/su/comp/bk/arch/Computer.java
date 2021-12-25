@@ -93,14 +93,10 @@ public class Computer implements Runnable {
 
     /** I/O registers space min start address */
     public final static int IO_REGISTERS_MIN_ADDRESS = 0170000;
-    /** I/O registers space max start address */
-    public final static int IO_REGISTERS_MAX_ADDRESS = 0177600;
     // I/O devices list
     private final List<Device> deviceList = new ArrayList<>();
     // I/O registers space addresses mapped to devices
     private final List<?>[] deviceTable = new List[2048];
-    // Devices start address (depends from connected RAM/ROM)
-    private int devicesStartAddress = IO_REGISTERS_MIN_ADDRESS;
 
     private boolean isRunning = false;
 
@@ -155,7 +151,9 @@ public class Computer implements Runnable {
         /** BK0011M - MSTD block attached */
         BK_0011M_MSTD(false, true),
         /** BK0011M with connected floppy drive controller (КНГМД) */
-        BK_0011M_KNGMD(true, true);
+        BK_0011M_KNGMD(true, true),
+        /** BK0011M with connected SMK512 controller */
+        BK_0011M_SMK512(true, true);
 
         private final boolean isFloppyControllerPresent;
         private final boolean isMemoryManagerPresent;
@@ -275,6 +273,12 @@ public class Computer implements Runnable {
                     break;
                 case BK_0011M_KNGMD:
                     addReadOnlyMemory(resources, R.raw.disk_327, "FloppyBios", 0160000);
+                    floppyController = new FloppyController(this);
+                    addDevice(floppyController);
+                    break;
+                case BK_0011M_SMK512:
+                    addReadOnlyMemory(resources, R.raw.disk_smk512_v205, "Smk512Bios", 0160000);
+                    addReadOnlyMemory(resources, R.raw.disk_smk512_v205, "Smk512Bios", 0170000);
                     floppyController = new FloppyController(this);
                     addDevice(floppyController);
                     break;
@@ -563,11 +567,6 @@ public class Computer implements Runnable {
         for (int memoryBlockIdx = 0; memoryBlockIdx < memoryBlocksCount; memoryBlockIdx++) {
             memoryTable[memoryStartBlock + memoryBlockIdx] = memory;
         }
-        // Correct devices start address, if needed
-        int memoryEndAddress = memory.getStartAddress() + (memory.getSize() << 1);
-        if (getDevicesStartAddress() < memoryEndAddress) {
-            setDevicesStartAddress(Math.min(memoryEndAddress, IO_REGISTERS_MAX_ADDRESS));
-        }
     }
 
     /**
@@ -602,22 +601,6 @@ public class Computer implements Runnable {
     public Memory getMemory(int address) {
         Memory memory = memoryTable[address >> 13];
         return (memory != null && memory.isRelatedAddress(address)) ? memory : null;
-    }
-
-    /**
-     * Get I/O devices start address.
-     * @return I/O devices start address value
-     */
-    public int getDevicesStartAddress() {
-        return devicesStartAddress;
-    }
-
-    /**
-     * Set I/O devices start address.
-     * @param devicesStartAddress I/O devices start address value to set
-     */
-    public void setDevicesStartAddress(int devicesStartAddress) {
-        this.devicesStartAddress = devicesStartAddress;
     }
 
     @SuppressWarnings("unchecked")
@@ -657,22 +640,25 @@ public class Computer implements Runnable {
         int readValue = BUS_ERROR;
 
         int wordAddress = address & 0177776;
-        // First check for I/O registers
-        if (address >= getDevicesStartAddress()) {
+
+        // Check for memory at given address
+        Memory memory = getMemory(address);
+        if (memory != null) {
+            readValue = memory.read(wordAddress);
+        }
+
+        // Check for I/O registers
+        if (address >= IO_REGISTERS_MIN_ADDRESS) {
             List<Device> subdevices = getDevices(address);
             if (subdevices != null) {
                 long cpuClock = getCpu().getTime();
-                readValue = 0;
+                if (readValue == BUS_ERROR) {
+                    readValue = 0;
+                }
                 for (Device subdevice: subdevices) {
                     // Read and combine subdevice state values in word mode
                     readValue |= subdevice.read(cpuClock, wordAddress);
                 }
-            }
-        } else {
-            // Check for memory at given address
-            Memory memory = getMemory(address);
-            if (memory != null) {
-                readValue = memory.read(wordAddress);
             }
         }
 
@@ -702,8 +688,14 @@ public class Computer implements Runnable {
             value <<= 8;
         }
 
-        // First check for I/O registers
-        if (address >= getDevicesStartAddress()) {
+        // Check for memory at given address
+        Memory memory = getMemory(address);
+        if (memory != null) {
+            isWritten = memory.write(isByteMode, address, value);
+        }
+
+        // Check for I/O registers
+        if (address >= IO_REGISTERS_MIN_ADDRESS) {
             List<Device> devices = getDevices(address);
             if (devices != null) {
                 long cpuClock = getCpu().getTime();
@@ -712,12 +704,6 @@ public class Computer implements Runnable {
                         isWritten = true;
                     }
                 }
-            }
-        } else {
-            // Check for memory at given address
-            Memory memory = getMemory(address);
-            if (memory != null) {
-                isWritten = memory.write(isByteMode, address, value);
             }
         }
 

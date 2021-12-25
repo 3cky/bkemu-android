@@ -997,9 +997,12 @@ public class Cpu {
         setPswState((short) 0340);
         int sel1RegisterValue = readMemory(false, REG_SEL1);
         if (sel1RegisterValue != Computer.BUS_ERROR) {
-            writeRegister(false, PC, sel1RegisterValue & 0177400);
+            int startAddress = sel1RegisterValue & 0177400;
+            Timber.d("read start address: 0%o", startAddress);
+            writeRegister(false, PC, startAddress);
         } else {
-            // FIXME Deal with bus error while read startup address
+            // FIXME Deal with bus error while read start address
+            Timber.w("can't read start address!");
         }
         time += RESET_TIME;
     }

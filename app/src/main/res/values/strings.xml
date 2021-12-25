@@ -22,6 +22,7 @@
     <string name="bk_0010_kngmd">BK 0010&#8211;01 (KNGMD)</string>
     <string name="bk_0011m_mstd">BK 0011M (MSTD)</string>
     <string name="bk_0011m_kngmd">BK 0011M (KNGMD)</string>
+    <string name="bk_0011m_smk512">BK 0011M (SMK512)</string>
     <string name="desc_erase">Erase</string>
     <string name="desc_collapse">Collapse</string>
     <string name="desc_expand">Expand</string>
