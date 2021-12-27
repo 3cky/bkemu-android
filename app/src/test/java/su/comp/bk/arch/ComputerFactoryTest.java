@@ -122,12 +122,12 @@ public class ComputerFactoryTest extends ResourceFileTestBase {
         computer = new Computer();
         computer.setClockFrequency(Computer.CLOCK_FREQUENCY_BK0010);
         workMemory = new RandomAccessMemory("TestWorkMemory",
-                0, 020000, RandomAccessMemory.Type.K565RU6);
-        computer.addMemory(workMemory);
+                020000, RandomAccessMemory.Type.K565RU6);
+        computer.addMemory(0, workMemory);
         RandomAccessMemory videoMemory = new RandomAccessMemory("TestVideoMemory",
-                040000, 020000, RandomAccessMemory.Type.K565RU6);
-        computer.addMemory(videoMemory);
-        computer.addMemory(new ReadOnlyMemory("TestReadOnlyMemory", 0100000, new byte[010000]));
+                020000, RandomAccessMemory.Type.K565RU6);
+        computer.addMemory(040000, videoMemory);
+        computer.addMemory(0100000, new ReadOnlyMemory("TestReadOnlyMemory", new byte[010000]));
         fakeTerminal = new FakeTerminal();
         computer.addDevice(fakeTerminal);
         computer.getCpu().setPswState(0);

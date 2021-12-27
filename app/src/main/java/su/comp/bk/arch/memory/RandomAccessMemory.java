@@ -24,13 +24,9 @@ import android.os.Bundle;
  * RAM (read/write) class.
  */
 public class RandomAccessMemory implements Memory {
-
     private final String id;
-    private final int startAddress;
     private final int size;
     private final short[] data;
-
-    private final int endAddress;
 
     /**
      * RAM types enumeration.
@@ -45,14 +41,11 @@ public class RandomAccessMemory implements Memory {
     /**
      * Create new RAM of given type (dynamic/static).
      * @param id RAM ID
-     * @param startAddress RAM starting address
      * @param size RAM size (in words)
      * @param type RAM {@link Type}
      */
-    public RandomAccessMemory(String id, int startAddress, int size, Type type) {
+    public RandomAccessMemory(String id, int size, Type type) {
         this.id = id;
-        this.startAddress = startAddress;
-        this.endAddress = startAddress + (size << 1) - 1;
         this.size = size;
         this.data = new short[getSize()];
         initData(type);
@@ -61,24 +54,22 @@ public class RandomAccessMemory implements Memory {
     /**
      * Create new RAM initialized from given data.
      * @param id RAM ID
-     * @param startAddress RAM starting address
      * @param data data to copy into created RAM
      * @param type RAM {@link Type}
      */
-    public RandomAccessMemory(String id, int startAddress, short[] data, Type type) {
-        this(id, startAddress, data.length, type);
+    public RandomAccessMemory(String id, short[] data, Type type) {
+        this(id, data.length, type);
         putData(data);
     }
 
     /**
      * Create new RAM initialized from given data.
      * @param id RAM ID
-     * @param startAddress RAM starting address
      * @param data data to copy into created RAM
      * @param type RAM {@link Type}
      */
-    public RandomAccessMemory(String id, int startAddress, byte[] data, Type type) {
-        this(id, startAddress, data.length >> 1, type);
+    public RandomAccessMemory(String id, byte[] data, Type type) {
+        this(id, data.length >> 1, type);
         putData(data);
     }
 
@@ -107,11 +98,6 @@ public class RandomAccessMemory implements Memory {
     }
 
     @Override
-    public int getStartAddress() {
-        return startAddress;
-    }
-
-    @Override
     public int getSize() {
         return size;
     }
@@ -134,41 +120,36 @@ public class RandomAccessMemory implements Memory {
         }
     }
 
-    private int getWordIndex(int address) {
-        return (address - startAddress) >> 1;
+    private int getWordIndex(int offset) {
+        return offset >> 1;
     }
 
-    protected int readWord(int address) {
-        return data[getWordIndex(address)] & 0177777;
+    protected int readWord(int offset) {
+        return data[getWordIndex(offset)] & 0177777;
     }
 
-    protected void writeWord(int address, int wordData) {
-        data[getWordIndex(address)] = (short) wordData;
-    }
-
-    @Override
-    public int read(int address) {
-        return readWord(address);
+    protected void writeWord(int offset, int wordData) {
+        data[getWordIndex(offset)] = (short) wordData;
     }
 
     @Override
-    public boolean write(boolean isByteMode, int address, int value) {
+    public int read(int offset) {
+        return readWord(offset);
+    }
+
+    @Override
+    public boolean write(boolean isByteMode, int offset, int value) {
         if (isByteMode) {
-            int w = readWord(address);
+            int w = readWord(offset);
             // Little-endian byte order
-            if ((address & 1) == 0) {
+            if ((offset & 1) == 0) {
                 value = (w & 0177400) | (value & 0377);
             } else {
                 value = (value & 0177400) | (w & 0377);
             }
         }
-        writeWord(address, value);
+        writeWord(offset, value);
         return true;
-    }
-
-    @Override
-    public boolean isRelatedAddress(int address) {
-        return (address >= startAddress) && (address <= endAddress);
     }
 
     @Override

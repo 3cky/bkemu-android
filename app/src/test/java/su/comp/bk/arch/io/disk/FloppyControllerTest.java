@@ -36,12 +36,9 @@ import su.comp.bk.ResourceFileTestBase;
 import su.comp.bk.arch.Computer;
 import su.comp.bk.arch.cpu.Cpu;
 import su.comp.bk.arch.io.Sel1RegisterSystemBits;
-import su.comp.bk.arch.io.disk.FloppyController;
 import su.comp.bk.arch.io.disk.FloppyController.FloppyDrive;
 import su.comp.bk.arch.io.disk.FloppyController.FloppyDriveIdentifier;
 import su.comp.bk.arch.io.disk.FloppyController.FloppyDriveSide;
-import su.comp.bk.arch.io.disk.DiskImage;
-import su.comp.bk.arch.io.disk.FileDiskImage;
 import su.comp.bk.arch.memory.RandomAccessMemory;
 import su.comp.bk.arch.memory.ReadOnlyMemory;
 import su.comp.bk.util.Crc16;
@@ -90,14 +87,14 @@ public class FloppyControllerTest extends ResourceFileTestBase {
         computer = new Computer();
         computer.setClockFrequency(Computer.CLOCK_FREQUENCY_BK0010);
         RandomAccessMemory workMemory = new RandomAccessMemory("TestWorkMemory",
-                0, 020000, RandomAccessMemory.Type.K565RU6);
-        computer.addMemory(workMemory);
+                020000, RandomAccessMemory.Type.K565RU6);
+        computer.addMemory(0, workMemory);
         RandomAccessMemory videoMemory = new RandomAccessMemory("TestVideoMemory",
-                040000, 020000, RandomAccessMemory.Type.K565RU6);
-        computer.addMemory(videoMemory);
-        computer.addMemory(new ReadOnlyMemory("TestMonitorRom", 0100000,
+                020000, RandomAccessMemory.Type.K565RU6);
+        computer.addMemory(040000, videoMemory);
+        computer.addMemory(0100000, new ReadOnlyMemory("TestMonitorRom",
                 FileUtils.readFileToByteArray(getTestResourceFile(MONITOR_ROM_FILE_NAME))));
-        computer.addMemory(new ReadOnlyMemory("TestFloppyRom", 0160000,
+        computer.addMemory(0160000, new ReadOnlyMemory("TestFloppyRom",
                 FileUtils.readFileToByteArray(getTestResourceFile(FDD_ROM_FILE_NAME))));
         floppyController = new FloppyController(computer);
         computer.addDevice(floppyController);

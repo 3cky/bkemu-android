@@ -49,9 +49,9 @@ public class SingleOperandOpcodesTest {
      */
     @Test
     public void testClrInstructionExecute() {
-        computer.addMemory(new RandomAccessMemory("TestRam",
-                01000, 3, RandomAccessMemory.Type.K565RU6));
-        computer.addMemory(new ReadOnlyMemory("TestRom", 0100000, new short[] {
+        computer.addMemory(01000, new RandomAccessMemory("TestRam",
+                3, RandomAccessMemory.Type.K565RU6));
+        computer.addMemory(0100000, new ReadOnlyMemory("TestRom", new short[] {
                 ClrOpcode.OPCODE, // CLR R0
                 (short) (ClrOpcode.OPCODE | Opcode.BYTE_OPERATION_FLAG), // CLRB R0
                 ClrOpcode.OPCODE | 010, // CLR (R0)
@@ -188,9 +188,9 @@ public class SingleOperandOpcodesTest {
      */
     @Test
     public void testComInstructionExecute() {
-        computer.addMemory(new RandomAccessMemory("TestRam",
-                01000, 3, RandomAccessMemory.Type.K565RU6));
-        computer.addMemory(new ReadOnlyMemory("TestRom", 0100000, new short[] {
+        computer.addMemory(01000, new RandomAccessMemory("TestRam",
+                3, RandomAccessMemory.Type.K565RU6));
+        computer.addMemory(0100000, new ReadOnlyMemory("TestRom", new short[] {
                 ComOpcode.OPCODE, // COM R0
                 (short) (ComOpcode.OPCODE | Opcode.BYTE_OPERATION_FLAG), // COMB R0
                 ComOpcode.OPCODE | 010, // COM (R0)
@@ -440,7 +440,7 @@ public class SingleOperandOpcodesTest {
      */
     @Test
     public void testAdcInstructionExecute() {
-        computer.addMemory(new ReadOnlyMemory("TestRom", 0100000, new short[] {
+        computer.addMemory(0100000, new ReadOnlyMemory("TestRom", new short[] {
                 AdcOpcode.OPCODE, // ADC R0
                 (short) (AdcOpcode.OPCODE | Opcode.BYTE_OPERATION_FLAG), // ADCB R0
                 }));
@@ -516,7 +516,7 @@ public class SingleOperandOpcodesTest {
      */
     @Test
     public void testAslInstructionExecute() {
-        computer.addMemory(new ReadOnlyMemory("TestRom", 0100000, new short[] {
+        computer.addMemory(0100000, new ReadOnlyMemory("TestRom", new short[] {
                 AslOpcode.OPCODE, // ASL R0
                 (short) (AslOpcode.OPCODE | Opcode.BYTE_OPERATION_FLAG), // ASLB R0
                 }));
@@ -573,7 +573,7 @@ public class SingleOperandOpcodesTest {
      */
     @Test
     public void testAsrInstructionExecute() {
-        computer.addMemory(new ReadOnlyMemory("TestRom", 0100000, new short[] {
+        computer.addMemory(0100000, new ReadOnlyMemory("TestRom", new short[] {
                 AsrOpcode.OPCODE, // ASR R0
                 (short) (AsrOpcode.OPCODE | Opcode.BYTE_OPERATION_FLAG), // ASRB R0
                 }));
@@ -630,7 +630,7 @@ public class SingleOperandOpcodesTest {
      */
     @Test
     public void testDecInstructionExecute() {
-        computer.addMemory(new ReadOnlyMemory("TestRom", 0100000, new short[] {
+        computer.addMemory(0100000, new ReadOnlyMemory("TestRom", new short[] {
                 DecOpcode.OPCODE, // DEC R0
                 (short) (DecOpcode.OPCODE | Opcode.BYTE_OPERATION_FLAG), // DECB R0
                 }));
@@ -685,7 +685,7 @@ public class SingleOperandOpcodesTest {
      */
     @Test
     public void testIncInstructionExecute() {
-        computer.addMemory(new ReadOnlyMemory("TestRom", 0100000, new short[] {
+        computer.addMemory(0100000, new ReadOnlyMemory("TestRom", new short[] {
                 IncOpcode.OPCODE, // INC R0
                 (short) (IncOpcode.OPCODE | Opcode.BYTE_OPERATION_FLAG), // INCB R0
                 }));
@@ -740,7 +740,7 @@ public class SingleOperandOpcodesTest {
      */
     @Test
     public void testMarkInstructionExecute() {
-        computer.addMemory(new RandomAccessMemory("TestRam", 0100000, new short[] {
+        computer.addMemory(0100000, new RandomAccessMemory("TestRam", new short[] {
                 MarkOpcode.OPCODE + 1, // MARK 1
                 0, // skipped parameter
                 (short) 0123456, // R5 to restore
@@ -759,7 +759,7 @@ public class SingleOperandOpcodesTest {
      */
     @Test
     public void testMfpsInstructionExecute() {
-        computer.addMemory(new ReadOnlyMemory("TestRom", 0100000, new short[] {
+        computer.addMemory(0100000, new ReadOnlyMemory("TestRom", new short[] {
                 (short) MfpsOpcode.OPCODE // MFPS R0
                 }));
         computer.reset();
@@ -776,7 +776,7 @@ public class SingleOperandOpcodesTest {
      */
     @Test
     public void testMtpsInstructionExecute() {
-        computer.addMemory(new ReadOnlyMemory("TestRom", 0100000, new short[] {
+        computer.addMemory(0100000, new ReadOnlyMemory("TestRom", new short[] {
                 (short) MtpsOpcode.OPCODE // MTPS R0
                 }));
         computer.reset();
@@ -792,7 +792,7 @@ public class SingleOperandOpcodesTest {
      */
     @Test
     public void testNegInstructionExecute() {
-        computer.addMemory(new ReadOnlyMemory("TestRom", 0100000, new short[] {
+        computer.addMemory(0100000, new ReadOnlyMemory("TestRom", new short[] {
                 NegOpcode.OPCODE, // NEG R0
                 (short) (NegOpcode.OPCODE | Opcode.BYTE_OPERATION_FLAG), // NEGB R0
                 }));
@@ -863,7 +863,7 @@ public class SingleOperandOpcodesTest {
      */
     @Test
     public void testRolInstructionExecute() {
-        computer.addMemory(new ReadOnlyMemory("TestRom", 0100000, new short[] {
+        computer.addMemory(0100000, new ReadOnlyMemory("TestRom", new short[] {
                 RolOpcode.OPCODE, // ROL R0
                 (short) (RolOpcode.OPCODE | Opcode.BYTE_OPERATION_FLAG), // ROLB R0
                 }));
@@ -922,7 +922,7 @@ public class SingleOperandOpcodesTest {
      */
     @Test
     public void testRorInstructionExecute() {
-        computer.addMemory(new ReadOnlyMemory("TestRom", 0100000, new short[] {
+        computer.addMemory(0100000, new ReadOnlyMemory("TestRom", new short[] {
                 RorOpcode.OPCODE, // ROR R0
                 (short) (RorOpcode.OPCODE | Opcode.BYTE_OPERATION_FLAG), // RORB R0
                 }));
@@ -982,7 +982,7 @@ public class SingleOperandOpcodesTest {
      */
     @Test
     public void testSbcInstructionExecute() {
-        computer.addMemory(new ReadOnlyMemory("TestRom", 0100000, new short[] {
+        computer.addMemory(0100000, new ReadOnlyMemory("TestRom", new short[] {
                 SbcOpcode.OPCODE, // SBC R0
                 (short) (SbcOpcode.OPCODE | Opcode.BYTE_OPERATION_FLAG), // SBCB R0
                 }));
@@ -1041,7 +1041,7 @@ public class SingleOperandOpcodesTest {
      */
     @Test
     public void testSwabInstructionExecute() {
-        computer.addMemory(new ReadOnlyMemory("TestRom", 0100000, new short[] {
+        computer.addMemory(0100000, new ReadOnlyMemory("TestRom", new short[] {
                 SwabOpcode.OPCODE, // SWAB R0
                 }));
         computer.reset();
@@ -1058,7 +1058,7 @@ public class SingleOperandOpcodesTest {
      */
     @Test
     public void testSxtInstructionExecute() {
-        computer.addMemory(new ReadOnlyMemory("TestRom", 0100000, new short[] {
+        computer.addMemory(0100000, new ReadOnlyMemory("TestRom", new short[] {
                 SxtOpcode.OPCODE, // SXT R0
                 (short) (SxtOpcode.OPCODE | Opcode.BYTE_OPERATION_FLAG) // SXTB R0
                 }));
@@ -1087,7 +1087,7 @@ public class SingleOperandOpcodesTest {
      */
     @Test
     public void testTstInstructionExecute() {
-        computer.addMemory(new ReadOnlyMemory("TestRom", 0100000, new short[] {
+        computer.addMemory(0100000, new ReadOnlyMemory("TestRom", new short[] {
                 TstOpcode.OPCODE, // TST R0
                 (short) (TstOpcode.OPCODE | Opcode.BYTE_OPERATION_FLAG), // TSTB R0
                 }));

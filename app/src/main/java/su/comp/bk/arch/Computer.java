@@ -66,7 +66,7 @@ public class Computer implements Runnable {
     private Configuration configuration;
 
     // Memory table mapped by 8KB blocks
-    private final Memory[] memoryTable = new Memory[8];
+    private final MemoryRange[] memoryTable = new MemoryRange[8];
 
     // CPU implementation reference
     private final Cpu cpu;
@@ -188,6 +188,30 @@ public class Computer implements Runnable {
         }
     }
 
+    public static class MemoryRange {
+        private final int startAddress;
+        private final Memory memory;
+        private final int endAddress;
+
+        public MemoryRange(int startAddress, Memory memory) {
+            this.startAddress = startAddress;
+            this.memory = memory;
+            this.endAddress = startAddress + (memory.getSize() << 1) - 1;
+        }
+
+        public int getStartAddress() {
+            return startAddress;
+        }
+
+        public Memory getMemory() {
+            return memory;
+        }
+
+        public boolean isRelatedAddress(int address) {
+            return (address >= startAddress) && (address <= endAddress);
+        }
+    }
+
     public Computer() {
         this.cpu = new Cpu(this);
     }
@@ -213,29 +237,29 @@ public class Computer implements Runnable {
             setClockFrequency(CLOCK_FREQUENCY_BK0010);
             // Set RAM configuration
             RandomAccessMemory workMemory = new RandomAccessMemory("WorkMemory",
-                    0,020000, Type.K565RU6);
-            addMemory(workMemory);
+                    020000, Type.K565RU6);
+            addMemory(0, workMemory);
             RandomAccessMemory videoMemory = new RandomAccessMemory("VideoMemory",
-                    040000, 020000, Type.K565RU6);
-            addMemory(videoMemory);
+                    020000, Type.K565RU6);
+            addMemory(040000, videoMemory);
             // Add video controller
             videoController = new VideoController(videoMemory);
             addDevice(videoController);
             // Set ROM configuration
-            addReadOnlyMemory(resources, R.raw.monit10, "Monitor10", 0100000);
+            addReadOnlyMemory(resources, 0100000, R.raw.monit10, "Monitor10");
             switch (config) {
                 case BK_0010_BASIC:
-                    addReadOnlyMemory(resources, R.raw.basic10_1, "Basic10:1", 0120000);
-                    addReadOnlyMemory(resources, R.raw.basic10_2, "Basic10:2", 0140000);
-                    addReadOnlyMemory(resources, R.raw.basic10_3, "Basic10:3", 0160000);
+                    addReadOnlyMemory(resources, 0120000, R.raw.basic10_1, "Basic10:1");
+                    addReadOnlyMemory(resources, 0140000, R.raw.basic10_2, "Basic10:2");
+                    addReadOnlyMemory(resources, 0160000, R.raw.basic10_3, "Basic10:3");
                     break;
                 case BK_0010_MSTD:
-                    addReadOnlyMemory(resources, R.raw.focal, "Focal", 0120000);
-                    addReadOnlyMemory(resources, R.raw.tests, "MSTD10", 0160000);
+                    addReadOnlyMemory(resources, 0120000, R.raw.focal, "Focal");
+                    addReadOnlyMemory(resources, 0160000, R.raw.tests, "MSTD10");
                     break;
                 case BK_0010_KNGMD:
-                    addMemory(new RandomAccessMemory("ExtMemory", 0120000, 020000, Type.K537RU10));
-                    addReadOnlyMemory(resources, R.raw.disk_327, "FloppyBios", 0160000);
+                    addMemory(0120000, new RandomAccessMemory("ExtMemory", 020000, Type.K537RU10));
+                    addReadOnlyMemory(resources, 0160000, R.raw.disk_327, "FloppyBios");
                     floppyController = new FloppyController(this);
                     addDevice(floppyController);
                     break;
@@ -254,32 +278,32 @@ public class Computer implements Runnable {
             for (int memoryBankIndex = 0; memoryBankIndex < MemoryManager.NUM_RAM_BANKS;
                     memoryBankIndex++) {
                 Memory memoryBank = new RandomAccessMemory("MemoryBank" + memoryBankIndex,
-                        0, 020000, Type.K565RU5);
+                        020000, Type.K565RU5);
                 firstBankedMemory.setBank(memoryBankIndex, memoryBank);
                 secondBankedMemory.setBank(memoryBankIndex, memoryBank);
             }
-            addMemory(firstBankedMemory.getBank(6)); // Fixed RAM page at address 0
-            addMemory(firstBankedMemory); // First banked memory window at address 040000
-            addMemory(secondBankedMemory); // Second banked memory window at address 0100000
+            addMemory(0, firstBankedMemory.getBank(6)); // Fixed RAM page at address 0
+            addMemory(BK0011_BANKED_MEMORY_0_ADDRESS, firstBankedMemory); // First banked memory window at address 040000
+            addMemory(BK0011_BANKED_MEMORY_1_ADDRESS, secondBankedMemory); // Second banked memory window at address 0100000
             // Set ROM configuration
             secondBankedMemory.setBank(MemoryManager.NUM_RAM_BANKS, new ReadOnlyMemory(
-                    "Basic11M:0", 0, loadReadOnlyMemoryData(resources, R.raw.basic11m_0)));
+                    "Basic11M:0", loadReadOnlyMemoryData(resources, R.raw.basic11m_0)));
             secondBankedMemory.setBank(MemoryManager.NUM_RAM_BANKS + 1, new ReadOnlyMemory(
-                    "Basic11M:1/ExtBOS11M", 0, loadReadOnlyMemoryData(resources,
+                    "Basic11M:1/ExtBOS11M", loadReadOnlyMemoryData(resources,
                             R.raw.basic11m_1, R.raw.ext11m)));
-            addReadOnlyMemory(resources, R.raw.bos11m, "BOS11M", 0140000);
+            addReadOnlyMemory(resources, 0140000, R.raw.bos11m, "BOS11M");
             switch (config) {
                 case BK_0011M_MSTD:
-                    addReadOnlyMemory(resources, R.raw.mstd11m, "MSTD11M", 0160000);
+                    addReadOnlyMemory(resources, 0160000, R.raw.mstd11m, "MSTD11M");
                     break;
                 case BK_0011M_KNGMD:
-                    addReadOnlyMemory(resources, R.raw.disk_327, "FloppyBios", 0160000);
+                    addReadOnlyMemory(resources, 0160000, R.raw.disk_327, "FloppyBios");
                     floppyController = new FloppyController(this);
                     addDevice(floppyController);
                     break;
                 case BK_0011M_SMK512:
-                    addReadOnlyMemory(resources, R.raw.disk_smk512_v205, "Smk512Bios", 0160000);
-                    addReadOnlyMemory(resources, R.raw.disk_smk512_v205, "Smk512Bios", 0170000);
+                    addReadOnlyMemory(resources, 0160000, R.raw.disk_smk512_v205, "Smk512Bios");
+                    addReadOnlyMemory(resources, 0170000, R.raw.disk_smk512_v205, "Smk512Bios");
                     floppyController = new FloppyController(this);
                     addDevice(floppyController);
                     break;
@@ -326,7 +350,8 @@ public class Computer implements Runnable {
 
     private List<Memory> getStatefulMemoryList() {
         List<Memory> statefulMemoryList = new ArrayList<>();
-        for (Memory memoryBlock : memoryTable) {
+        for (MemoryRange memoryRange : memoryTable) {
+            Memory memoryBlock = memoryRange.getMemory();
             if (!(memoryBlock instanceof ReadOnlyMemory)) {
                 if (memoryBlock instanceof RandomAccessMemory) {
                     if (!statefulMemoryList.contains(memoryBlock)) {
@@ -414,10 +439,10 @@ public class Computer implements Runnable {
         systemUptimeSyncCheckIntervalTicks = nanosToCpuTime(UPTIME_SYNC_CHECK_INTERVAL);
     }
 
-    private void addReadOnlyMemory(Resources resources, int romDataResId, String romId, int address)
+    private void addReadOnlyMemory(Resources resources, int address, int romDataResId, String romId)
             throws IOException {
         byte[] romData = loadReadOnlyMemoryData(resources, romDataResId);
-        addMemory(new ReadOnlyMemory(romId, address, romData));
+        addMemory(address, new ReadOnlyMemory(romId, romData));
     }
 
     /**
@@ -557,16 +582,18 @@ public class Computer implements Runnable {
 
     /**
      * Add memory (RAM/ROM) to address space.
+     * @param address address to add memory
      * @param memory {@link Memory} to add
      */
-    public void addMemory(Memory memory) {
-        int memoryStartBlock = memory.getStartAddress() >> 13;
+    public void addMemory(int address, Memory memory) {
+        int memoryStartBlock = address >> 13;
         int memoryBlocksCount = memory.getSize() >> 12; // ((size << 1) >> 13)
         if ((memory.getSize() & 07777) != 0) {
             memoryBlocksCount++;
         }
+        MemoryRange memoryRange = new MemoryRange(address, memory);
         for (int memoryBlockIdx = 0; memoryBlockIdx < memoryBlocksCount; memoryBlockIdx++) {
-            memoryTable[memoryStartBlock + memoryBlockIdx] = memory;
+            memoryTable[memoryStartBlock + memoryBlockIdx] = memoryRange;
         }
     }
 
@@ -596,12 +623,16 @@ public class Computer implements Runnable {
      * <code>false</code> otherwise
      */
     public boolean isReadOnlyMemoryAddress(int address) {
-        return (address >= 0) && (getMemory(address) instanceof ReadOnlyMemory);
+        if (address >= 0) {
+            MemoryRange memoryRange = getMemoryRange(address);
+            return memoryRange != null && memoryRange.isRelatedAddress(address)
+                    && memoryRange.getMemory() instanceof ReadOnlyMemory;
+        }
+        return false;
     }
 
-    public Memory getMemory(int address) {
-        Memory memory = memoryTable[address >> 13];
-        return (memory != null && memory.isRelatedAddress(address)) ? memory : null;
+    public MemoryRange getMemoryRange(int address) {
+        return memoryTable[address >> 13];
     }
 
     @SuppressWarnings("unchecked")
@@ -643,9 +674,9 @@ public class Computer implements Runnable {
         int wordAddress = address & 0177776;
 
         // Check for memory at given address
-        Memory memory = getMemory(address);
-        if (memory != null) {
-            readValue = memory.read(wordAddress);
+        MemoryRange memoryRange = getMemoryRange(address);
+        if (memoryRange != null && memoryRange.isRelatedAddress(address)) {
+            readValue = memoryRange.getMemory().read(wordAddress - memoryRange.getStartAddress());
         }
 
         // Check for I/O registers
@@ -690,9 +721,10 @@ public class Computer implements Runnable {
         }
 
         // Check for memory at given address
-        Memory memory = getMemory(address);
-        if (memory != null) {
-            isWritten = memory.write(isByteMode, address, value);
+        MemoryRange memoryRange = getMemoryRange(address);
+        if (memoryRange != null && memoryRange.isRelatedAddress(address)) {
+            isWritten = memoryRange.getMemory().write(isByteMode,
+                    address - memoryRange.getStartAddress(), value);
         }
 
         // Check for I/O registers

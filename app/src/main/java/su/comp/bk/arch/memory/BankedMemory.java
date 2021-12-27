@@ -28,8 +28,6 @@ import su.comp.bk.arch.Computer;
 public class BankedMemory implements Memory {
 
     private final String id;
-    private final int startAddress;
-    private final int endAddress;
     private final int size;
 
     private final Memory[] banks;
@@ -45,8 +43,6 @@ public class BankedMemory implements Memory {
      */
     public BankedMemory(String id, int startAddress, int size, int numBanks) {
         this.id = id;
-        this.startAddress = startAddress;
-        this.endAddress = startAddress + (size << 1) - 1;
         this.size = size;
         this.banks = new Memory[numBanks];
     }
@@ -118,11 +114,6 @@ public class BankedMemory implements Memory {
     }
 
     @Override
-    public int getStartAddress() {
-        return startAddress;
-    }
-
-    @Override
     public int getSize() {
         return size;
     }
@@ -133,19 +124,13 @@ public class BankedMemory implements Memory {
     }
 
     @Override
-    public boolean isRelatedAddress(int address) {
-        return (address >= startAddress) && (address <= endAddress);
+    public int read(int offset) {
+        return (activeBank != null) ? activeBank.read(offset) : Computer.BUS_ERROR;
     }
 
     @Override
-    public int read(int address) {
-        return (activeBank != null) ? activeBank.read(address - startAddress) : Computer.BUS_ERROR;
-    }
-
-    @Override
-    public boolean write(boolean isByteMode, int address, int value) {
-        return (activeBank != null) && activeBank.write(isByteMode,
-                address - startAddress, value);
+    public boolean write(boolean isByteMode, int offset, int value) {
+        return (activeBank != null) && activeBank.write(isByteMode, offset, value);
     }
 
     @Override

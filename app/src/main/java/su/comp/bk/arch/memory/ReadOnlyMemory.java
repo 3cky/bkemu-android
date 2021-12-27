@@ -22,19 +22,17 @@ package su.comp.bk.arch.memory;
  * ROM (read only) memory class.
  */
 public class ReadOnlyMemory extends RandomAccessMemory {
-
     /**
      * Create new ROM initialized from given data.
      * @param id ROM ID
-     * @param startAddress ROM starting address
      * @param data data to copy into created ROM
      */
-    public ReadOnlyMemory(String id, int startAddress, short[] data) {
-        super(id, startAddress, data, Type.OTHER);
+    public ReadOnlyMemory(String id, short[] data) {
+        super(id, data, Type.OTHER);
     }
 
-    public ReadOnlyMemory(String id, int startAddress, byte[] data) {
-        super(id, startAddress, data, Type.OTHER);
+    public ReadOnlyMemory(String id, byte[] data) {
+        super(id, data, Type.OTHER);
     }
 
     @Override
@@ -43,7 +41,7 @@ public class ReadOnlyMemory extends RandomAccessMemory {
     }
 
     @Override
-    public boolean write(boolean isByteMode, int address, int value) {
+    public boolean write(boolean isByteMode, int offset, int value) {
         return false;
     }
 }

@@ -51,7 +51,7 @@ public class ControlOpcodesTest {
 
     @Test
     public void testResetInstructionExecute() {
-        computer.addMemory(new ReadOnlyMemory("TestRom", 0100000, new short[] {
+        computer.addMemory(0100000, new ReadOnlyMemory("TestRom", new short[] {
                 ResetOpcode.OPCODE
         }));
         computer.reset();
@@ -68,7 +68,7 @@ public class ControlOpcodesTest {
 
     @Test
     public void testWaitInstructionExecute() {
-        computer.addMemory(new ReadOnlyMemory("TestRom", 0100000, new short[] {
+        computer.addMemory(0100000, new ReadOnlyMemory("TestRom", new short[] {
                 WaitOpcode.OPCODE
         }));
         computer.reset();
@@ -79,7 +79,7 @@ public class ControlOpcodesTest {
 
     @Test
     public void testHaltInstructionExecute() {
-        computer.addMemory(new ReadOnlyMemory("TestRom", 0100000, new short[] {
+        computer.addMemory(0100000, new ReadOnlyMemory("TestRom", new short[] {
                 HaltOpcode.OPCODE,                   // 0100000: HALT
                 (short) 0100010,                     // 0100002: <vector - PC>
                 0377,                                // 0100004: <vector - PSW>

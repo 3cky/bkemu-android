@@ -31,12 +31,6 @@ public interface Memory {
     String getId();
 
     /**
-     * Get memory address.
-     * @return memory absolute address (0000000-0177776)
-     */
-    int getStartAddress();
-
-    /**
      * Get memory size (in words!).
      * @return memory size in words
      */
@@ -50,30 +44,22 @@ public interface Memory {
 
     /**
      * Read word value from the memory.
-     * @param address absolute address to read (0000000-0177776)
+     * @param offset value offset to read (0000000-0177776)
      * @return read word value
      */
-    int read(int address);
+    int read(int offset);
 
     /**
      * Write word/byte value to the memory.
      * @param isByteMode <code>true</code> to write byte value, <code>false</code> to write
      * word value
-     * @param address absolute address to write (0000000-0177777)
+     * @param offset value offset to write (0000000-0177777)
      * @param value data bus word value to write to the memory. In byte mode value is in word's
-     *              low byte for even addresses and in word's high byte for odd addresses)
+     *              low byte for even offsets and in word's high byte for odd offsets)
      * @return <code>true</code> if value successfully written to memory,
      * <code>false</code> otherwise
      */
-    boolean write(boolean isByteMode, int address, int value);
-
-    /**
-     * Check is given address related to this memory.
-     * @param address absolute address to check (0000000-0177777)
-     * @return <code>true</code> if given address is related to this memory,
-     * <code>false</code> otherwise
-     */
-    boolean isRelatedAddress(int address);
+    boolean write(boolean isByteMode, int offset, int value);
 
 
     /**

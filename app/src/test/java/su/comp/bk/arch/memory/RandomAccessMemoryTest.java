@@ -26,40 +26,36 @@ import org.junit.Test;
  * RAM implementation tests.
  */
 public class RandomAccessMemoryTest {
-
     /**
-     * Test method for {@link su.comp.bk.arch.memory.RandomAccessMemory#RandomAccessMemory(String, int, int, su.comp.bk.arch.memory.RandomAccessMemory.Type)}.
+     * Test method for {@link su.comp.bk.arch.memory.RandomAccessMemory#RandomAccessMemory(String, int, su.comp.bk.arch.memory.RandomAccessMemory.Type)}.
      */
     @Test
     public void testRandomAccessMemoryIntInt() {
         RandomAccessMemory ram = new RandomAccessMemory("TestRam",
-                01000, 4, RandomAccessMemory.Type.K565RU6);
-        assertEquals(01000, ram.getStartAddress());
+                4, RandomAccessMemory.Type.K565RU6);
         assertEquals(4, ram.getSize());
     }
 
     /**
-     * Test method for {@link su.comp.bk.arch.memory.RandomAccessMemory#RandomAccessMemory(String, int, short[], su.comp.bk.arch.memory.RandomAccessMemory.Type)}.
+     * Test method for {@link su.comp.bk.arch.memory.RandomAccessMemory#RandomAccessMemory(String, short[], su.comp.bk.arch.memory.RandomAccessMemory.Type)}.
      */
     @Test
     public void testRandomAccessMemoryIntShortArray() {
         short[] ramData = new short[] { 0, 1, 2, 3 };
         RandomAccessMemory ram = new RandomAccessMemory("TestRam",
-                01000, ramData, RandomAccessMemory.Type.K565RU6);
-        assertEquals(01000, ram.getStartAddress());
+                ramData, RandomAccessMemory.Type.K565RU6);
         assertEquals(4, ram.getSize());
         assertArrayEquals(ramData, ram.getData());
     }
 
     /**
-     * Test method for {@link su.comp.bk.arch.memory.RandomAccessMemory#RandomAccessMemory(String, int, byte[], su.comp.bk.arch.memory.RandomAccessMemory.Type)}.
+     * Test method for {@link su.comp.bk.arch.memory.RandomAccessMemory#RandomAccessMemory(String, byte[], su.comp.bk.arch.memory.RandomAccessMemory.Type)}.
      */
     @Test
     public void testRandomAccessMemoryIntByteArray() {
         byte[] ramData = new byte[] { 0, 1, 2, 3 };
         RandomAccessMemory ram = new RandomAccessMemory("TestRam",
-                01000, ramData, RandomAccessMemory.Type.K565RU6);
-        assertEquals(01000, ram.getStartAddress());
+                ramData, RandomAccessMemory.Type.K565RU6);
         assertEquals(2, ram.getSize());
         assertArrayEquals(new short[] { 1 << 8, (3 << 8) + 2 }, ram.getData());
     }
@@ -68,45 +64,44 @@ public class RandomAccessMemoryTest {
     public void testRead() {
         short[] ramData = new short[] { 0, 1, (short) 0177777, (short) 0177776 };
         RandomAccessMemory ram = new RandomAccessMemory("TestRam",
-                01000, ramData, RandomAccessMemory.Type.K565RU6);
-        assertEquals(0, ram.read(01000));
-        assertEquals(0, ram.read(01001));
-        assertEquals(1, ram.read(01002));
-        assertEquals(1, ram.read(01003));
-        assertEquals(0177777, ram.read(01004));
-        assertEquals(0177777, ram.read(01005));
-        assertEquals(0177776, ram.read(01006));
-        assertEquals(0177776, ram.read(01007));
+                ramData, RandomAccessMemory.Type.K565RU6);
+        assertEquals(0, ram.read(0));
+        assertEquals(0, ram.read(1));
+        assertEquals(1, ram.read(2));
+        assertEquals(1, ram.read(3));
+        assertEquals(0177777, ram.read(4));
+        assertEquals(0177777, ram.read(5));
+        assertEquals(0177776, ram.read(6));
+        assertEquals(0177776, ram.read(7));
     }
 
     @Test
     public void testWriteWord() {
         short[] ramData = new short[] { 0, 0 };
         RandomAccessMemory ram = new RandomAccessMemory("TestRam",
-                01000, ramData, RandomAccessMemory.Type.K565RU6);
-        ram.write(false, 01000, 0377);
-        assertEquals(0377, ram.read(01000));
-        ram.write(false, 01001, 0377);
-        assertEquals(0377, ram.read(01000));
-        ram.write(false, 01002, 0177777);
-        assertEquals(0177777, ram.read(01002));
-        ram.write(false, 01003, 0177777);
-        assertEquals(0177777, ram.read(01002));
-        ram.write(false, 01002, 01777777);
-        assertEquals(0177777, ram.read(01002));
+                ramData, RandomAccessMemory.Type.K565RU6);
+        ram.write(false, 0, 0377);
+        assertEquals(0377, ram.read(0));
+        ram.write(false, 1, 0377);
+        assertEquals(0377, ram.read(0));
+        ram.write(false, 2, 0177777);
+        assertEquals(0177777, ram.read(2));
+        ram.write(false, 3, 0177777);
+        assertEquals(0177777, ram.read(2));
+        ram.write(false, 2, 01777777);
+        assertEquals(0177777, ram.read(2));
     }
 
     @Test
     public void testWriteByte() {
         byte[] ramData = new byte[] { 0, 0 };
         RandomAccessMemory ram = new RandomAccessMemory("TestRam",
-                01000, ramData, RandomAccessMemory.Type.K565RU6);
-        ram.write(true, 01000, 1);
-        assertEquals(1, ram.read(01000));
-        ram.write(true, 01001, 0377 << 8);
-        assertEquals((0377 << 8) + 1, ram.read(01000));
-        ram.write(true, 01001, 0177777);
-        assertEquals((0377 << 8) + 1, ram.read(01000));
+                ramData, RandomAccessMemory.Type.K565RU6);
+        ram.write(true, 0, 1);
+        assertEquals(1, ram.read(0));
+        ram.write(true, 1, 0377 << 8);
+        assertEquals((0377 << 8) + 1, ram.read(0));
+        ram.write(true, 1, 0177777);
+        assertEquals((0377 << 8) + 1, ram.read(0));
     }
-
 }

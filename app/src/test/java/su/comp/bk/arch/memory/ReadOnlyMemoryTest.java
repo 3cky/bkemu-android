@@ -30,25 +30,24 @@ public class ReadOnlyMemoryTest {
     @Test
     public void testWriteWord() {
         short[] romData = new short[] { 0, (short) 0177777 };
-        ReadOnlyMemory rom = new ReadOnlyMemory("TestRom", 01000, romData);
-        rom.write(false, 01000, 0377);
-        assertEquals(0, rom.read(01000));
-        rom.write(false, 01001, 0377);
-        assertEquals(0, rom.read(01000));
-        rom.write(false, 01002, 0);
-        assertEquals(0177777, rom.read(01002));
-        rom.write(false, 01003, 0);
-        assertEquals(0177777, rom.read(01002));
+        ReadOnlyMemory rom = new ReadOnlyMemory("TestRom", romData);
+        rom.write(false, 0, 0377);
+        assertEquals(0, rom.read(0));
+        rom.write(false, 1, 0377);
+        assertEquals(0, rom.read(0));
+        rom.write(false, 2, 0);
+        assertEquals(0177777, rom.read(2));
+        rom.write(false, 3, 0);
+        assertEquals(0177777, rom.read(2));
     }
 
     @Test
     public void testWriteByte() {
         byte[] romData = new byte[] { 0, (byte) 0377 };
-        ReadOnlyMemory rom = new ReadOnlyMemory("TestRom", 01000, romData);
-        assertFalse(rom.write(true, 01000, 0377));
-        assertEquals(0377 << 8, rom.read(01000));
-        assertFalse(rom.write(true, 01001, 0));
-        assertEquals(0377 << 8, rom.read(01000));
+        ReadOnlyMemory rom = new ReadOnlyMemory("TestRom", romData);
+        assertFalse(rom.write(true, 0, 0377));
+        assertEquals(0377 << 8, rom.read(0));
+        assertFalse(rom.write(true, 1, 0));
+        assertEquals(0377 << 8, rom.read(0));
     }
-
 }
