@@ -88,7 +88,7 @@ dependencies {
     implementation 'com.andkulikov:transitionseverywhere:2.0.0-alpha01'
     implementation 'com.jakewharton.timber:timber:4.7.1'
 
-    testImplementation 'junit:junit:4.12'
+    testImplementation 'junit:junit:4.13.1'
     testImplementation 'commons-io:commons-io:2.4'
     testImplementation 'org.robolectric:robolectric:4.6'
     testImplementation 'net.lachlanmckee:timber-junit-rule:1.0.1'
