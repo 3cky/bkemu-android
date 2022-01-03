@@ -78,7 +78,7 @@ public class ComputerFactoryTest extends ResourceFileTestBase {
         }
 
         @Override
-        public void init(long cpuTime) {
+        public void init(long cpuTime, boolean isHardwareReset) {
             isWriting = false;
         }
 

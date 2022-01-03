@@ -112,7 +112,7 @@ public class ControlOpcodesTest {
                 return new int[] { Cpu.REG_HALT_PC, Cpu.REG_HALT_PSW };
             }
             @Override
-            public void init(long cpuTime) {
+            public void init(long cpuTime, boolean isHardwareReset) {
             }
 
             @Override
@@ -139,7 +139,7 @@ public class ControlOpcodesTest {
                 return new int[] { Cpu.REG_SEL1 };
             }
             @Override
-            public void init(long cpuTime) {
+            public void init(long cpuTime, boolean isHardwareReset) {
             }
 
             @Override

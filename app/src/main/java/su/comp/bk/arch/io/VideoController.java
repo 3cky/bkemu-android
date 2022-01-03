@@ -391,7 +391,7 @@ public class VideoController implements Device, Computer.UptimeListener {
     }
 
     @Override
-    public void init(long cpuTime) {
+    public void init(long cpuTime, boolean isHardwareReset) {
         // Do nothing
     }
 

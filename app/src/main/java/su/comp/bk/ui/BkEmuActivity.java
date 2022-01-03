@@ -580,7 +580,7 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
                 if (storedConfiguration != null) {
                     computer.configure(getResources(), storedConfiguration);
                     initializeComputerDisks();
-                    computer.restoreState(getResources(), savedInstanceState);
+                    computer.restoreState(savedInstanceState);
                     isComputerInitialized = true;
                 }
             } catch (Exception e) {
@@ -705,7 +705,7 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
         outState.putBoolean(ON_SCREEN_JOYSTICK_VISIBLE, isOnScreenJoystickVisible());
         keyboardManager.saveState(outState);
         // Save computer state
-        computer.saveState(getResources(), outState);
+        computer.saveState(outState);
         super.onSaveInstanceState(outState);
     }
 

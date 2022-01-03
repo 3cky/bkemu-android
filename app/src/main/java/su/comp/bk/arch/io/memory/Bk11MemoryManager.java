@@ -1,12 +1,10 @@
 /*
- * Created: 17.01.2013
+ * Copyright (C) 2021 Victor Antonovich (v.antonovich@gmail.com)
  *
- * Copyright (C) 2012 Victor Antonovich (v.antonovich@gmail.com)
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -14,19 +12,24 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
  */
-package su.comp.bk.arch.io;
+package su.comp.bk.arch.io.memory;
 
+import su.comp.bk.arch.Computer;
 import su.comp.bk.arch.cpu.Cpu;
+import su.comp.bk.arch.io.Device;
 import su.comp.bk.arch.memory.BankedMemory;
 import android.os.Bundle;
 
 /**
  * BK-0011M memory manager.
  */
-public class MemoryManager implements Device {
+public class Bk11MemoryManager implements Device {
+    // State save/restore: Current memory configuration value
+    private static final String STATE_MEMORY_CONFIGURATION = Bk11MemoryManager.class.getName() +
+            "#current_config";
 
     private final static int[] ADDRESSES = { Cpu.REG_SEL1 };
 
@@ -45,15 +48,20 @@ public class MemoryManager implements Device {
     // Second banked memory window (addresses 0100000-0140000)
     private final BankedMemory secondBankedMemory;
 
+    // Default memory configuration value
+    private static final int DEFAULT_MEMORY_CONFIGURATION = 0;
+
+    // Current memory configuration value
+    private int currentMemoryConfiguration;
+
     /**
      * Create memory manager with given memory banks.
      * @param firstBankedMemory first banked memory window (addresses 040000-0100000)
      * @param secondBankedMemory second banked memory window (addresses 0100000-0140000)
      */
-    public MemoryManager(BankedMemory firstBankedMemory, BankedMemory secondBankedMemory) {
+    public Bk11MemoryManager(BankedMemory firstBankedMemory, BankedMemory secondBankedMemory) {
         this.firstBankedMemory = firstBankedMemory;
         this.secondBankedMemory = secondBankedMemory;
-        setMemoryConfiguration(0);
     }
 
     @Override
@@ -62,26 +70,27 @@ public class MemoryManager implements Device {
     }
 
     @Override
-    public void init(long cpuTime) {
-        // FIXME Do nothing?
+    public void init(long cpuTime, boolean isHardwareReset) {
+        if (isHardwareReset) {
+            setMemoryConfiguration(DEFAULT_MEMORY_CONFIGURATION);
+        }
     }
 
     @Override
     public void saveState(Bundle outState) {
-        // TODO Auto-generated method stub
-
+        outState.putInt(STATE_MEMORY_CONFIGURATION, currentMemoryConfiguration);
     }
 
     @Override
     public void restoreState(Bundle inState) {
-        // TODO Auto-generated method stub
-
+        setMemoryConfiguration(inState.getInt(STATE_MEMORY_CONFIGURATION,
+                DEFAULT_MEMORY_CONFIGURATION));
     }
 
     @Override
     public int read(long cpuTime, int address) {
-        // Register is write-only
-        return 0;
+        // Register is write only
+        return Computer.BUS_ERROR;
     }
 
     @Override
@@ -94,6 +103,8 @@ public class MemoryManager implements Device {
     }
 
     private void setMemoryConfiguration(int value) {
+        // Update current memory configuration value
+        currentMemoryConfiguration = value;
         // Set first memory bank configuration
         firstBankedMemory.setActiveBankIndex((value >> 12) & 7);
         // Set second memory bank configuration
@@ -118,5 +129,4 @@ public class MemoryManager implements Device {
         }
         secondBankedMemory.setActiveBankIndex((romBankIndex < 0) ? (value >> 8) & 7 : romBankIndex);
     }
-
 }

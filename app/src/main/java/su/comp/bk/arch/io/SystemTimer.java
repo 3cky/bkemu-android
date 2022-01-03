@@ -60,7 +60,7 @@ public class SystemTimer implements Device, VideoController.FrameSyncListener {
     }
 
     @Override
-    public void init(long cpuTime) {
+    public void init(long cpuTime, boolean isHardwareReset) {
         // Do nothing
     }
 

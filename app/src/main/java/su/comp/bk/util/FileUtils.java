@@ -30,6 +30,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
@@ -42,6 +43,9 @@ public class FileUtils {
     public final static String[] FILE_EXT_BINARY_IMAGES = new String[] { ".BIN" };
     /** Array of file extensions for floppy disk images */
     public final static String[] FILE_EXT_FLOPPY_DISK_IMAGES = new String[] { ".BKD", ".IMG" };
+
+    /** Internal I/O buffer default size */
+    private static final int BUFFER_SIZE = 8 * 1024;
 
     /**
      * Get tape file name as string from its 16 bytes array presentation.
@@ -148,5 +152,41 @@ public class FileUtils {
             }
         }
         return (result != null) ? result : uri.getLastPathSegment();
+    }
+
+    /**
+     * Write data fully from InputStream to OutputStream.
+     *
+     * @param is InputStream to read
+     * @param os OutputStream to write
+     * @return number of bytes written
+     * @throws IOException in case of I/O error
+     */
+    public static long writeFully(InputStream is, OutputStream os) throws IOException {
+        return writeFully(is, os, BUFFER_SIZE);
+    }
+
+    /**
+     * Write data fully from InputStream to OutputStream.
+     *
+     * @param is InputStream to read
+     * @param os OutputStream to write
+     * @param bufferSize buffer size to use
+     * @return number of bytes written
+     * @throws IOException in case of I/O error
+     */
+    public static long writeFully(InputStream is, OutputStream os, int bufferSize)
+            throws IOException {
+        int bytesRead;
+        long bytesWritten = 0;
+        byte[] buf = new byte[bufferSize];
+        while (is.available() > 0) {
+            bytesRead = is.read(buf, 0, buf.length);
+            if (bytesRead > 0) {
+                os.write(buf, 0, bytesRead);
+                bytesWritten += bytesRead;
+            }
+        }
+        return bytesWritten;
     }
 }

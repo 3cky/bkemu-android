@@ -131,8 +131,8 @@ public class Ay8910 extends AudioOutput<Ay8910.Ay8910Command> {
     }
 
     @Override
-    public synchronized void init(long cpuTime) {
-        super.init(cpuTime);
+    public synchronized void init(long cpuTime, boolean isHardwareReset) {
+        super.init(cpuTime, isHardwareReset);
         this.register = 0;
         this.rng = 1;
         this.outputA = 0;

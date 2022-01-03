@@ -108,7 +108,7 @@ public class Timer implements Device {
     }
 
     @Override
-    public void init(long cpuTime) {
+    public void init(long cpuTime, boolean isHardwareReset) {
         setControlRegister(cpuTime, CONTROL_REGISTER_INITIAL_STATE);
     }
 

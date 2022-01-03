@@ -45,7 +45,7 @@ public class Sel1RegisterSystemBits implements Device {
     }
 
     @Override
-    public void init(long cpuTime) {
+    public void init(long cpuTime, boolean isHardwareReset) {
         setWriteFlagState(false);
     }
 

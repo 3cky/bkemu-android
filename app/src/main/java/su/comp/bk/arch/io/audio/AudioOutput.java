@@ -100,7 +100,7 @@ public abstract class AudioOutput<U extends AudioOutputUpdate> implements Device
     }
 
     @Override
-    public void init(long cpuTime) {
+    public void init(long cpuTime, boolean isHardwareReset) {
         resetAudioOutputUpdates();
     }
 

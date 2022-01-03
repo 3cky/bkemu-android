@@ -60,17 +60,4 @@ public interface Memory {
      * <code>false</code> otherwise
      */
     boolean write(boolean isByteMode, int offset, int value);
-
-
-    /**
-     * Save memory state.
-     * @param outState {@link Bundle} to save memory state
-     */
-    void saveState(Bundle outState);
-
-    /**
-     * Read memory state.
-     * @param inState {@link Bundle} to restore memory state
-     */
-    void restoreState(Bundle inState);
 }

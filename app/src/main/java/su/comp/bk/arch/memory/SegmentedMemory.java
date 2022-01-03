@@ -18,41 +18,95 @@
 
 package su.comp.bk.arch.memory;
 
-import android.os.Bundle;
+import su.comp.bk.arch.Computer;
 
-public class SegmentedMemory implements Memory {
-    @Override
-    public String getId() {
-        return null;
+/**
+ * Memory class allowing to divide given memory to equally sized segments.
+ * Only one selected segment is accessible at a time.
+ */
+public class SegmentedMemory extends AbstractMemory {
+    private final Memory memory;
+    private final int segmentSize;
+
+    private int activeSegmentIndex = -1;
+
+    private int maxReadableOffset;
+    private int maxWritableOffset;
+
+    /**
+     * Create new segmented memory with given segment size.
+     * @param id segmented memory ID
+     * @param memory memory to divide to segments
+     * @param segmentSize segment size (in words)
+     */
+    public SegmentedMemory(String id, Memory memory, int segmentSize) {
+        super(id);
+        this.memory = memory;
+        this.segmentSize = segmentSize;
+        setReadableSize(segmentSize);
+        setWritableSize(segmentSize);
+    }
+
+    /**
+     * Set segment readable part size (defaults to total segment size).
+     * @param readableSize segment readable size (in words)
+     */
+    public void setReadableSize(int readableSize) {
+        this.maxReadableOffset = (readableSize > 0) ? (readableSize - 1) * 2 : -1;
+    }
+
+    /**
+     * Set segment writable part size (defaults to total segment size).
+     * @param writableSize segment writable size (in words)
+     */
+    public void setWritableSize(int writableSize) {
+        this.maxWritableOffset = (writableSize > 0) ? (writableSize - 1) * 2 : -1;
+    }
+
+    private boolean isReadableOffset(int offset) {
+        return offset <= maxReadableOffset;
+    }
+
+    private boolean isWritableOffset(int offset) {
+        return offset <= maxWritableOffset;
     }
 
     @Override
     public int getSize() {
-        return 0;
+        return segmentSize;
     }
 
     @Override
     public short[] getData() {
-        return new short[0];
+        return memory.getData();
     }
 
     @Override
     public int read(int offset) {
-        return 0;
+        return !isReadableOffset(offset) || (activeSegmentIndex < 0)
+                ? Computer.BUS_ERROR
+                : memory.read(getActiveSegmentOffset() + offset);
     }
 
     @Override
     public boolean write(boolean isByteMode, int offset, int value) {
-        return false;
+        return isWritableOffset(offset) && (activeSegmentIndex >= 0) && memory.write(isByteMode,
+                getActiveSegmentOffset() + offset, value);
     }
 
-    @Override
-    public void saveState(Bundle outState) {
-
+    /**
+     * Set active segment index.
+     * @param activeSegmentIndex active segment index or -1 to set no active segment
+     */
+    public void setActiveSegmentIndex(int activeSegmentIndex) {
+        this.activeSegmentIndex = activeSegmentIndex;
     }
 
-    @Override
-    public void restoreState(Bundle inState) {
-
+    /**
+     * Get active segment offset in the memory.
+     * @return active segment offset (in bytes) or -1 if no active segment is set
+     */
+    private int getActiveSegmentOffset() {
+        return (activeSegmentIndex >= 0) ? activeSegmentIndex * segmentSize * 2 : -1;
     }
 }

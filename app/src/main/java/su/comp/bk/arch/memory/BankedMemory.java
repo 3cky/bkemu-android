@@ -19,16 +19,13 @@
  */
 package su.comp.bk.arch.memory;
 
-import android.os.Bundle;
 import su.comp.bk.arch.Computer;
 
 /**
- * Banked memory class.
+ * Memory class allowing access to one of equally sized memory (RAM/ROM) banks.
  */
-public class BankedMemory implements Memory {
-
-    private final String id;
-    private final int size;
+public class BankedMemory extends AbstractMemory {
+    private final int bankSize;
 
     private final Memory[] banks;
 
@@ -36,14 +33,14 @@ public class BankedMemory implements Memory {
     private Memory activeBank;
 
     /**
-     * Create new banked memory with given start address, bank size and number of banks.
+     * Create new banked memory with given bank size and number of banks.
      * @param id banked memory ID
-     * @param startAddress Memory bank starting address
-     * @param size Memory bank size (in words)
+     * @param bankSize Memory bank size (in words)
+     * @param numBanks number of banks
      */
-    public BankedMemory(String id, int startAddress, int size, int numBanks) {
-        this.id = id;
-        this.size = size;
+    public BankedMemory(String id, int bankSize, int numBanks) {
+        super(id);
+        this.bankSize = bankSize;
         this.banks = new Memory[numBanks];
     }
 
@@ -109,18 +106,13 @@ public class BankedMemory implements Memory {
     }
 
     @Override
-    public String getId() {
-        return id;
-    }
-
-    @Override
     public int getSize() {
-        return size;
+        return bankSize;
     }
 
     @Override
     public synchronized short[] getData() {
-        return activeBank.getData();
+        return (activeBank != null) ? activeBank.getData() : null;
     }
 
     @Override
@@ -132,31 +124,4 @@ public class BankedMemory implements Memory {
     public boolean write(boolean isByteMode, int offset, int value) {
         return (activeBank != null) && activeBank.write(isByteMode, offset, value);
     }
-
-    @Override
-    public void saveState(Bundle outState) {
-        outState.putInt(toString(), getActiveBankIndex());
-    }
-
-    @Override
-    public void restoreState(Bundle inState) {
-        setActiveBankIndex(inState.getInt(toString()));
-    }
-
-    @Override
-    public int hashCode() {
-        return id.hashCode();
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        return super.equals(o) || (o instanceof BankedMemory
-                && ((BankedMemory) o).getId().equals(id));
-    }
-
-    @Override
-    public String toString() {
-        return getClass().getName() + "#" + id;
-    }
-
 }

@@ -18,37 +18,49 @@
  */
 package su.comp.bk.arch;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.List;
-
-import org.apache.commons.lang.ArrayUtils;
-
 import android.content.res.Resources;
 import android.os.Bundle;
 
+import org.apache.commons.lang.ArrayUtils;
+
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.ByteBuffer;
+import java.nio.ShortBuffer;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.zip.Deflater;
+import java.util.zip.DeflaterOutputStream;
+import java.util.zip.InflaterInputStream;
+
 import su.comp.bk.R;
 import su.comp.bk.arch.cpu.Cpu;
-import su.comp.bk.arch.io.audio.AudioOutput;
 import su.comp.bk.arch.io.Device;
-import su.comp.bk.arch.io.disk.FloppyController;
 import su.comp.bk.arch.io.KeyboardController;
-import su.comp.bk.arch.io.MemoryManager;
 import su.comp.bk.arch.io.PeripheralPort;
 import su.comp.bk.arch.io.Sel1RegisterSystemBits;
 import su.comp.bk.arch.io.SystemTimer;
 import su.comp.bk.arch.io.Timer;
 import su.comp.bk.arch.io.VideoController;
 import su.comp.bk.arch.io.VideoControllerManager;
+import su.comp.bk.arch.io.audio.AudioOutput;
 import su.comp.bk.arch.io.audio.Ay8910;
 import su.comp.bk.arch.io.audio.Covox;
 import su.comp.bk.arch.io.audio.Speaker;
-import su.comp.bk.arch.memory.Memory;
+import su.comp.bk.arch.io.disk.FloppyController;
+import su.comp.bk.arch.io.disk.SmkHddController;
+import su.comp.bk.arch.io.memory.Bk11MemoryManager;
+import su.comp.bk.arch.io.memory.SmkMemoryManager;
 import su.comp.bk.arch.memory.BankedMemory;
+import su.comp.bk.arch.memory.Memory;
 import su.comp.bk.arch.memory.RandomAccessMemory;
 import su.comp.bk.arch.memory.RandomAccessMemory.Type;
 import su.comp.bk.arch.memory.ReadOnlyMemory;
+import su.comp.bk.arch.memory.SegmentedMemory;
+import su.comp.bk.arch.memory.SelectableMemory;
+import su.comp.bk.util.FileUtils;
 import timber.log.Timber;
 
 /**
@@ -58,6 +70,8 @@ public class Computer implements Runnable {
 
     // State save/restore: Computer system uptime (in nanoseconds)
     private static final String STATE_SYSTEM_UPTIME = Computer.class.getName() + "#sys_uptime";
+    // State save/restore: Computer RAM data
+    private static final String STATE_RAM_DATA = Computer.class.getName() + "#ram_data";
 
     /** Bus error constant */
     public final static int BUS_ERROR = -1;
@@ -65,8 +79,11 @@ public class Computer implements Runnable {
     // Computer configuration
     private Configuration configuration;
 
-    // Memory table mapped by 8KB blocks
-    private final MemoryRange[] memoryTable = new MemoryRange[8];
+    // Memory table mapped by 4KB blocks
+    private final List<?>[] memoryTable = new List[16];
+
+    // List of created RandomAccessMemory instances
+    private final List<RandomAccessMemory> randomAccessMemoryList = new ArrayList<>();
 
     // CPU implementation reference
     private final Cpu cpu;
@@ -92,7 +109,7 @@ public class Computer implements Runnable {
     public static final int BK0011_BANKED_MEMORY_1_ADDRESS = 0100000;
 
     /** I/O registers space min start address */
-    public final static int IO_REGISTERS_MIN_ADDRESS = 0170000;
+    public final static int IO_REGISTERS_MIN_ADDRESS = 0177000;
     // I/O devices list
     private final List<Device> deviceList = new ArrayList<>();
     // I/O registers space addresses mapped to devices
@@ -131,6 +148,9 @@ public class Computer implements Runnable {
     private long systemUptimeSyncCheckTimestampTicks;
 
     private final List<UptimeListener> uptimeListeners = new ArrayList<>();
+
+    // HDD controller reference (<code>null</code> if no HDD controller present)
+    private SmkHddController hddController;
 
     /**
      * Computer uptime updates listener.
@@ -180,7 +200,7 @@ public class Computer implements Runnable {
         }
 
         /**
-         * Check is BK-0011 {@link MemoryManager} present in configuration.
+         * Check is BK-0011 {@link Bk11MemoryManager} present in configuration.
          * @return <code>true</code> if memory manager present, <code>false</code> otherwise
          */
         public boolean isMemoryManagerPresent() {
@@ -236,10 +256,10 @@ public class Computer implements Runnable {
             // BK-0010 configurations
             setClockFrequency(CLOCK_FREQUENCY_BK0010);
             // Set RAM configuration
-            RandomAccessMemory workMemory = new RandomAccessMemory("WorkMemory",
+            RandomAccessMemory workMemory = createRandomAccessMemory("WorkMemory",
                     020000, Type.K565RU6);
             addMemory(0, workMemory);
-            RandomAccessMemory videoMemory = new RandomAccessMemory("VideoMemory",
+            RandomAccessMemory videoMemory = createRandomAccessMemory("VideoMemory",
                     020000, Type.K565RU6);
             addMemory(040000, videoMemory);
             // Add video controller
@@ -258,7 +278,7 @@ public class Computer implements Runnable {
                     addReadOnlyMemory(resources, 0160000, R.raw.tests, "MSTD10");
                     break;
                 case BK_0010_KNGMD:
-                    addMemory(0120000, new RandomAccessMemory("ExtMemory", 020000, Type.K537RU10));
+                    addMemory(0120000, createRandomAccessMemory("ExtMemory", 020000, Type.K537RU10));
                     addReadOnlyMemory(resources, 0160000, R.raw.disk_327, "FloppyBios");
                     floppyController = new FloppyController(this);
                     addDevice(floppyController);
@@ -271,27 +291,32 @@ public class Computer implements Runnable {
             setClockFrequency(CLOCK_FREQUENCY_BK0011);
             // Set RAM configuration
             BankedMemory firstBankedMemory = new BankedMemory("BankedMemory0",
-                    BK0011_BANKED_MEMORY_0_ADDRESS, 020000, MemoryManager.NUM_RAM_BANKS);
+                    020000, Bk11MemoryManager.NUM_RAM_BANKS);
             BankedMemory secondBankedMemory = new BankedMemory("BankedMemory1",
-                    BK0011_BANKED_MEMORY_1_ADDRESS, 020000,
-                    MemoryManager.NUM_RAM_BANKS + MemoryManager.NUM_ROM_BANKS);
-            for (int memoryBankIndex = 0; memoryBankIndex < MemoryManager.NUM_RAM_BANKS;
+                    020000,
+                    Bk11MemoryManager.NUM_RAM_BANKS + Bk11MemoryManager.NUM_ROM_BANKS);
+            for (int memoryBankIndex = 0; memoryBankIndex < Bk11MemoryManager.NUM_RAM_BANKS;
                     memoryBankIndex++) {
-                Memory memoryBank = new RandomAccessMemory("MemoryBank" + memoryBankIndex,
+                Memory memoryBank = createRandomAccessMemory("MemoryBank" + memoryBankIndex,
                         020000, Type.K565RU5);
                 firstBankedMemory.setBank(memoryBankIndex, memoryBank);
                 secondBankedMemory.setBank(memoryBankIndex, memoryBank);
             }
             addMemory(0, firstBankedMemory.getBank(6)); // Fixed RAM page at address 0
             addMemory(BK0011_BANKED_MEMORY_0_ADDRESS, firstBankedMemory); // First banked memory window at address 040000
-            addMemory(BK0011_BANKED_MEMORY_1_ADDRESS, secondBankedMemory); // Second banked memory window at address 0100000
+            SelectableMemory selectableSecondBankedMemory = new SelectableMemory(
+                    secondBankedMemory.getId(), secondBankedMemory, true);
+            addMemory(BK0011_BANKED_MEMORY_1_ADDRESS, selectableSecondBankedMemory); // Second banked memory window at address 0100000
             // Set ROM configuration
-            secondBankedMemory.setBank(MemoryManager.NUM_RAM_BANKS, new ReadOnlyMemory(
+            secondBankedMemory.setBank(Bk11MemoryManager.NUM_RAM_BANKS, new ReadOnlyMemory(
                     "Basic11M:0", loadReadOnlyMemoryData(resources, R.raw.basic11m_0)));
-            secondBankedMemory.setBank(MemoryManager.NUM_RAM_BANKS + 1, new ReadOnlyMemory(
-                    "Basic11M:1/ExtBOS11M", loadReadOnlyMemoryData(resources,
+            secondBankedMemory.setBank(Bk11MemoryManager.NUM_RAM_BANKS + 1,
+                    new ReadOnlyMemory("Basic11M:1/ExtBOS11M", loadReadOnlyMemoryData(resources,
                             R.raw.basic11m_1, R.raw.ext11m)));
-            addReadOnlyMemory(resources, 0140000, R.raw.bos11m, "BOS11M");
+            ReadOnlyMemory bosRom = new ReadOnlyMemory("BOS11M",
+                    loadReadOnlyMemoryData(resources, R.raw.bos11m));
+            SelectableMemory selectableBosRom = new SelectableMemory(bosRom.getId(), bosRom, true);
+            addMemory( 0140000, selectableBosRom);
             switch (config) {
                 case BK_0011M_MSTD:
                     addReadOnlyMemory(resources, 0160000, R.raw.mstd11m, "MSTD11M");
@@ -302,18 +327,42 @@ public class Computer implements Runnable {
                     addDevice(floppyController);
                     break;
                 case BK_0011M_SMK512:
-                    addReadOnlyMemory(resources, 0160000, R.raw.disk_smk512_v205, "Smk512Bios");
-                    addReadOnlyMemory(resources, 0170000, R.raw.disk_smk512_v205, "Smk512Bios");
+                    ReadOnlyMemory smkBiosRom = new ReadOnlyMemory("SmkBiosRom",
+                            loadReadOnlyMemoryData(resources, R.raw.disk_smk512_v205));
+                    SelectableMemory selectableSmkBiosRom0 = new SelectableMemory(
+                            smkBiosRom.getId() + ":0", smkBiosRom, false);
+                    SelectableMemory selectableSmkBiosRom1 = new SelectableMemory(
+                            smkBiosRom.getId() + ":1", smkBiosRom, false);
+                    addMemory(SmkMemoryManager.BIOS_ROM_0_START_ADDRESS, selectableSmkBiosRom0);
+                    addMemory(SmkMemoryManager.BIOS_ROM_1_START_ADDRESS, selectableSmkBiosRom1);
+                    RandomAccessMemory smkRam = createRandomAccessMemory("SmkRam",
+                            SmkMemoryManager.MEMORY_TOTAL_SIZE, Type.K565RU5);
+                    List<SegmentedMemory> smkRamSegments = new ArrayList<>(
+                            SmkMemoryManager.NUM_MEMORY_SEGMENTS);
+                    for (int i = 0; i < SmkMemoryManager.NUM_MEMORY_SEGMENTS; i++) {
+                        SegmentedMemory smkRamSegment = new SegmentedMemory("SmkRamSegment" + i,
+                                smkRam, SmkMemoryManager.MEMORY_SEGMENT_SIZE);
+                        smkRamSegments.add(smkRamSegment);
+                        addMemory(SmkMemoryManager.MEMORY_START_ADDRESS +
+                                i * SmkMemoryManager.MEMORY_SEGMENT_SIZE * 2, smkRamSegment);
+                    }
+                    SmkMemoryManager smkMemoryManager = new SmkMemoryManager(smkRamSegments,
+                            selectableSmkBiosRom0, selectableSmkBiosRom1);
+                    smkMemoryManager.setSelectableBk11BosRom(selectableBosRom);
+                    smkMemoryManager.setSelectableBk11SecondBankedMemory(selectableSecondBankedMemory);
+                    addDevice(smkMemoryManager);
                     floppyController = new FloppyController(this);
                     addDevice(floppyController);
+                    hddController = new SmkHddController(this);
+                    addDevice(hddController);
                     break;
                 default:
                     break;
             }
-            // Configure memory manager
-            addDevice(new MemoryManager(firstBankedMemory, secondBankedMemory));
+            // Configure BK0011M memory manager
+            addDevice(new Bk11MemoryManager(firstBankedMemory, secondBankedMemory));
             // Add video controller with palette/screen manager
-            BankedMemory videoMemory = new BankedMemory("VideoPagesMemory", 0, 020000, 2);
+            BankedMemory videoMemory = new BankedMemory("VideoPagesMemory", 020000, 2);
             videoMemory.setBank(0, firstBankedMemory.getBank(1));
             videoMemory.setBank(1, firstBankedMemory.getBank(7));
             videoController = new VideoController(videoMemory);
@@ -348,44 +397,39 @@ public class Computer implements Runnable {
         return this.configuration;
     }
 
-    private List<Memory> getStatefulMemoryList() {
-        List<Memory> statefulMemoryList = new ArrayList<>();
-        for (MemoryRange memoryRange : memoryTable) {
-            Memory memoryBlock = memoryRange.getMemory();
-            if (!(memoryBlock instanceof ReadOnlyMemory)) {
-                if (memoryBlock instanceof RandomAccessMemory) {
-                    if (!statefulMemoryList.contains(memoryBlock)) {
-                        statefulMemoryList.add(memoryBlock);
-                    }
-                } else if (memoryBlock instanceof BankedMemory) {
-                    BankedMemory bankedMemory = (BankedMemory) memoryBlock;
-                    for (Memory memoryBank : bankedMemory.getBanks()) {
-                        if (memoryBank != null && !(memoryBank instanceof ReadOnlyMemory)
-                                && !statefulMemoryList.contains(memoryBank)) {
-                            statefulMemoryList.add(memoryBank);
-                        }
-                    }
-                    statefulMemoryList.add(bankedMemory);
-                }
-            }
-        }
-        return statefulMemoryList;
+    /**
+     * Create new {@link RandomAccessMemory} and add it to the RAM list for further saving/restoring.
+     * @param memoryId RAM identifier
+     * @param memorySize RAM size (in words)
+     * @param memoryType RAM type
+     * @return created {@link RandomAccessMemory} reference
+     */
+    private RandomAccessMemory createRandomAccessMemory(String memoryId, int memorySize,
+                                                        Type memoryType) {
+        RandomAccessMemory memory = new RandomAccessMemory(memoryId, memorySize, memoryType);
+        addToRandomAccessMemoryList(memory);
+        return memory;
+    }
+
+    private void addToRandomAccessMemoryList(RandomAccessMemory memory) {
+        randomAccessMemoryList.add(memory);
+    }
+
+    private List<RandomAccessMemory> getRandomAccessMemoryList() {
+        return randomAccessMemoryList;
     }
 
     /**
      * Save computer state.
-     * @param resources Android {@link Resources} object reference
      * @param outState {@link Bundle} to save state
      */
-    public void saveState(Resources resources, Bundle outState) {
+    public void saveState(Bundle outState) {
         // Save computer configuration
         outState.putString(Configuration.class.getName(), getConfiguration().name());
         // Save computer system uptime
         outState.putLong(STATE_SYSTEM_UPTIME, getSystemUptime());
         // Save RAM data
-        for (Memory memory: getStatefulMemoryList()) {
-            memory.saveState(outState);
-        }
+        saveRandomAccessMemoryData(outState);
         // Save CPU state
         getCpu().saveState(outState);
         // Save device states
@@ -394,26 +438,86 @@ public class Computer implements Runnable {
         }
     }
 
+    private void saveRandomAccessMemoryData(Bundle outState) {
+        List<RandomAccessMemory> randomAccessMemoryList = getRandomAccessMemoryList();
+        // Calculate total RAM data size (in bytes)
+        int totalDataSize = 0;
+        for (RandomAccessMemory memory: randomAccessMemoryList) {
+            totalDataSize += memory.getSize() * 2;
+        }
+        // Pack all RAM data into a single buffer
+        ByteBuffer dataBuf = ByteBuffer.allocate(totalDataSize);
+        ShortBuffer shortDataBuf = dataBuf.asShortBuffer();
+        for (RandomAccessMemory memory: randomAccessMemoryList) {
+            shortDataBuf.put(memory.getData(), 0, memory.getSize());
+        }
+        dataBuf.flip();
+        // Compress RAM data
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        Deflater deflater = new Deflater(Deflater.BEST_COMPRESSION);
+        try (DeflaterOutputStream dos = new DeflaterOutputStream(baos, deflater)) {
+            dos.write(dataBuf.array());
+        } catch (IOException e) {
+            throw new IllegalStateException("Can't compress RAM data", e);
+        }
+        byte[] compressedData = baos.toByteArray();
+        outState.putByteArray(STATE_RAM_DATA, compressedData);
+        Timber.d("Saved RAM data: original %dKB, compressed %dKB",
+                totalDataSize / 1024, compressedData.length / 1024);
+    }
+
     /**
      * Restore computer state.
-     * @param resources Android {@link Resources} object reference
      * @param inState {@link Bundle} to restore state
      * @throws Exception in case of error while state restoring
      */
-    public void restoreState(Resources resources, Bundle inState) throws Exception {
+    public void restoreState(Bundle inState) throws Exception {
         // Restore computer system uptime
         setSystemUptime(inState.getLong(STATE_SYSTEM_UPTIME));
         // Initialize CPU and devices
-        cpu.initDevices();
+        cpu.initDevices(true);
         // Restore RAM data
-        for (Memory memory: getStatefulMemoryList()) {
-            memory.restoreState(inState);
-        }
+        restoreRandomAccessMemoryData(inState);
         // Restore CPU state
         getCpu().restoreState(inState);
         // Restore device states
         for (Device device : deviceList) {
             device.restoreState(inState);
+        }
+    }
+
+    private void restoreRandomAccessMemoryData(Bundle inState) {
+        byte[] compressedData = inState.getByteArray(STATE_RAM_DATA);
+        if (compressedData == null || compressedData.length == 0) {
+            throw new IllegalArgumentException("No RAM data to restore");
+        }
+        List<RandomAccessMemory> randomAccessMemoryList = getRandomAccessMemoryList();
+        // Calculate RAM memory data size (in bytes)
+        int totalDataSize = 0;
+        for (RandomAccessMemory memory: randomAccessMemoryList) {
+            totalDataSize += memory.getSize() * 2;
+        }
+        // Decompress RAM data
+        ByteArrayOutputStream baos = new ByteArrayOutputStream(totalDataSize);
+        ByteArrayInputStream bais = new ByteArrayInputStream(compressedData);
+        try (InflaterInputStream iis = new InflaterInputStream(bais)) {
+            FileUtils.writeFully(iis, baos);
+        } catch (IOException e) {
+            throw new IllegalArgumentException("Can't decompress RAM data", e);
+        }
+        // Check decompressed data
+        byte[] data = baos.toByteArray();
+        if (data.length != totalDataSize) {
+            throw new IllegalArgumentException(String.format("Invalid decompressed RAM " +
+                            "data length: expected %d, got %d", totalDataSize, data.length));
+        }
+        // Restore RAM data
+        ByteBuffer dataBuf = ByteBuffer.wrap(data);
+        ShortBuffer shortDataBuf = dataBuf.asShortBuffer();
+        for (RandomAccessMemory memory: randomAccessMemoryList) {
+            short[] memoryData = new short[memory.getSize()];
+            shortDataBuf.get(memoryData);
+            memory.putData(memoryData);
         }
     }
 
@@ -586,14 +690,21 @@ public class Computer implements Runnable {
      * @param memory {@link Memory} to add
      */
     public void addMemory(int address, Memory memory) {
-        int memoryStartBlock = address >> 13;
-        int memoryBlocksCount = memory.getSize() >> 12; // ((size << 1) >> 13)
-        if ((memory.getSize() & 07777) != 0) {
+        int memoryStartBlock = address >> 12;
+        int memoryBlocksCount = memory.getSize() >> 11; // ((size << 1) >> 12)
+        if ((memory.getSize() & 03777) != 0) {
             memoryBlocksCount++;
         }
         MemoryRange memoryRange = new MemoryRange(address, memory);
-        for (int memoryBlockIdx = 0; memoryBlockIdx < memoryBlocksCount; memoryBlockIdx++) {
-            memoryTable[memoryStartBlock + memoryBlockIdx] = memoryRange;
+        for (int i = 0; i < memoryBlocksCount; i++) {
+            int memoryBlockIdx = memoryStartBlock + i;
+            @SuppressWarnings("unchecked")
+            List<MemoryRange> memoryRanges = (List<MemoryRange>) memoryTable[memoryBlockIdx];
+            if (memoryRanges == null) {
+                memoryRanges = new ArrayList<>(1);
+                memoryTable[memoryBlockIdx] = memoryRanges;
+            }
+            memoryRanges.add(0, memoryRange);
         }
     }
 
@@ -624,15 +735,23 @@ public class Computer implements Runnable {
      */
     public boolean isReadOnlyMemoryAddress(int address) {
         if (address >= 0) {
-            MemoryRange memoryRange = getMemoryRange(address);
-            return memoryRange != null && memoryRange.isRelatedAddress(address)
-                    && memoryRange.getMemory() instanceof ReadOnlyMemory;
+            List<MemoryRange> memoryRanges = getMemoryRanges(address);
+            if (memoryRanges == null || memoryRanges.isEmpty()) {
+                return false;
+            }
+            for (MemoryRange memoryRange : memoryRanges) {
+                if (memoryRange != null && memoryRange.isRelatedAddress(address)
+                        && memoryRange.getMemory() instanceof ReadOnlyMemory) {
+                    return true;
+                }
+            }
         }
         return false;
     }
 
-    public MemoryRange getMemoryRange(int address) {
-        return memoryTable[address >> 13];
+    @SuppressWarnings("unchecked")
+    public List<MemoryRange> getMemoryRanges(int address) {
+        return (List<MemoryRange>) memoryTable[address >> 12];
     }
 
     @SuppressWarnings("unchecked")
@@ -642,10 +761,12 @@ public class Computer implements Runnable {
 
     /**
      * Initialize bus devices state (on power-on cycle or RESET opcode).
+     * @param isHardwareReset true if bus initialization is initiated by hardware reset,
+     *                        false if it is initiated by RESET command
      */
-    public void initDevices() {
+    public void initDevices(boolean isHardwareReset) {
         for (Device device: deviceList) {
-            device.init(getCpu().getTime());
+            device.init(getCpu().getTime(), isHardwareReset);
         }
     }
 
@@ -673,10 +794,19 @@ public class Computer implements Runnable {
 
         int wordAddress = address & 0177776;
 
-        // Check for memory at given address
-        MemoryRange memoryRange = getMemoryRange(address);
-        if (memoryRange != null && memoryRange.isRelatedAddress(address)) {
-            readValue = memoryRange.getMemory().read(wordAddress - memoryRange.getStartAddress());
+        // Check for memories at given address
+        List<MemoryRange> memoryRanges = getMemoryRanges(address);
+        if (memoryRanges != null) {
+            for (MemoryRange memoryRange : memoryRanges) {
+                if (memoryRange.isRelatedAddress(address)) {
+                    int memoryReadValue = memoryRange.getMemory().read(
+                            wordAddress - memoryRange.getStartAddress());
+                    if (memoryReadValue != BUS_ERROR) {
+                        readValue = memoryReadValue;
+                        break;
+                    }
+                }
+            }
         }
 
         // Check for I/O registers
@@ -684,12 +814,14 @@ public class Computer implements Runnable {
             List<Device> subdevices = getDevices(address);
             if (subdevices != null) {
                 long cpuClock = getCpu().getTime();
-                if (readValue == BUS_ERROR) {
-                    readValue = 0;
-                }
-                for (Device subdevice: subdevices) {
+                for (Device subdevice : subdevices) {
                     // Read and combine subdevice state values in word mode
-                    readValue |= subdevice.read(cpuClock, wordAddress);
+                    int subdeviceReadValue = subdevice.read(cpuClock, wordAddress);
+                    if (subdeviceReadValue != BUS_ERROR) {
+                        readValue = (readValue == BUS_ERROR)
+                                ? subdeviceReadValue
+                                : readValue | subdeviceReadValue;
+                    }
                 }
             }
         }
@@ -720,11 +852,17 @@ public class Computer implements Runnable {
             value <<= 8;
         }
 
-        // Check for memory at given address
-        MemoryRange memoryRange = getMemoryRange(address);
-        if (memoryRange != null && memoryRange.isRelatedAddress(address)) {
-            isWritten = memoryRange.getMemory().write(isByteMode,
-                    address - memoryRange.getStartAddress(), value);
+        // Check for memories at given address
+        List<MemoryRange> memoryRanges = getMemoryRanges(address);
+        if (memoryRanges != null) {
+            for (MemoryRange memoryRange : memoryRanges) {
+                if (memoryRange.isRelatedAddress(address)) {
+                    if (memoryRange.getMemory().write(isByteMode,
+                            address - memoryRange.getStartAddress(), value)) {
+                        isWritten = true;
+                    }
+                }
+            }
         }
 
         // Check for I/O registers
@@ -732,7 +870,7 @@ public class Computer implements Runnable {
             List<Device> devices = getDevices(address);
             if (devices != null) {
                 long cpuClock = getCpu().getTime();
-                for (Device device: devices) {
+                for (Device device : devices) {
                     if (device.write(cpuClock, isByteMode, address, value)) {
                         isWritten = true;
                     }

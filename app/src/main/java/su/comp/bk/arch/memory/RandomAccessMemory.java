@@ -18,13 +18,10 @@
  */
 package su.comp.bk.arch.memory;
 
-import android.os.Bundle;
-
 /**
  * RAM (read/write) class.
  */
-public class RandomAccessMemory implements Memory {
-    private final String id;
+public class RandomAccessMemory extends AbstractMemory {
     private final int size;
     private final short[] data;
 
@@ -45,7 +42,7 @@ public class RandomAccessMemory implements Memory {
      * @param type RAM {@link Type}
      */
     public RandomAccessMemory(String id, int size, Type type) {
-        this.id = id;
+        super(id);
         this.size = size;
         this.data = new short[getSize()];
         initData(type);
@@ -90,11 +87,6 @@ public class RandomAccessMemory implements Memory {
             default:
                 break;
         }
-    }
-
-    @Override
-    public String getId() {
-        return id;
     }
 
     @Override
@@ -150,32 +142,6 @@ public class RandomAccessMemory implements Memory {
         }
         writeWord(offset, value);
         return true;
-    }
-
-    @Override
-    public void saveState(Bundle outState) {
-        outState.putShortArray(toString(), getData());
-    }
-
-    @Override
-    public void restoreState(Bundle inState) {
-        putData(inState.getShortArray(toString()));
-    }
-
-    @Override
-    public int hashCode() {
-        return id.hashCode();
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        return super.equals(o) || (o instanceof RandomAccessMemory
-                && ((RandomAccessMemory) o).getId().equals(id));
-    }
-
-    @Override
-    public String toString() {
-        return getClass().getName() + "#" + id;
     }
 
 }

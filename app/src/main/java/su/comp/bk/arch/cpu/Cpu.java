@@ -993,7 +993,7 @@ public class Cpu {
      */
     public void reset() {
         clearFlags();
-        initDevices();
+        initDevices(true);
         setPswState((short) 0340);
         int sel1RegisterValue = readMemory(false, REG_SEL1);
         if (sel1RegisterValue != Computer.BUS_ERROR) {
@@ -1021,11 +1021,11 @@ public class Cpu {
     /**
      * Initialize computer devices.
      */
-    public void initDevices() {
+    public void initDevices(boolean isHardwareReset) {
         clearIrq1Request();
         clearIrq2Request();
         clearVirqRequest();
-        computer.initDevices();
+        computer.initDevices(isHardwareReset);
     }
 
     /**

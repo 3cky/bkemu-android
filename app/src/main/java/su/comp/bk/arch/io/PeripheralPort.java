@@ -18,14 +18,9 @@
  */
 package su.comp.bk.arch.io;
 
-import su.comp.bk.arch.Computer;
 import su.comp.bk.arch.cpu.Cpu;
-import timber.log.Timber;
 
 import android.os.Bundle;
-import android.view.MotionEvent;
-import android.view.View;
-import android.view.View.OnTouchListener;
 
 /**
  * BK-0010 peripheral port.
@@ -42,7 +37,7 @@ public class PeripheralPort implements Device {
     }
 
     @Override
-    public void init(long cpuTime) {
+    public void init(long cpuTime, boolean isHardwareReset) {
         resetState(cpuTime);
     }
 

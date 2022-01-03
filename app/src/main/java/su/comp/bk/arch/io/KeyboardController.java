@@ -22,6 +22,7 @@ import android.os.Bundle;
 
 import su.comp.bk.arch.Computer;
 import su.comp.bk.arch.cpu.Cpu;
+import su.comp.bk.arch.io.memory.Bk11MemoryManager;
 
 /**
  * BK-0010 keyboard controller (К1801ВП1-014).
@@ -93,7 +94,7 @@ public class KeyboardController implements Device {
     }
 
     @Override
-    public void init(long cpuTime) {
+    public void init(long cpuTime, boolean isHardwareReset) {
         setButtonPressed(cpuTime, false);
         writeDataRegister(0);
         setStatusRegisterDataReadyFlag(false);
@@ -216,7 +217,7 @@ public class KeyboardController implements Device {
                 break;
             case Cpu.REG_SEL1:
                 // Check for BK-0011M STOP button enabled flag state if register is selected
-                if (isComputerBk11m && (value & MemoryManager.ENABLE_BIT) == 0) {
+                if (isComputerBk11m && (value & Bk11MemoryManager.ENABLE_BIT) == 0) {
                     setStopButtonEnabled((value & SEL1_BK11M_STOP_BUTTON_ENABLED) == 0);
                     isWritten = true;
                 }

@@ -19,7 +19,6 @@ package su.comp.bk.arch.io.disk;
 
 import static su.comp.bk.arch.Computer.NANOSECS_IN_MSEC;
 
-import android.net.Uri;
 import android.os.Bundle;
 import android.util.SparseBooleanArray;
 
@@ -701,7 +700,7 @@ public class FloppyController implements Device {
     }
 
     @Override
-    public synchronized void init(long cpuTime) {
+    public synchronized void init(long cpuTime, boolean isHardwareReset) {
         writeControlRegister(cpuTime, 0);
     }
 

@@ -33,8 +33,10 @@ public interface Device {
     /**
      * Handle bus INIT signal (on hardware reset or RESET instruction).
      * @param cpuTime current CPU time (in clock ticks)
+     * @param isHardwareReset true if bus initialization is initiated by hardware reset,
+     *                        false if it is initiated by RESET command
      */
-    void init(long cpuTime);
+    void init(long cpuTime, boolean isHardwareReset);
 
     /**
      * Save device state.
