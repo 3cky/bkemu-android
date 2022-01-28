@@ -19,4 +19,9 @@
     <dimen name="fdd_padding">5dp</dimen>
     <dimen name="fdd_text_margin">3dp</dimen>
     <dimen name="fdd_label_size">24sp</dimen>
+
+    <dimen name="hdd_margin">5dp</dimen>
+    <dimen name="hdd_padding">5dp</dimen>
+    <dimen name="hdd_text_margin">3dp</dimen>
+    <dimen name="hdd_label_size">24sp</dimen>
 </resources>

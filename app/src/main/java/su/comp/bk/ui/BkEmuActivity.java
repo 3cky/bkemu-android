@@ -19,6 +19,9 @@
 
 package su.comp.bk.ui;
 
+import static su.comp.bk.arch.io.disk.IdeController.IF_0;
+import static su.comp.bk.arch.io.disk.IdeController.IF_1;
+
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
@@ -89,6 +92,7 @@ import su.comp.bk.arch.io.disk.FloppyController.FloppyDriveIdentifier;
 import su.comp.bk.arch.io.VideoController;
 import su.comp.bk.arch.io.audio.AudioOutput;
 import su.comp.bk.arch.io.disk.FileDiskImage;
+import su.comp.bk.arch.io.disk.IdeController;
 import su.comp.bk.arch.io.disk.SafDiskImage;
 import su.comp.bk.ui.joystick.JoystickManager;
 import su.comp.bk.ui.keyboard.KeyboardManager;
@@ -99,25 +103,36 @@ import timber.log.Timber;
  * Main application activity.
  */
 public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiVisibilityChangeListener {
-
+    // State save/restore: Key prefix
+    private static final String STATE_PREFIX = "BkEmuActivity#";
     // State save/restore: Last accessed emulator binary image file URI
-    private static final String LAST_BIN_IMAGE_FILE_URI = BkEmuActivity.class.getName() +
-            "#last_bin_image_file_uri";
+    private static final String STATE_LAST_BIN_IMAGE_FILE_URI = STATE_PREFIX +
+            "last_bin_image_file_uri";
     // State save/restore: Last accessed emulator binary image file address
-    private static final String LAST_BIN_IMAGE_FILE_LENGTH = BkEmuActivity.class.getName() +
-            "#last_bin_image_file_address";
+    private static final String STATE_LAST_BIN_IMAGE_FILE_LENGTH = STATE_PREFIX +
+            "last_bin_image_file_address";
     // State save/restore: Last accessed emulator binary image file length
-    private static final String LAST_BIN_IMAGE_FILE_ADDRESS = BkEmuActivity.class.getName() +
-            "#last_bin_image_file_length";
+    private static final String STATE_LAST_BIN_IMAGE_FILE_ADDRESS = STATE_PREFIX +
+            "last_bin_image_file_length";
     // State save/restore: Last selected floppy disk image drive name
-    private static final String LAST_FLOPPY_DISK_IMAGE_DRIVE_NAME = BkEmuActivity.class.getName() +
-            "#last_floppy_disk_image_drive_name";
+    private static final String STATE_LAST_FLOPPY_DISK_IMAGE_DRIVE_NAME = STATE_PREFIX +
+            "last_floppy_disk_image_drive_name";
+    // State save/restore: Last selected hard disk image IDE interface identifier
+    private static final String STATE_LAST_IDE_DRIVE_IMAGE_INTERFACE_ID = STATE_PREFIX +
+            "last_hard_disk_image_ide_interface_id";
     // State save/restore: Tape parameters block address
-    private static final String TAPE_PARAMS_BLOCK_ADDRESS = BkEmuActivity.class.getName() +
-            "#tape_params_block_addr";
+    private static final String STATE_TAPE_PARAMS_BLOCK_ADDRESS = STATE_PREFIX +
+            "tape_params_block_addr";
     // State save/restore: On-screen joystick visibility state
-    private static final String ON_SCREEN_JOYSTICK_VISIBLE = BkEmuActivity.class.getName() +
-            "#on_screen_joystick_visible";
+    private static final String STATE_ON_SCREEN_JOYSTICK_VISIBLE = STATE_PREFIX +
+            "on_screen_joystick_visible";
+
+    /** Array of file extensions for binary images */
+    public final static String[] FILE_EXT_BINARY_IMAGES = new String[] { ".BIN" };
+    /** Array of file extensions for floppy disk images */
+    public final static String[] FILE_EXT_FLOPPY_DISK_IMAGES = new String[] { ".BKD", ".IMG" };
+    /** Array of file extensions for hard disk images */
+    public final static String[] FILE_EXT_HARD_DISK_IMAGES = new String[] { ".HDI" };
 
     public final static int STACK_TOP_ADDRESS = 01000;
 
@@ -125,12 +140,14 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
     private static final int DIALOG_COMPUTER_MODEL = 1;
     private static final int DIALOG_ABOUT = 2;
     private static final int DIALOG_FLOPPY_DISK_MOUNT_ERROR = 3;
+    private static final int DIALOG_IDE_DRIVE_ATTACH_ERROR = 4;
 
     // Intent request IDs
     private static final int REQUEST_MENU_BIN_IMAGE_FILE_LOAD = 1;
     private static final int REQUEST_EMT_BIN_IMAGE_FILE_LOAD = 2;
     private static final int REQUEST_MENU_FLOPPY_DISK_IMAGE_FILE_SELECT = 3;
     private static final int REQUEST_EMT_BIN_IMAGE_FILE_SAVE = 4;
+    private static final int REQUEST_MENU_IDE_DRIVE_IMAGE_FILE_SELECT = 5;
 
     // Google Play application URL to share
     private static final String APPLICATION_SHARE_URL = "https://play.google.com" +
@@ -145,6 +162,9 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
             PREFS_KEY_FLOPPY_DRIVE_PREFIX + "image:";
     private static final String PREFS_KEY_FLOPPY_DRIVE_WRITE_PROTECT_MODE =
             PREFS_KEY_FLOPPY_DRIVE_PREFIX + "writeProtectMode:";
+    private static final String PREFS_KEY_IDE_DRIVE_PREFIX =
+            "su.comp.bk.arch.io.IdeController.IdeDrive";
+    private static final String PREFS_KEY_IDE_DRIVE_IMAGE = "image:";
     private static final String PREFS_KEY_AUDIO_VOLUME =
             "su.comp.bk.arch.io.audio.AudioOutput/volume";
 
@@ -155,8 +175,11 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
     // Last loaded emulator binary image URI string
     protected String lastBinImageFileUri;
 
-    // Last selected floppy disk image drive
+    // Last selected floppy disk image drive identifier
     protected FloppyDriveIdentifier lastFloppyDiskImageDrive;
+
+    // Last selected hard disk image IDE interface identifier
+    protected int lastIdeDriveImageInterfaceId;
 
     // BK0011M .BMB10 syscall - Read subroutine address
     private static final int BK11_BMB10_READ_ADDRESS = 0155560;
@@ -184,7 +207,8 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
 
     protected String intentDataProgramImageUri;
 
-    protected String intentDataDiskImageUri;
+    protected String intentDataFloppyDiskImageUri;
+    protected String intentDataHardDiskImageUri;
 
     protected Handler activityHandler;
 
@@ -289,9 +313,9 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
                     if (intentDataProgramImageUri != null) {
                         // Monitor command prompt, load program from path from intent data
                         activityHandler.post(new IntentDataProgramImageLoader());
-                    } else if (intentDataDiskImageUri != null) {
-                        // Monitor command prompt, trying to boot from mounted disk image
-                        intentDataDiskImageUri = null;
+                    } else if (intentDataFloppyDiskImageUri != null) {
+                        // Monitor command prompt, trying to boot from mounted floppy disk image
+                        intentDataFloppyDiskImageUri = null;
                         // FIXME simulate bus error trap in case of boot error
                         cpu.push(cpu.readMemory(false, Cpu.TRAP_VECTOR_BUS_ERROR));
                         // Start booting
@@ -507,54 +531,74 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
     }
 
     // Check intent data for program/disk image to mount
-    private boolean checkIntentData() {
+    private void checkIntentData() {
         // Check for last accessed program/disk file paths
-        lastBinImageFileUri = getIntent().getStringExtra(LAST_BIN_IMAGE_FILE_URI);
+        lastBinImageFileUri = getIntent().getStringExtra(STATE_LAST_BIN_IMAGE_FILE_URI);
         // Check for program/disk image file to run
         String intentDataString = getIntent().getDataString();
         if (intentDataString != null) {
             String intentDataFileName = FileUtils.resolveUriFileName(this,
                     Uri.parse(intentDataString));
-            if (FileUtils.isFileNameExtensionMatched(intentDataFileName,
-                    FileUtils.FILE_EXT_BINARY_IMAGES)) {
+            if (FileUtils.isFileNameExtensionMatched(intentDataFileName, FILE_EXT_BINARY_IMAGES)) {
                 this.intentDataProgramImageUri = intentDataString;
-                return true;
             } else if (FileUtils.isFileNameExtensionMatched(intentDataFileName,
-                    FileUtils.FILE_EXT_FLOPPY_DISK_IMAGES)) {
-                this.intentDataDiskImageUri = intentDataString;
-                return true;
+                    FILE_EXT_FLOPPY_DISK_IMAGES)) {
+                this.intentDataFloppyDiskImageUri = intentDataString;
+            } else if (FileUtils.isFileNameExtensionMatched(intentDataFileName,
+                    FILE_EXT_HARD_DISK_IMAGES)) {
+                this.intentDataHardDiskImageUri = intentDataString;
             }
         }
-        return false;
     }
 
     // Mount intent disk image, if it's provided
     private void mountIntentDataDiskImage() {
-        if (intentDataDiskImageUri == null) {
+        String intentDataDiskImageUri;
+        if (intentDataFloppyDiskImageUri != null) {
+            intentDataDiskImageUri = intentDataFloppyDiskImageUri;
+        } else if (intentDataHardDiskImageUri != null) {
+            intentDataDiskImageUri = intentDataHardDiskImageUri;
+        } else {
             return;
         }
-        Uri intentDataDiskImageLocalUri = null;
+
+        Uri intentDataDiskImageLocalUri;
         try {
             intentDataDiskImageLocalUri = FileUtils.getLocalFileUri(getApplicationContext(),
                     intentDataDiskImageUri);
         } catch (IOException e) {
-            Timber.e(e, "Can't get local file URI for floppy disk intent image %s",
+            Timber.e(e, "Can't get local file for intent disk image URI: %s",
                     intentDataDiskImageUri);
+            return;
         }
+
         boolean isIntentDataDiskImageMounted = false;
-        if (intentDataDiskImageLocalUri != null) {
-            try {
-                DiskImage intentDataDiskImage = new SafDiskImage(getApplicationContext(),
+
+        if (intentDataFloppyDiskImageUri != null) {
+            DiskImage intentDataFloppyDiskImage = openDiskImage(intentDataDiskImageLocalUri);
+            if (intentDataFloppyDiskImage != null) {
+                isIntentDataDiskImageMounted = mountFloppyDiskImage(FloppyDriveIdentifier.A,
+                        intentDataFloppyDiskImage, false);
+                if (isIntentDataDiskImageMounted) {
+                    detachIdeDrive(IF_0); // ensure we will boot from floppy disk
+                }
+            } else {
+                Timber.w("Can't open intent floppy disk image: %s",
                         intentDataDiskImageLocalUri);
-                isIntentDataDiskImageMounted = mountFddImage(FloppyDriveIdentifier.A,
-                        intentDataDiskImage);
-            } catch (IOException e) {
-                Timber.e(e, "Can't get mount floppy disk intent image %s",
-                        intentDataDiskImageUri);
+            }
+        } else if (intentDataHardDiskImageUri != null) {
+            DiskImage intentDataHardDiskImage = openDiskImage(intentDataDiskImageLocalUri);
+            if (intentDataHardDiskImage != null) {
+                isIntentDataDiskImageMounted = attachIdeDrive(IF_0, intentDataHardDiskImage);
+            } else {
+                Timber.w("Can't open intent hard disk image: %s",
+                        intentDataDiskImageLocalUri);
             }
         }
+
         if (!isIntentDataDiskImageMounted) {
-            intentDataDiskImageUri = null;
+            intentDataHardDiskImageUri = null;
+            intentDataFloppyDiskImageUri = null;
         }
     }
 
@@ -595,8 +639,10 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
                 Configuration startupConfiguration;
                 if (intentDataProgramImageUri != null) {
                     startupConfiguration = Configuration.BK_0010_MONITOR;
-                } else if (intentDataDiskImageUri != null) {
-                    startupConfiguration = Configuration.BK_0010_KNGMD;
+                } else if (intentDataFloppyDiskImageUri != null) {
+                    startupConfiguration = Configuration.BK_0011M_KNGMD;
+                } else if (intentDataHardDiskImageUri != null) {
+                    startupConfiguration = Configuration.BK_0011M_SMK512;
                 } else {
                     startupConfiguration = currentConfiguration;
                 }
@@ -633,7 +679,10 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
 
     private void initializeComputerDisks() {
         if (computer.getFloppyController() != null) {
-            mountAvailableFddImages();
+            mountAvailableFloppyDiskImages();
+        }
+        if (computer.getIdeController() != null) {
+            attachAvailableIdeDriveImages();
         }
     }
 
@@ -693,16 +742,18 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
     protected void onSaveInstanceState(@NonNull Bundle outState) {
         Timber.d("onSaveInstanceState()");
         // Save last accessed emulator image file parameters
-        outState.putString(LAST_BIN_IMAGE_FILE_URI, lastBinImageFileUri);
-        outState.putInt(LAST_BIN_IMAGE_FILE_ADDRESS, lastBinImageAddress);
-        outState.putInt(LAST_BIN_IMAGE_FILE_LENGTH, lastBinImageLength);
+        outState.putString(STATE_LAST_BIN_IMAGE_FILE_URI, lastBinImageFileUri);
+        outState.putInt(STATE_LAST_BIN_IMAGE_FILE_ADDRESS, lastBinImageAddress);
+        outState.putInt(STATE_LAST_BIN_IMAGE_FILE_LENGTH, lastBinImageLength);
         // Save last disk image drive name
-        outState.putString(LAST_FLOPPY_DISK_IMAGE_DRIVE_NAME, (lastFloppyDiskImageDrive != null)
+        outState.putString(STATE_LAST_FLOPPY_DISK_IMAGE_DRIVE_NAME, (lastFloppyDiskImageDrive != null)
                 ? lastFloppyDiskImageDrive.name() : null);
+        // Save last selected IDE drive image interface identifier
+        outState.putInt(STATE_LAST_IDE_DRIVE_IMAGE_INTERFACE_ID, lastIdeDriveImageInterfaceId);
         // Save tape parameters block address
-        outState.putInt(TAPE_PARAMS_BLOCK_ADDRESS, tapeParamsBlockAddr);
+        outState.putInt(STATE_TAPE_PARAMS_BLOCK_ADDRESS, tapeParamsBlockAddr);
         // Save on-screen control states
-        outState.putBoolean(ON_SCREEN_JOYSTICK_VISIBLE, isOnScreenJoystickVisible());
+        outState.putBoolean(STATE_ON_SCREEN_JOYSTICK_VISIBLE, isOnScreenJoystickVisible());
         keyboardManager.saveState(outState);
         // Save computer state
         computer.saveState(outState);
@@ -713,17 +764,19 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
     protected void onRestoreInstanceState(Bundle inState) {
         Timber.d("onRestoreInstanceState()");
         // Restore last accessed emulator image file parameters
-        lastBinImageFileUri = inState.getString(LAST_BIN_IMAGE_FILE_URI);
-        lastBinImageAddress = inState.getInt(LAST_BIN_IMAGE_FILE_ADDRESS);
-        lastBinImageLength = inState.getInt(LAST_BIN_IMAGE_FILE_LENGTH);
+        lastBinImageFileUri = inState.getString(STATE_LAST_BIN_IMAGE_FILE_URI);
+        lastBinImageAddress = inState.getInt(STATE_LAST_BIN_IMAGE_FILE_ADDRESS);
+        lastBinImageLength = inState.getInt(STATE_LAST_BIN_IMAGE_FILE_LENGTH);
         // Restore last disk image drive
-        String lastDiskImageDriveName = inState.getString(LAST_FLOPPY_DISK_IMAGE_DRIVE_NAME);
+        String lastDiskImageDriveName = inState.getString(STATE_LAST_FLOPPY_DISK_IMAGE_DRIVE_NAME);
         lastFloppyDiskImageDrive = (lastDiskImageDriveName != null)
                 ? FloppyDriveIdentifier.valueOf(lastDiskImageDriveName) : null;
+        // Restore last selected IDE drive image interface identifier
+        lastIdeDriveImageInterfaceId = inState.getInt(STATE_LAST_IDE_DRIVE_IMAGE_INTERFACE_ID);
         // Restore tape parameters block address
-        tapeParamsBlockAddr = inState.getInt(TAPE_PARAMS_BLOCK_ADDRESS);
+        tapeParamsBlockAddr = inState.getInt(STATE_TAPE_PARAMS_BLOCK_ADDRESS);
         // Restore on-screen control states
-        switchOnScreenJoystickVisibility(inState.getBoolean(ON_SCREEN_JOYSTICK_VISIBLE));
+        switchOnScreenJoystickVisibility(inState.getBoolean(STATE_ON_SCREEN_JOYSTICK_VISIBLE));
         keyboardManager.restoreState(inState);
         super.onRestoreInstanceState(inState);
     }
@@ -840,6 +893,8 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
                 return createAboutDialog();
             case DIALOG_FLOPPY_DISK_MOUNT_ERROR:
                 return createFloppyDiskMountErrorDialog();
+            case DIALOG_IDE_DRIVE_ATTACH_ERROR:
+                return createIdeDriveAttachErrorDialog();
         }
         return null;
     }
@@ -849,6 +904,15 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
             .setIcon(android.R.drawable.ic_dialog_alert)
             .setTitle(R.string.err)
             .setMessage(R.string.dialog_floppy_disk_mount_error)
+            .setPositiveButton(R.string.ok, null)
+            .create();
+    }
+
+    private Dialog createIdeDriveAttachErrorDialog() {
+        return new AlertDialog.Builder(this)
+            .setIcon(android.R.drawable.ic_dialog_alert)
+            .setTitle(R.string.err)
+            .setMessage(R.string.dialog_ide_drive_attach_error)
             .setPositiveButton(R.string.ok, null)
             .create();
     }
@@ -939,44 +1003,50 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
                 / this.computer.getClockFrequency() * 100f));
     }
 
+    private DiskImage openDiskImage(Uri diskImageLocationUri) {
+        return openDiskImage(diskImageLocationUri.toString());
+    }
+
+    private DiskImage openDiskImage(String diskImageLocation) {
+        DiskImage diskImage = null;
+        Uri diskImageLocationUri = Uri.parse(diskImageLocation);
+        String diskImageLocationUriScheme = diskImageLocationUri.getScheme();
+        if ("content".equals(diskImageLocationUriScheme)) {
+            // Open as SAF disk image
+            try {
+                diskImage = new SafDiskImage(getApplicationContext(), diskImageLocationUri);
+            } catch (IOException e) {
+                Timber.i(e, "Can't open location %s as SAF disk image", diskImageLocation);
+            }
+        } else if (diskImageLocationUriScheme == null || "file".equals(diskImageLocationUriScheme)) {
+            // Open as file disk image
+            String diskImageFilePath = diskImageLocationUri.getPath();
+            if (diskImageFilePath != null) {
+                try {
+                    diskImage = new FileDiskImage(new File(diskImageFilePath));
+                } catch (IOException e) {
+                    Timber.i(e, "Can't open location %s as file disk image", diskImageLocation);
+                }
+            }
+        } else {
+            Timber.w("Unknown disk image location type: %s", diskImageLocation);
+        }
+        return diskImage;
+    }
+
     /**
-     * Try to mount all available floppy drive disk images.
+     * Try to mount all available floppy disk images.
      */
-    protected void mountAvailableFddImages() {
+    protected void mountAvailableFloppyDiskImages() {
         Timber.d("Mounting all available floppy disk images");
         FloppyController fddController = computer.getFloppyController();
         for (FloppyDriveIdentifier fddIdentifier : FloppyDriveIdentifier.values()) {
             String fddImageLocation = getLastMountedFloppyDiskImageLocation(fddIdentifier);
-            boolean fddWriteProtectMode = getLastMountedFloppyDiskImageWriteProtectMode(fddIdentifier);
+            boolean isFddWriteProtectMode = getLastMountedFloppyDiskImageWriteProtectMode(fddIdentifier);
             if (fddImageLocation != null) {
-                DiskImage fddImage = null;
-                Uri fddImageLocationUri = Uri.parse(fddImageLocation);
-                String fddImageLocationUriScheme = fddImageLocationUri.getScheme();
-                if ("content".equals(fddImageLocationUriScheme)) {
-                    // Open as SAF disk image
-                    try {
-                        fddImage = new SafDiskImage(getApplicationContext(), fddImageLocationUri);
-                    } catch (IOException e) {
-                        Timber.i(e, "Can't open floppy disk %s as SAF image: %s",
-                                fddIdentifier, fddImageLocation);
-                    }
-                } else if (fddImageLocationUriScheme == null
-                        || "file".equals(fddImageLocationUriScheme)) {
-                    // Open as file disk image
-                    String fddImageFilePath = fddImageLocationUri.getPath();
-                    if (fddImageFilePath != null) {
-                        try {
-                            fddImage = new FileDiskImage(new File(fddImageFilePath));
-                        } catch (IOException e) {
-                            Timber.i(e, "Can't open floppy disk %s as file image: %s",
-                                    fddIdentifier, fddImageLocation);
-                        }
-                    }
-                } else {
-                    Timber.w("Unknown floppy disk image location: %s", fddImageLocation);
-                }
+                DiskImage fddImage = openDiskImage(fddImageLocation);
                 if (fddImage != null) {
-                    doMountFddImage(fddController, fddIdentifier, fddImage);
+                    doMountFloppyDiskImage(fddController, fddIdentifier, fddImage, isFddWriteProtectMode);
                 } else {
                     resetLastFloppyDriveMountData(fddIdentifier);
                 }
@@ -985,34 +1055,57 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
     }
 
     /**
-     * Try to mount disk image to given floppy drive.
+     * Try to attach all available IDE drive images.
+     */
+    protected void attachAvailableIdeDriveImages() {
+        Timber.d("Attaching all available IDE drive images");
+        IdeController ideController = computer.getIdeController();
+        for (int ideInterfaceId = IF_0; ideInterfaceId <= IF_1; ideInterfaceId++) {
+            String ideDriveImageLocation = getLastAttachedIdeDriveImageLocation(ideInterfaceId);
+            if (ideDriveImageLocation != null) {
+                DiskImage ideDriveImage = openDiskImage(ideDriveImageLocation);
+                if (ideDriveImage != null) {
+                    doAttachIdeDrive(ideController, ideInterfaceId, ideDriveImage);
+                } else {
+                    setLastAttachedIdeDriveImageLocation(ideInterfaceId, null);
+                }
+            }
+        }
+    }
+
+    /**
+     * Try to mount floppy disk image to given floppy drive.
      * @param fddIdentifier floppy drive identifier to mount image
      * @param fddImage disk image
+     * @param isFddWriteProtectMode true to mount in write-protect mode,
+     *                              false to mount in read/write mode
      * @return true if image successfully mounted, false otherwise
      */
-    protected boolean mountFddImage(FloppyDriveIdentifier fddIdentifier, DiskImage fddImage) {
+    protected boolean mountFloppyDiskImage(FloppyDriveIdentifier fddIdentifier, DiskImage fddImage,
+                                           boolean isFddWriteProtectMode) {
         FloppyController fddController = computer.getFloppyController();
-        if (doMountFddImage(fddController, fddIdentifier, fddImage)) {
+        if (doMountFloppyDiskImage(fddController, fddIdentifier, fddImage, isFddWriteProtectMode)) {
             setLastMountedFloppyDiskImageLocation(fddIdentifier, fddImage.getLocation().toString());
-            setLastFloppyDriveWriteProtectMode(fddIdentifier, fddImage.isReadOnly());
+            setLastFloppyDriveWriteProtectMode(fddIdentifier,
+                    fddImage.isReadOnly() || isFddWriteProtectMode);
             return true;
         }
         return false;
     }
 
-    private boolean doMountFddImage(FloppyController fddController,
-                                    FloppyDriveIdentifier fddIdentifier,
-                                    DiskImage fddImage) {
+    private boolean doMountFloppyDiskImage(FloppyController fddController,
+                                           FloppyDriveIdentifier fddIdentifier,
+                                           DiskImage fddImage, boolean isFddWriteProtectMode) {
         try {
             if (fddImage != null && fddController != null) {
                 for (FloppyDriveIdentifier d : FloppyDriveIdentifier.values()) {
                     DiskImage mountedDiskImage = fddController.getFloppyDriveImage(d);
                     if (mountedDiskImage != null && fddImage.getLocation().equals(
                             mountedDiskImage.getLocation())) {
-                        unmountFddImage(d);
+                        unmountFloppyDiskImage(d);
                     }
                 }
-                boolean isWriteProtectMode = fddImage.isReadOnly();
+                boolean isWriteProtectMode = fddImage.isReadOnly() || isFddWriteProtectMode;
                 fddController.mountDiskImage(fddImage, fddIdentifier, isWriteProtectMode);
                 Timber.d("Mounted floppy disk image %s to drive %s in %s mode",
                         fddImage, fddIdentifier, (isWriteProtectMode ? "read only" : "read/write"));
@@ -1026,18 +1119,18 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
     }
 
     /**
-     * Unmount disk image from given floppy drive.
+     * Unmount floppy disk image from given floppy drive.
      * @param fddIdentifier floppy drive identifier to unmount image
      */
-    protected void unmountFddImage(FloppyDriveIdentifier fddIdentifier) {
+    protected void unmountFloppyDiskImage(FloppyDriveIdentifier fddIdentifier) {
         FloppyController fddController = computer.getFloppyController();
-        if (doUnmountFddImage(fddController, fddIdentifier)) {
+        if (doUnmountFloppyDiskImage(fddController, fddIdentifier)) {
             resetLastFloppyDriveMountData(fddIdentifier);
         }
     }
 
-    private boolean doUnmountFddImage(FloppyController fddController,
-                                      FloppyDriveIdentifier fddIdentifier) {
+    private boolean doUnmountFloppyDiskImage(FloppyController fddController,
+                                             FloppyDriveIdentifier fddIdentifier) {
         try {
             if (fddController != null && fddController.isFloppyDriveMounted(fddIdentifier)) {
                 fddController.unmountDiskImage(fddIdentifier);
@@ -1046,6 +1139,70 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
             }
         } catch (Exception e) {
             Timber.e(e, "Can't unmount floppy disk image from drive %s", fddIdentifier);
+        }
+        return false;
+    }
+
+    /**
+     * Try to attach IDE drive with given disk image to given IDE interface.
+     * @param ideInterfaceId IDE interface identifier to attach drive
+     * @param image disk image
+     * @return true if drive successfully attached, false otherwise
+     */
+    protected boolean attachIdeDrive(int ideInterfaceId, DiskImage image) {
+        IdeController ideController = computer.getIdeController();
+        if (doAttachIdeDrive(ideController, ideInterfaceId, image)) {
+            setLastAttachedIdeDriveImageLocation(ideInterfaceId, image.getLocation().toString());
+            return true;
+        }
+        return false;
+    }
+
+    private boolean doAttachIdeDrive(IdeController ideController, int ideInterfaceId,
+                                     DiskImage image) {
+        try {
+            if (image != null && ideController != null) {
+                // FIXME check image type (raw / hdi)
+                IdeController.IdeDrive ideDrive = new IdeController.IdeDriveHdiImage(image);
+                // Check the same image is attached to the another channel
+                int otherIdeInterfaceId = (ideInterfaceId == IF_0) ? IF_1 : IF_0;
+                IdeController.IdeDrive otherIdeDrive = ideController.getAttachedDrive(otherIdeInterfaceId);
+                if (otherIdeDrive != null && otherIdeDrive.equals(ideDrive)) {
+                    detachIdeDrive(otherIdeInterfaceId);
+                }
+                // Attach drive to the given channel
+                ideController.attachDrive(ideInterfaceId, ideDrive);
+                Timber.d("Attached IDE drive with disk image %s to IDE interface %d",
+                        image, ideInterfaceId);
+                return true;
+            }
+        } catch (Exception e) {
+            Timber.e(e, "Can't attach IDE drive with disk image %s to IDE interface %d",
+                    image, ideInterfaceId);
+        }
+        return false;
+    }
+
+    /**
+     * Detach IDE drive from given IDE interface.
+     * @param ideInterfaceId IDE interface identifier to detach image
+     */
+    protected void detachIdeDrive(int ideInterfaceId) {
+        IdeController ideController = computer.getIdeController();
+        if (doDetachIdeDrive(ideController, ideInterfaceId)) {
+            setLastAttachedIdeDriveImageLocation(ideInterfaceId, null);
+        }
+    }
+
+    private boolean doDetachIdeDrive(IdeController ideController, int ideInterfaceId) {
+        try {
+            if (ideController != null && ideController.getAttachedDrive(ideInterfaceId) != null) {
+                ideController.detachDrive(ideInterfaceId);
+                Timber.d("Detached IDE drive from IDE interface %d", ideInterfaceId);
+                return true;
+            }
+        } catch (Exception e) {
+            Timber.e(e, "Can't detach IDE drive from IDE interface %d", ideInterfaceId);
         }
         return false;
     }
@@ -1112,7 +1269,7 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
      * Show floppy disk image to mount selection dialog.
      * @param fddIdentifier floppy drive identifier to mount image
      */
-    protected void showMountDiskImageFileDialog(FloppyDriveIdentifier fddIdentifier) {
+    protected void showMountFloppyDiskImageFileDialog(FloppyDriveIdentifier fddIdentifier) {
         lastFloppyDiskImageDrive = fddIdentifier;
         Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
         intent.addCategory(Intent.CATEGORY_OPENABLE);
@@ -1121,6 +1278,21 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
                 | Intent.FLAG_GRANT_WRITE_URI_PERMISSION
                 | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
         startActivityForResult(intent, REQUEST_MENU_FLOPPY_DISK_IMAGE_FILE_SELECT);
+    }
+
+    /**
+     * Show IDE drive image to attach selection dialog.
+     * @param ideInterfaceId IDE interface identifier to attach image
+     */
+    protected void showAttachIdeDriveImageFileDialog(int ideInterfaceId) {
+        lastIdeDriveImageInterfaceId = ideInterfaceId;
+        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType("*/*");
+        intent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION
+                | Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
+        startActivityForResult(intent, REQUEST_MENU_IDE_DRIVE_IMAGE_FILE_SELECT);
     }
 
     /**
@@ -1182,17 +1354,37 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
                         break;
                     }
                     boolean isFloppyDiskImageMounted = false;
-                    try {
-                        getContentResolver().takePersistableUriPermission(floppyDiskImageUri,
-                                Intent.FLAG_GRANT_READ_URI_PERMISSION
-                                        | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
-                        SafDiskImage floppyDiskImage = new SafDiskImage(this, floppyDiskImageUri);
-                        isFloppyDiskImageMounted = mountFddImage(lastFloppyDiskImageDrive, floppyDiskImage);
-                    } catch (IOException e) {
-                        Timber.e(e,"can't mount floppy disk image %s'", floppyDiskImageUri);
+                    getContentResolver().takePersistableUriPermission(floppyDiskImageUri,
+                            Intent.FLAG_GRANT_READ_URI_PERMISSION
+                                    | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+                    DiskImage floppyDiskImage = openDiskImage(floppyDiskImageUri);
+                    if (floppyDiskImage != null) {
+                        isFloppyDiskImageMounted = mountFloppyDiskImage(lastFloppyDiskImageDrive,
+                                floppyDiskImage, false);
                     }
                     if (!isFloppyDiskImageMounted) {
                         showDialog(DIALOG_FLOPPY_DISK_MOUNT_ERROR);
+                    }
+                }
+                break;
+            case REQUEST_MENU_IDE_DRIVE_IMAGE_FILE_SELECT:
+                IdeController ideController = computer.getIdeController();
+                if (resultCode == Activity.RESULT_OK && ideController != null) {
+                    Uri ideDriveImageUri = data.getData();
+                    if (ideDriveImageUri == null) {
+                        break;
+                    }
+                    boolean isIdeDriveAttached = false;
+                    getContentResolver().takePersistableUriPermission(ideDriveImageUri,
+                            Intent.FLAG_GRANT_READ_URI_PERMISSION
+                                    | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+                    DiskImage ideDriveImage = openDiskImage(ideDriveImageUri);
+                    if (ideDriveImage != null) {
+                        isIdeDriveAttached = attachIdeDrive(lastIdeDriveImageInterfaceId,
+                                ideDriveImage);
+                    }
+                    if (!isIdeDriveAttached) {
+                        showDialog(DIALOG_IDE_DRIVE_ATTACH_ERROR);
                     }
                 }
                 break;
@@ -1346,7 +1538,7 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
     protected void restartActivity() {
         Intent intent = getIntent();
         // Pass last accessed program/disk image file paths to new activity
-        intent.putExtra(LAST_BIN_IMAGE_FILE_URI, lastBinImageFileUri);
+        intent.putExtra(STATE_LAST_BIN_IMAGE_FILE_URI, lastBinImageFileUri);
         finish();
         startActivity(intent);
         overridePendingTransition(0, 0);
@@ -1374,6 +1566,36 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
         SharedPreferences prefs = getPreferences();
         SharedPreferences.Editor prefsEditor = prefs.edit();
         prefsEditor.putString(PREFS_KEY_COMPUTER_CONFIGURATION, configuration.name());
+        prefsEditor.apply();
+    }
+
+    private String getLastAttachedIdeDriveImageLocationPrefsKey(int ideInterfaceId) {
+        return PREFS_KEY_IDE_DRIVE_PREFIX + ideInterfaceId + "/" + PREFS_KEY_IDE_DRIVE_IMAGE;
+    }
+
+    /**
+     * Get last attached IDE drive disk image location for given IDE interface.
+     * @param ideInterfaceId IDE interface identifier
+     * @return last attached IDE drive disk image location (null if no drive was attached)
+     */
+    protected String getLastAttachedIdeDriveImageLocation(int ideInterfaceId) {
+        SharedPreferences prefs = getPreferences();
+        return prefs.getString(getLastAttachedIdeDriveImageLocationPrefsKey(ideInterfaceId),
+                null);
+    }
+
+    /**
+     * Set last attached IDE drive disk image location for given IDE interface.
+     * @param ideInterfaceId IDE interface identifier
+     * @param ideDriveImageLocation attached IDE drive disk image location
+     * (null if no drive was attached)
+     */
+    protected void setLastAttachedIdeDriveImageLocation(int ideInterfaceId,
+                                                        String ideDriveImageLocation) {
+        SharedPreferences prefs = getPreferences();
+        SharedPreferences.Editor prefsEditor = prefs.edit();
+        prefsEditor.putString(getLastAttachedIdeDriveImageLocationPrefsKey(ideInterfaceId),
+                ideDriveImageLocation);
         prefsEditor.apply();
     }
 

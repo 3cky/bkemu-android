@@ -184,6 +184,21 @@ public class SafDiskImage implements DiskImage {
         writeBuffer(offset);
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof SafDiskImage)) return false;
+
+        SafDiskImage that = (SafDiskImage) o;
+
+        return location.equals(that.location);
+    }
+
+    @Override
+    public int hashCode() {
+        return location.hashCode();
+    }
+
     @NonNull
     @Override
     public String toString() {

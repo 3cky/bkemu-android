@@ -50,7 +50,8 @@ import su.comp.bk.arch.io.audio.Ay8910;
 import su.comp.bk.arch.io.audio.Covox;
 import su.comp.bk.arch.io.audio.Speaker;
 import su.comp.bk.arch.io.disk.FloppyController;
-import su.comp.bk.arch.io.disk.SmkHddController;
+import su.comp.bk.arch.io.disk.IdeController;
+import su.comp.bk.arch.io.disk.SmkIdeController;
 import su.comp.bk.arch.io.memory.Bk11MemoryManager;
 import su.comp.bk.arch.io.memory.SmkMemoryManager;
 import su.comp.bk.arch.memory.BankedMemory;
@@ -149,8 +150,8 @@ public class Computer implements Runnable {
 
     private final List<UptimeListener> uptimeListeners = new ArrayList<>();
 
-    // HDD controller reference (<code>null</code> if no HDD controller present)
-    private SmkHddController hddController;
+    // IDE controller reference (<code>null</code> if no IDE controller present)
+    private IdeController ideController;
 
     /**
      * Computer uptime updates listener.
@@ -353,8 +354,9 @@ public class Computer implements Runnable {
                     addDevice(smkMemoryManager);
                     floppyController = new FloppyController(this);
                     addDevice(floppyController);
-                    hddController = new SmkHddController(this);
-                    addDevice(hddController);
+                    SmkIdeController smkIdeController = new SmkIdeController(this);
+                    ideController = smkIdeController;
+                    addDevice(smkIdeController);
                     break;
                 default:
                     break;
@@ -613,10 +615,18 @@ public class Computer implements Runnable {
 
     /**
      * Get {@link FloppyController} reference.
-     * @return floppyController reference or <code>null</code> if not attached
+     * @return floppy controller reference or <code>null</code> if floppy controller is not present
      */
     public FloppyController getFloppyController() {
         return floppyController;
+    }
+
+    /**
+     * Get {@link IdeController} reference.
+     * @return IDE controller reference or <code>null</code> if IDE controller is not present
+     */
+    public IdeController getIdeController() {
+        return ideController;
     }
 
     /**
@@ -974,6 +984,9 @@ public class Computer implements Runnable {
         }
         if (floppyController != null) {
             floppyController.unmountDiskImages();
+        }
+        if (ideController != null) {
+            ideController.detachDrives();
         }
     }
 

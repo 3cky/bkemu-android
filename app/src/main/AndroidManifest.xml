@@ -63,6 +63,14 @@
                 <data android:pathPattern="*\\..*\\.BKD"/>
                 <data android:pathPattern=".*\\..*\\..*\\.BKD"/>
                 <data android:pathPattern=".*\\..*\\..*\\..*\\.BKD"/>
+                <data android:pathPattern=".*\\.hdi"/>
+                <data android:pathPattern="*\\..*\\.hdi"/>
+                <data android:pathPattern=".*\\..*\\..*\\.hdi"/>
+                <data android:pathPattern=".*\\..*\\..*\\..*\\.hdi"/>
+                <data android:pathPattern=".*\\.HDI"/>
+                <data android:pathPattern="*\\..*\\.HDI"/>
+                <data android:pathPattern=".*\\..*\\..*\\.HDI"/>
+                <data android:pathPattern=".*\\..*\\..*\\..*\\.HDI"/>
             </intent-filter>
         </activity>
     </application>

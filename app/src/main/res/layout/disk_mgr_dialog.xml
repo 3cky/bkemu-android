@@ -1,10 +1,31 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/fdd_mgr_layout"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
     android:layout_gravity="center"
     android:orientation="vertical">
+
+    <include
+        android:id="@+id/hdd_layout_0"
+        android:layout_height="wrap_content"
+        android:layout_width="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:layout_margin="@dimen/fdd_margin"
+        layout="@layout/hdd"
+        android:visibility="gone"
+        tools:visibility="visible" />
+
+    <include
+        android:id="@+id/hdd_layout_1"
+        android:layout_height="wrap_content"
+        android:layout_width="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:layout_margin="@dimen/fdd_margin"
+        layout="@layout/hdd"
+        android:visibility="gone"
+        tools:visibility="visible" />
 
     <include
         android:id="@+id/fdd_layout_a"
@@ -28,7 +49,8 @@
         android:layout_width="wrap_content"
         android:layout_gravity="center_horizontal"
         android:layout_marginBottom="@dimen/fdd_margin"
-        layout="@layout/fdd" />
+        layout="@layout/fdd"
+        android:visibility="gone" />
 
     <include
         android:id="@+id/fdd_layout_d"
@@ -36,6 +58,7 @@
         android:layout_width="wrap_content"
         android:layout_gravity="center_horizontal"
         android:layout_marginBottom="@dimen/fdd_margin"
-        layout="@layout/fdd" />
+        layout="@layout/fdd"
+        android:visibility="gone" />
 
 </LinearLayout>

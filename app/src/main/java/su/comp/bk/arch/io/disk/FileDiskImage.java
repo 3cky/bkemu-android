@@ -88,6 +88,21 @@ public class FileDiskImage implements DiskImage {
         diskImageRandomAccessFile.writeShort(value);
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof FileDiskImage)) return false;
+
+        FileDiskImage that = (FileDiskImage) o;
+
+        return diskImageFile.equals(that.diskImageFile);
+    }
+
+    @Override
+    public int hashCode() {
+        return diskImageFile.hashCode();
+    }
+
     @NonNull
     @Override
     public String toString() {

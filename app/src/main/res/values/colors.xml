@@ -5,5 +5,8 @@
     <color name="fdd_label">#000000</color>
     <color name="fdd_empty">#505050</color>
     <color name="fdd_loaded">#000000</color>
+    <color name="hdd_label">#000000</color>
+    <color name="hdd_detached">#505050</color>
+    <color name="hdd_attached">#000000</color>
     <color name="item_clickable">#7bc1bb</color>
 </resources>

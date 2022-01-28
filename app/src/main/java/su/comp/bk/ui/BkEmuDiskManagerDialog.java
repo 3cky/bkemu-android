@@ -18,6 +18,14 @@
 
 package su.comp.bk.ui;
 
+import static su.comp.bk.arch.io.disk.FloppyController.FloppyDriveIdentifier.A;
+import static su.comp.bk.arch.io.disk.FloppyController.FloppyDriveIdentifier.B;
+import static su.comp.bk.arch.io.disk.FloppyController.FloppyDriveIdentifier.C;
+import static su.comp.bk.arch.io.disk.FloppyController.FloppyDriveIdentifier.D;
+import static su.comp.bk.arch.io.disk.IdeController.IF_0;
+import static su.comp.bk.arch.io.disk.IdeController.IF_1;
+import static su.comp.bk.util.FileUtils.ellipsizeFileName;
+
 import android.app.Activity;
 import android.app.Dialog;
 import android.os.Bundle;
@@ -34,12 +42,15 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.widget.SwitchCompat;
 import androidx.fragment.app.DialogFragment;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.Objects;
 
 import su.comp.bk.R;
 import su.comp.bk.arch.io.disk.DiskImage;
 import su.comp.bk.arch.io.disk.FloppyController;
 import su.comp.bk.arch.io.disk.FloppyController.FloppyDriveIdentifier;
+import su.comp.bk.arch.io.disk.IdeController;
 
 /**
  * Disk drives manager dialog.
@@ -48,9 +59,13 @@ public class BkEmuDiskManagerDialog extends DialogFragment {
     private static final int MAX_FILE_NAME_DISPLAY_LENGTH = 15;
     private static final int FILE_NAME_DISPLAY_SUFFIX_LENGTH = 3;
 
-    private static final long SHOW_SELECTED_DRIVES_UPDATE_PERIOD = 250L;
+    private static final long SHOW_DRIVES_ACTIVITY_UPDATE_INTERVAL_MSECS = 100L;
+    private static final long IDE_DRIVE_ACTIVITY_TIMEOUT_NANOS =
+            SHOW_DRIVES_ACTIVITY_UPDATE_INTERVAL_MSECS * 1000000L;
 
     private final SparseArray<View> floppyDriveViews = new SparseArray<>();
+
+    private final SparseArray<View> ideDriveViews = new SparseArray<>();
 
     private final Handler handler = new Handler();
 
@@ -71,12 +86,24 @@ public class BkEmuDiskManagerDialog extends DialogFragment {
         return getBkEmuActivity().getComputer().getFloppyController();
     }
 
+    private IdeController getIdeController() {
+        return getBkEmuActivity().getComputer().getIdeController();
+    }
+
     private void addFloppyDriveView(FloppyDriveIdentifier identifier, View view) {
         floppyDriveViews.append(identifier.ordinal(), view);
     }
 
     private View getFloppyDriveView(FloppyDriveIdentifier identifier) {
         return floppyDriveViews.get(identifier.ordinal());
+    }
+
+    private void addIdeDriveView(int ideDriveIdentifier, View view) {
+        ideDriveViews.append(ideDriveIdentifier, view);
+    }
+
+    private View getIdeDriveView(int ideDriveIdentifier) {
+        return ideDriveViews.get(ideDriveIdentifier);
     }
 
     @NonNull
@@ -86,21 +113,21 @@ public class BkEmuDiskManagerDialog extends DialogFragment {
         AlertDialog.Builder builder = new AlertDialog.Builder(activity);
         builder.setTitle(R.string.menu_disk_manager);
         LayoutInflater inflater = activity.getLayoutInflater();
-        builder.setView(inflater.inflate(R.layout.fdd_mgr_dialog, null));
+        builder.setView(inflater.inflate(R.layout.disk_mgr_dialog, null));
         return builder.create();
     }
 
     @Override
     public void onStart() {
         super.onStart();
-        setupFloppyDriveViews();
+        setupDriveViews();
     }
 
     @Override
     public void onResume() {
         super.onResume();
         this.isActive = true;
-        handler.post(this::showSelectedDrives);
+        handler.post(this::showDrivesActivity);
     }
 
     @Override
@@ -109,11 +136,31 @@ public class BkEmuDiskManagerDialog extends DialogFragment {
         super.onPause();
     }
 
-    private void showSelectedDrives() {
+    private void showDrivesActivity() {
         if (isActive) {
             showSelectedFloppyDrive();
-            handler.postDelayed(this::showSelectedDrives, SHOW_SELECTED_DRIVES_UPDATE_PERIOD);
+            showIdeDrivesActivity();
+            handler.postDelayed(this::showDrivesActivity, SHOW_DRIVES_ACTIVITY_UPDATE_INTERVAL_MSECS);
         }
+    }
+
+    private void showIdeDrivesActivity() {
+        IdeController ideController = getIdeController();
+        if (ideController != null) {
+            for (int ideInterfaceId = IF_0; ideInterfaceId <= IF_1; ideInterfaceId++) {
+                View ideDriveView = getIdeDriveView(ideInterfaceId);
+                if (isIdeDriveActive(ideController, ideInterfaceId)) {
+                    ideDriveView.setSelected(!ideDriveView.isSelected());
+                } else {
+                    ideDriveView.setSelected(false);
+                }
+            }
+        }
+    }
+
+    private boolean isIdeDriveActive(IdeController ideController, int ideInterfaceId) {
+        long lastDriveActivityTimestamp = ideController.getLastDriveActivityTimestamp(ideInterfaceId);
+        return System.nanoTime() - lastDriveActivityTimestamp <= IDE_DRIVE_ACTIVITY_TIMEOUT_NANOS;
     }
 
     private void showSelectedFloppyDrive() {
@@ -128,29 +175,46 @@ public class BkEmuDiskManagerDialog extends DialogFragment {
         }
     }
 
-    private void setupFloppyDriveViews() {
+    private void setupDriveViews() {
         Dialog dialog = Objects.requireNonNull(getDialog());
-
-        addFloppyDriveView(FloppyDriveIdentifier.A, dialog.findViewById(R.id.fdd_layout_a));
-        addFloppyDriveView(FloppyDriveIdentifier.B, dialog.findViewById(R.id.fdd_layout_b));
-        addFloppyDriveView(FloppyDriveIdentifier.C, dialog.findViewById(R.id.fdd_layout_c));
-        addFloppyDriveView(FloppyDriveIdentifier.D, dialog.findViewById(R.id.fdd_layout_d));
-
-        for (FloppyDriveIdentifier driveIdentifier : FloppyDriveIdentifier.values()) {
-            setupFloppyDriveView(driveIdentifier);
+        IdeController ideController = getIdeController();
+        if (ideController != null) {
+            setupIdeDriveViews(dialog, true);
+            setupFloppyDriveViews(dialog, A, B);
+        } else {
+            setupIdeDriveViews(dialog, false);
+            setupFloppyDriveViews(dialog, A, B, C, D);
         }
     }
 
-    private void setupFloppyDriveView(final FloppyDriveIdentifier fddIdentifier) {
+    private void setupFloppyDriveViews(Dialog dialog, FloppyDriveIdentifier... driveIdentifiers) {
+        addFloppyDriveView(A, dialog.findViewById(R.id.fdd_layout_a));
+        addFloppyDriveView(B, dialog.findViewById(R.id.fdd_layout_b));
+        addFloppyDriveView(C, dialog.findViewById(R.id.fdd_layout_c));
+        addFloppyDriveView(D, dialog.findViewById(R.id.fdd_layout_d));
+
+        List<FloppyDriveIdentifier> driveIdentifierList = Arrays.asList(driveIdentifiers);
+        for (FloppyDriveIdentifier driveIdentifier : FloppyDriveIdentifier.values()) {
+            setupFloppyDriveView(driveIdentifier, driveIdentifierList.contains(driveIdentifier));
+        }
+    }
+
+    private void setupFloppyDriveView(final FloppyDriveIdentifier fddIdentifier, boolean isVisible) {
         View fddView = getFloppyDriveView(fddIdentifier);
-        updateFloppyDriveView(fddView, fddIdentifier);
-        BkEmuActivity bkEmuActivity = getBkEmuActivity();
-        fddView.setOnClickListener(v -> bkEmuActivity.showMountDiskImageFileDialog(fddIdentifier));
-        fddView.setOnLongClickListener(v -> {
-            bkEmuActivity.unmountFddImage(fddIdentifier);
-            updateFloppyDriveView(v, fddIdentifier);
-            return true;
-        });
+        if (isVisible) {
+            fddView.setVisibility(View.VISIBLE);
+            updateFloppyDriveView(fddView, fddIdentifier);
+            BkEmuActivity bkEmuActivity = getBkEmuActivity();
+            fddView.setOnClickListener(v ->
+                    bkEmuActivity.showMountFloppyDiskImageFileDialog(fddIdentifier));
+            fddView.setOnLongClickListener(v -> {
+                bkEmuActivity.unmountFloppyDiskImage(fddIdentifier);
+                updateFloppyDriveView(v, fddIdentifier);
+                return true;
+            });
+        } else {
+            fddView.setVisibility(View.GONE);
+        }
     }
 
     private void updateFloppyDriveView(final View fddView,
@@ -173,18 +237,9 @@ public class BkEmuDiskManagerDialog extends DialogFragment {
             fddWriteProtectSwitch.setClickable(!mountedDiskImage.isReadOnly());
             fddFileTextView.setTextColor(getResources().getColor(R.color.fdd_loaded));
             String fddImageFileName = mountedDiskImage.getName();
-            if (fddImageFileName.length() > MAX_FILE_NAME_DISPLAY_LENGTH) {
-                // Trim file name to display
-                int nameDotIndex = fddImageFileName.lastIndexOf('.');
-                if (nameDotIndex < 0) {
-                    nameDotIndex = fddImageFileName.length();
-                }
-                int nameSuffixIndex = nameDotIndex - FILE_NAME_DISPLAY_SUFFIX_LENGTH;
-                int namePrefixIndex = MAX_FILE_NAME_DISPLAY_LENGTH - (fddImageFileName.length()
-                        - nameSuffixIndex);
-                fddImageFileName = fddImageFileName.substring(0, namePrefixIndex)
-                        .concat("...").concat(fddImageFileName.substring(nameSuffixIndex));
-            }
+            // Trim file name to display, if needed
+            fddImageFileName = ellipsizeFileName(fddImageFileName, MAX_FILE_NAME_DISPLAY_LENGTH,
+                    FILE_NAME_DISPLAY_SUFFIX_LENGTH);
             fddFileTextView.setText(fddImageFileName);
         } else {
             fddWriteProtectSwitch.setClickable(false);
@@ -199,5 +254,54 @@ public class BkEmuDiskManagerDialog extends DialogFragment {
                                         boolean isWriteProtectMode) {
         fddController.setFloppyDriveWriteProtectMode(fddIdentifier, isWriteProtectMode);
         getBkEmuActivity().setLastFloppyDriveWriteProtectMode(fddIdentifier, isWriteProtectMode);
+    }
+
+    private void setupIdeDriveViews(Dialog dialog, boolean isVisible) {
+        addIdeDriveView(IF_0, dialog.findViewById(R.id.hdd_layout_0));
+        addIdeDriveView(IF_1, dialog.findViewById(R.id.hdd_layout_1));
+
+        setupIdeDriveView(IF_0, isVisible);
+        setupIdeDriveView(IF_1, isVisible);
+    }
+
+    private void setupIdeDriveView(final int ideDriveIdentifier, boolean isVisible) {
+        View hddView = getIdeDriveView(ideDriveIdentifier);
+        if (isVisible) {
+            hddView.setVisibility(View.VISIBLE);
+            updateIdeDriveView(hddView, ideDriveIdentifier);
+            BkEmuActivity bkEmuActivity = getBkEmuActivity();
+            hddView.setOnClickListener(v ->
+                    bkEmuActivity.showAttachIdeDriveImageFileDialog(ideDriveIdentifier));
+            hddView.setOnLongClickListener(v -> {
+                bkEmuActivity.detachIdeDrive(ideDriveIdentifier);
+                updateIdeDriveView(v, ideDriveIdentifier);
+                return true;
+            });
+        } else {
+            hddView.setVisibility(View.GONE);
+        }
+    }
+
+    private void updateIdeDriveView(final View hddView,
+                                    final int ideDriveIdentifier) {
+        TextView hddLabelView = hddView.findViewWithTag("hdd_label");
+        hddLabelView.setText(ideDriveIdentifier == IF_0 ? "1" : "2");
+        IdeController ideController = getIdeController();
+        IdeController.IdeDrive ideDrive = ideController.getAttachedDrive(ideDriveIdentifier);
+        boolean isHddAttached = (ideDrive != null);
+        ImageView hddImageView = hddView.findViewWithTag("hdd_image");
+        hddImageView.setSelected(false);
+        TextView hddNameTextView = hddView.findViewWithTag("hdd_file");
+        if (isHddAttached) {
+            hddNameTextView.setTextColor(getResources().getColor(R.color.hdd_attached));
+            String hddImageFileName = ideDrive.getName();
+            // Trim file name to display, if needed
+            hddImageFileName = ellipsizeFileName(hddImageFileName, MAX_FILE_NAME_DISPLAY_LENGTH,
+                    FILE_NAME_DISPLAY_SUFFIX_LENGTH);
+            hddNameTextView.setText(hddImageFileName);
+        } else {
+            hddNameTextView.setTextColor(getResources().getColor(R.color.hdd_detached));
+            hddNameTextView.setText(R.string.hdd_detached);
+        }
     }
 }

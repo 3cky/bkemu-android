@@ -39,11 +39,6 @@ import java.util.List;
 import java.util.Objects;
 
 public class FileUtils {
-    /** Array of file extensions for binary images */
-    public final static String[] FILE_EXT_BINARY_IMAGES = new String[] { ".BIN" };
-    /** Array of file extensions for floppy disk images */
-    public final static String[] FILE_EXT_FLOPPY_DISK_IMAGES = new String[] { ".BKD", ".IMG" };
-
     /** Internal I/O buffer default size */
     private static final int BUFFER_SIZE = 8 * 1024;
 
@@ -188,5 +183,27 @@ public class FileUtils {
             }
         }
         return bytesWritten;
+    }
+
+    /**
+     * Ellipsize file name, if max file name length is exceeded.
+     *
+     * @param fileName file name to ellipsize
+     * @param maxLength max file name length
+     * @param suffixLength max file name suffix length
+     * @return ellipsized file name
+     */
+    public static String ellipsizeFileName(String fileName, int maxLength, int suffixLength) {
+        if (fileName.length() > maxLength) {
+            int nameDotIndex = fileName.lastIndexOf('.');
+            if (nameDotIndex < 0) {
+                nameDotIndex = fileName.length();
+            }
+            int nameSuffixIndex = nameDotIndex - suffixLength;
+            int namePrefixIndex = maxLength - (fileName.length() - nameSuffixIndex);
+            fileName = fileName.substring(0, namePrefixIndex).concat("...")
+                    .concat(fileName.substring(nameSuffixIndex));
+        }
+        return fileName;
     }
 }
