@@ -57,34 +57,53 @@ public interface DiskImage {
     void close() throws IOException;
 
     /**
-     * Read byte from disk image at specified offset.
-     * @param offset read offset (in bytes)
+     * Read byte from disk image at specified position.
+     * @param position read position (in bytes)
      * @return read byte in eight lower bits of integer
      * @throws IOException in case of I/O error
      */
-    int readByte(long offset) throws IOException;
+    int readByte(long position) throws IOException;
+
 
     /**
-     * Write byte to disk image at specified offset.
-     * @param offset write offset (in bytes)
+     * Read bytes from disk image at specified position to given buffer.
+     * @param buffer buffer to read
+     * @param position read position (in bytes)
+     * @param length number of bytes to read
+     * @throws IOException in case of I/O error
+     */
+    void readBytes(byte[] buffer, long position, int length) throws IOException;
+
+    /**
+     * Write byte to disk image at specified position.
+     * @param position write position (in bytes)
      * @param value value to write
      * @throws IOException in case of I/O error
      */
-    void writeByte(long offset, byte value) throws IOException;
+    void writeByte(long position, byte value) throws IOException;
 
     /**
-     * Read word (big-endian) from disk image at specified offset.
-     * @param offset read offset (in bytes)
+     * Write bytes from buffer to disk image at specified position.
+     * @param buffer buffer to write
+     * @param position write position (in bytes)
+     * @param length number of bytes to write
+     * @throws IOException in case of I/O error
+     */
+    void writeBytes(byte[] buffer, long position, int length) throws IOException;
+
+    /**
+     * Read word (big-endian) from disk image at specified position.
+     * @param position read position (in bytes)
      * @return read word in sixteen lower bits of integer
      * @throws IOException in case of I/O error
      */
-    int readWord(long offset) throws IOException;
+    int readWord(long position) throws IOException;
 
     /**
-     * Write word to disk image at specified offset.
-     * @param offset write offset (in bytes)
+     * Write word to disk image at specified position.
+     * @param position write position (in bytes)
      * @param value value to write
      * @throws IOException in case of I/O error
      */
-    void writeWord(long offset, short value) throws IOException;
+    void writeWord(long position, short value) throws IOException;
 }

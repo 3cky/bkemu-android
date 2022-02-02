@@ -170,30 +170,26 @@ public class IdeController {
 
         @Override
         public int read(byte[] buffer, long sectorIndex, int numSectors) {
-            long startSectorOffset = getImageHeaderSize() + sectorIndex * SECTOR_SIZE;
-            for (int i = 0; i < numSectors * SECTOR_SIZE; i++) {
-                long offset = startSectorOffset + i;
-                try {
-                    buffer[i] = (byte) image.readByte(offset);
-                } catch (IOException e) {
-                    Timber.e(e, "Can't read image at offset %d", offset);
-                    return -1;
-                }
+            long position = getImageHeaderSize() + sectorIndex * SECTOR_SIZE;
+            int length = numSectors * SECTOR_SIZE;
+            try {
+                image.readBytes(buffer, position, length);
+            } catch (IOException e) {
+                Timber.e(e, "Can't read image at position %d", position);
+                return -1;
             }
             return numSectors;
         }
 
         @Override
         public int write(byte[] buffer, long sectorIndex, int numSectors) {
-            long startSectorOffset = getImageHeaderSize() + sectorIndex * SECTOR_SIZE;
-            for (int i = 0; i < numSectors * SECTOR_SIZE; i++) {
-                long offset = startSectorOffset + i;
-                try {
-                    image.writeByte(offset, buffer[i]);
-                } catch (IOException e) {
-                    Timber.e(e, "Can't write image at offset %d", offset);
-                    return -1;
-                }
+            long position = getImageHeaderSize() + sectorIndex * SECTOR_SIZE;
+            int length = numSectors * SECTOR_SIZE;
+            try {
+                image.writeBytes(buffer, position, length);
+            } catch (IOException e) {
+                Timber.e(e, "Can't write image at position %d", position);
+                return -1;
             }
             return numSectors;
         }

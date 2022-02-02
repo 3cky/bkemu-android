@@ -133,55 +133,73 @@ public class SafDiskImage implements DiskImage {
         }
     }
 
-    private void readBuffer(long offset, int size) throws IOException {
+    private void readBuffer(ByteBuffer buf, long pos, int len) throws IOException {
         setDiskImageFileChannelInInputMode(true);
-        diskImageFileChannel.position(offset);
-        diskImageBuffer.rewind();
-        diskImageBuffer.limit(size);
+        diskImageFileChannel.position(pos);
+        buf.rewind();
+        buf.limit(len);
         do {
-            int len = diskImageFileChannel.read(diskImageBuffer);
-            if (len < 0) {
-                throw new IOException("readBuffer(" + offset + ", " + size + "): " + len);
+            int res = diskImageFileChannel.read(buf);
+            if (res < 0) {
+                throw new IOException("readBuffer(" + pos + ", " + len + "): " + res);
             }
-        } while (diskImageBuffer.position() < size);
+        } while (buf.position() < len);
     }
 
-    private void writeBuffer(long offset) throws IOException {
+    private void readBuffer(long pos, int len) throws IOException {
+        readBuffer(diskImageBuffer, pos, len);
+    }
+
+    private void writeBuffer(ByteBuffer buf, long pos) throws IOException {
         setDiskImageFileChannelInInputMode(false);
-        diskImageFileChannel.position(offset);
-        diskImageBuffer.flip();
+        diskImageFileChannel.position(pos);
+        buf.flip();
         do {
-            int len = diskImageFileChannel.write(diskImageBuffer);
-            if (len < 0) {
-                throw new IOException("writeBuffer(" + offset + "): " + len);
+            int res = diskImageFileChannel.write(buf);
+            if (res < 0) {
+                throw new IOException("writeBuffer(" + pos + "): " + res);
             }
-        } while (diskImageBuffer.remaining() > 0);
+        } while (buf.remaining() > 0);
+    }
+
+    private void writeBuffer(long pos) throws IOException {
+        writeBuffer(diskImageBuffer, pos);
     }
 
     @Override
-    public int readByte(long offset) throws IOException {
-        readBuffer(offset, 1);
+    public int readByte(long position) throws IOException {
+        readBuffer(position, 1);
         return diskImageBuffer.get(0) & 0xFF;
     }
 
     @Override
-    public void writeByte(long offset, byte value) throws IOException {
-        diskImageBuffer.clear();
-        diskImageBuffer.put(value);
-        writeBuffer(offset);
+    public void readBytes(byte[] buffer, long position, int length) throws IOException {
+        readBuffer(ByteBuffer.wrap(buffer), position, length);
     }
 
     @Override
-    public int readWord(long offset) throws IOException {
-        readBuffer(offset, 2);
+    public void writeByte(long position, byte value) throws IOException {
+        diskImageBuffer.clear();
+        diskImageBuffer.put(value);
+        writeBuffer(position);
+    }
+
+    @Override
+    public void writeBytes(byte[] buffer, long position, int length) throws IOException {
+
+    }
+
+    @Override
+    public int readWord(long position) throws IOException {
+        readBuffer(position, 2);
         return diskImageBuffer.getShort(0) & 0xFFFF;
     }
 
     @Override
-    public void writeWord(long offset, short value) throws IOException {
+    public void writeWord(long position, short value) throws IOException {
         diskImageBuffer.clear();
         diskImageBuffer.putShort(value);
-        writeBuffer(offset);
+        writeBuffer(position);
     }
 
     @Override

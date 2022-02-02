@@ -65,26 +65,38 @@ public class FileDiskImage implements DiskImage {
     }
 
     @Override
-    public int readByte(long offset) throws IOException {
-        diskImageRandomAccessFile.seek(offset);
+    public int readByte(long position) throws IOException {
+        diskImageRandomAccessFile.seek(position);
         return diskImageRandomAccessFile.readUnsignedByte();
     }
 
     @Override
-    public void writeByte(long offset, byte value) throws IOException {
-        diskImageRandomAccessFile.seek(offset);
+    public void readBytes(byte[] buffer, long position, int length) throws IOException {
+        diskImageRandomAccessFile.seek(position);
+        diskImageRandomAccessFile.read(buffer, 0, length);
+    }
+
+    @Override
+    public void writeByte(long position, byte value) throws IOException {
+        diskImageRandomAccessFile.seek(position);
         diskImageRandomAccessFile.writeByte(value);
     }
 
     @Override
-    public int readWord(long offset) throws IOException {
-        diskImageRandomAccessFile.seek(offset);
+    public void writeBytes(byte[] buffer, long position, int length) throws IOException {
+        diskImageRandomAccessFile.seek(position);
+        diskImageRandomAccessFile.write(buffer, 0, length);
+    }
+
+    @Override
+    public int readWord(long position) throws IOException {
+        diskImageRandomAccessFile.seek(position);
         return diskImageRandomAccessFile.readUnsignedShort();
     }
 
     @Override
-    public void writeWord(long offset, short value) throws IOException {
-        diskImageRandomAccessFile.seek(offset);
+    public void writeWord(long position, short value) throws IOException {
+        diskImageRandomAccessFile.seek(position);
         diskImageRandomAccessFile.writeShort(value);
     }
 
