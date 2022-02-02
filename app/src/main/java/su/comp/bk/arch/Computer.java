@@ -807,7 +807,8 @@ public class Computer implements Runnable {
         // Check for memories at given address
         List<MemoryRange> memoryRanges = getMemoryRanges(address);
         if (memoryRanges != null) {
-            for (MemoryRange memoryRange : memoryRanges) {
+            for (int i = 0, memoryRangesSize = memoryRanges.size(); i < memoryRangesSize; i++) {
+                MemoryRange memoryRange = memoryRanges.get(i);
                 if (memoryRange.isRelatedAddress(address)) {
                     int memoryReadValue = memoryRange.getMemory().read(
                             wordAddress - memoryRange.getStartAddress());
@@ -824,7 +825,8 @@ public class Computer implements Runnable {
             List<Device> subdevices = getDevices(address);
             if (subdevices != null) {
                 long cpuClock = getCpu().getTime();
-                for (Device subdevice : subdevices) {
+                for (int i = 0, subdevicesSize = subdevices.size(); i < subdevicesSize; i++) {
+                    Device subdevice = subdevices.get(i);
                     // Read and combine subdevice state values in word mode
                     int subdeviceReadValue = subdevice.read(cpuClock, wordAddress);
                     if (subdeviceReadValue != BUS_ERROR) {
@@ -865,7 +867,8 @@ public class Computer implements Runnable {
         // Check for memories at given address
         List<MemoryRange> memoryRanges = getMemoryRanges(address);
         if (memoryRanges != null) {
-            for (MemoryRange memoryRange : memoryRanges) {
+            for (int i = 0, memoryRangesSize = memoryRanges.size(); i < memoryRangesSize; i++) {
+                MemoryRange memoryRange = memoryRanges.get(i);
                 if (memoryRange.isRelatedAddress(address)) {
                     if (memoryRange.getMemory().write(isByteMode,
                             address - memoryRange.getStartAddress(), value)) {
@@ -880,7 +883,8 @@ public class Computer implements Runnable {
             List<Device> devices = getDevices(address);
             if (devices != null) {
                 long cpuClock = getCpu().getTime();
-                for (Device device : devices) {
+                for (int i = 0, devicesSize = devices.size(); i < devicesSize; i++) {
+                    Device device = devices.get(i);
                     if (device.write(cpuClock, isByteMode, address, value)) {
                         isWritten = true;
                     }
