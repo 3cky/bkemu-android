@@ -35,7 +35,6 @@ import android.os.Bundle;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
-import java.sql.Time;
 import java.util.Arrays;
 
 import timber.log.Timber;
@@ -87,6 +86,19 @@ public class IdeController {
     private int nextDriveSerialNumber;
 
     public interface IdeDrive {
+        /**
+         * IDE drive max number of heads.
+         */
+        int MAX_HEADS = 16;
+        /**
+         * IDE drive max number of sectors per cylinder.
+         */
+        int MAX_SECTORS = 63;
+        /**
+         * IDE drive max number of cylinders.
+         */
+        int MAX_CYLINDERS = 16383;
+
         /**
          * Get name of this drive.
          *
@@ -146,12 +158,68 @@ public class IdeController {
     abstract static class IdeDriveImage implements IdeDrive {
         private final DiskImage image;
 
+        private int numCylinders;
+        private int numHeads;
+        private int numSectors;
+
+        private long totalNumSectors;
+
         protected IdeDriveImage(DiskImage image) {
             this.image = image;
+            init();
         }
 
         protected DiskImage getImage() {
             return image;
+        }
+
+        protected void init() {
+            long imageDataSize = image.length() - getImageHeaderSize();
+            totalNumSectors = imageDataSize / SECTOR_SIZE;
+            if (imageDataSize % SECTOR_SIZE > 0) {
+                totalNumSectors++;
+            }
+            setupGeometry();
+            Timber.d("Geometry: cylinders: %d, heads: %d, sectors: %d. Total LBA sectors: %d",
+                    getNumCylinders(), getNumHeads(), getNumSectors(), getTotalNumSectors());
+        }
+
+        protected abstract void setupGeometry();
+
+        protected void setNumCylinders(int numCylinders) {
+            checkGeometryParameter(numCylinders, MAX_CYLINDERS);
+            this.numCylinders = numCylinders;
+        }
+
+        protected void setNumHeads(int numHeads) {
+            checkGeometryParameter(numHeads, MAX_HEADS);
+            this.numHeads = numHeads;
+        }
+
+        protected void setNumSectors(int numSectors) {
+            checkGeometryParameter(numSectors, MAX_SECTORS);
+            this.numSectors = numSectors;
+        }
+
+        private static void checkGeometryParameter(int value, int maxValue) {
+            if (value <= 0 || value > maxValue) {
+                throw new IllegalArgumentException("Invalid geometry parameter value: " + value);
+            }
+        }
+
+        @Override
+        public int getNumCylinders() {
+            return numCylinders;
+        }
+
+        @Override
+        public int getNumHeads() {
+            return numHeads;
+        }
+
+        @Override
+        public int getNumSectors() {
+            return numSectors;
         }
 
         @Override
@@ -168,12 +236,15 @@ public class IdeController {
             }
         }
 
+        protected long getImageDataSectorPosition(long sectorIndex) {
+            return getImageHeaderSize() + sectorIndex * SECTOR_SIZE;
+        }
+
         @Override
         public int read(byte[] buffer, long sectorIndex, int numSectors) {
-            long position = getImageHeaderSize() + sectorIndex * SECTOR_SIZE;
-            int length = numSectors * SECTOR_SIZE;
+            long position = getImageDataSectorPosition(sectorIndex);
             try {
-                image.readBytes(buffer, position, length);
+                image.readBytes(buffer, position, numSectors * SECTOR_SIZE);
             } catch (IOException e) {
                 Timber.e(e, "Can't read image at position %d", position);
                 return -1;
@@ -183,10 +254,9 @@ public class IdeController {
 
         @Override
         public int write(byte[] buffer, long sectorIndex, int numSectors) {
-            long position = getImageHeaderSize() + sectorIndex * SECTOR_SIZE;
-            int length = numSectors * SECTOR_SIZE;
+            long position = getImageDataSectorPosition(sectorIndex);
             try {
-                image.writeBytes(buffer, position, length);
+                image.writeBytes(buffer, position, numSectors * SECTOR_SIZE);
             } catch (IOException e) {
                 Timber.e(e, "Can't write image at position %d", position);
                 return -1;
@@ -196,12 +266,25 @@ public class IdeController {
 
         @Override
         public long getTotalNumSectors() {
-            long imageDataSize = image.length() - getImageHeaderSize();
-            long totalNumSectors = imageDataSize / SECTOR_SIZE;
-            if (imageDataSize % SECTOR_SIZE > 0) {
-                totalNumSectors++;
-            }
             return totalNumSectors;
+        }
+
+        protected int readInt16(long position) {
+            DiskImage image = getImage();
+            try {
+                return (image.readByte(position) & 0xFF)
+                        | ((image.readByte(position + 1) & 0xFF) << 8);
+            } catch (IOException e) {
+                throw new IllegalStateException("Can't read image at position " + position, e);
+            }
+        }
+
+        protected int readInt16Inv(long position) {
+            return ~readInt16(position) & 0xFFFF;
+        }
+
+        protected int readInt16Inv(long position, int offset) {
+            return readInt16Inv(position + offset);
         }
 
         @Override
@@ -227,6 +310,88 @@ public class IdeController {
     }
 
     /**
+     * IDE drive image stored as raw (headerless) disk data.
+     */
+    public static class IdeDriveRawImage extends IdeDriveImage {
+        /** AltPro controller drive image: Partition table checksum seed */
+        public static final int ALTPRO_PT_CHECKSUM_SEED = 012701;
+        /** AltPro controller drive image: Max number of logical disks */
+        public static final int ALTPRO_MAX_NUM_LD = 125;
+        /** AltPro controller drive image: Partition table sector index */
+        public static final int ALTPRO_PT_SECTOR_INDEX = 7;
+        /** AltPro controller drive image: Partition table offset */
+        public static final int ALTPRO_PT_OFFSET = 2;
+        /** AltPro controller drive image: Number of logical disks */
+        public static final int ALTPRO_NUM_LD_OFFSET = 0770;
+        /** AltPro controller drive image: Number of sectors offset */
+        public static final int ALTPRO_NUM_SECTORS_OFFSET = 0772;
+        /** AltPro controller drive image: Number of heads offset */
+        public static final int ALTPRO_NUM_HEADS_OFFSET = 0774;
+        /** AltPro controller drive image: Number of cylinders offset */
+        public static final int ALTPRO_NUM_CYLINDERS_OFFSET = 0776;
+
+        public IdeDriveRawImage(DiskImage image) {
+            super(image);
+        }
+
+        @Override
+        protected void setupGeometry() {
+            if (!setupAltProGeometry()) {
+                setupDefaultGeometry();
+            }
+        }
+
+        private boolean setupAltProGeometry() {
+            long pos = getImageDataSectorPosition(ALTPRO_PT_SECTOR_INDEX);
+            try {
+                // Get number of logical disks (LD) in partition table
+                int numLogicalDisks = readInt16Inv(pos, ALTPRO_NUM_LD_OFFSET) & 0xFF;
+                if (numLogicalDisks > ALTPRO_MAX_NUM_LD) {
+                    // Invalid number of logical disks
+                    return false;
+                }
+
+                // AltPro partition table grows up like stack. Each LD is two words long.
+                // Checksum is one word long, computed as a simple sum of all partition table
+                // records and geometry data and written atop of partition table
+                int checksumPos = ALTPRO_NUM_LD_OFFSET - numLogicalDisks * 4 - 2;
+                int checksum = readInt16Inv(pos, checksumPos);
+                do {
+                    checksumPos += 2; // next word
+                    checksum -= readInt16Inv(pos, checksumPos);
+                } while (checksumPos < ALTPRO_NUM_CYLINDERS_OFFSET);
+
+                if ((checksum & 0xFFFF) != ALTPRO_PT_CHECKSUM_SEED) {
+                    // Partition table is invalid
+                    return false;
+                }
+
+                // Partition table is valid, get geometry from it
+                setNumSectors(readInt16Inv(pos, ALTPRO_NUM_SECTORS_OFFSET));
+                setNumHeads(readInt16Inv(pos, ALTPRO_NUM_HEADS_OFFSET) & 0xFF);
+                setNumCylinders(readInt16Inv(pos, ALTPRO_NUM_CYLINDERS_OFFSET));
+
+                return true;
+            } catch (Exception e) {
+                Timber.d("Can't set up AltPro geometry: %s", e.getMessage());
+            }
+            return false;
+        }
+
+        private void setupDefaultGeometry() {
+            setNumSectors(MAX_SECTORS);
+            setNumHeads(MAX_HEADS);
+            setNumCylinders(Math.min((int) (getTotalNumSectors() / (getNumSectors() * getNumHeads())),
+                    MAX_CYLINDERS));
+        }
+
+        @Override
+        protected long getImageHeaderSize() {
+            return 0;
+        }
+    }
+
+    /**
      * IDE drive image stored in .hdi image file.
      * File consists from 512 bytes long header in IDENTIFY command output format
      * and raw disk data.
@@ -237,30 +402,10 @@ public class IdeController {
         }
 
         @Override
-        public int getNumCylinders() {
-            return readInt16(IDENTIFY_NUM_CYLINDERS);
-        }
-
-        @Override
-        public int getNumHeads() {
-            return readInt16(IDENTIFY_NUM_HEADS);
-        }
-
-        @Override
-        public int getNumSectors() {
-            return readInt16(IDENTIFY_NUM_SECTORS);
-        }
-
-        private int readInt16(int offset) {
-            int result = 0;
-            DiskImage image = getImage();
-            try {
-                result = (image.readByte(offset) & 0xFF)
-                        | ((image.readByte(offset + 1) & 0xFF) << 8);
-            } catch (IOException e) {
-                Timber.e(e, "Can't read image at offset %d", offset);
-            }
-            return result;
+        protected void setupGeometry() {
+            setNumCylinders(readInt16(IDENTIFY_NUM_CYLINDERS));
+            setNumHeads(readInt16(IDENTIFY_NUM_HEADS));
+            setNumSectors(readInt16(IDENTIFY_NUM_SECTORS));
         }
 
         @Override

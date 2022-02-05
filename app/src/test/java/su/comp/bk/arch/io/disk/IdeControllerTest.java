@@ -79,9 +79,11 @@ public class IdeControllerTest extends ResourceFileTestBase {
     public final static int TEST_DRIVE_NUM_SECTORS = 16;
 
     private final static String TEST_HDI_IMAGE_FILE_NAME = "test.hdi";
-    public final static int TEST_HDI_IMAGE_NUM_CYLINDERS = 40;
-    public final static int TEST_HDI_IMAGE_NUM_HEADS = 16;
-    public final static int TEST_HDI_IMAGE_NUM_SECTORS = 63;
+    private final static String TEST_RAW_IMAGE_FILE_NAME = "test_hdd.img";
+
+    public final static int TEST_IMAGE_NUM_CYLINDERS = 40;
+    public final static int TEST_IMAGE_NUM_HEADS = 16;
+    public final static int TEST_IMAGE_NUM_SECTORS = 63;
 
     private IdeController ideController;
 
@@ -318,18 +320,18 @@ public class IdeControllerTest extends ResourceFileTestBase {
         FileDiskImage testImage = new FileDiskImage(testImageFile);
         IdeController.IdeDriveHdiImage testIdeDriveHdiImage =
                 new IdeController.IdeDriveHdiImage(testImage);
-        assertEquals(TEST_HDI_IMAGE_NUM_CYLINDERS, testIdeDriveHdiImage.getNumCylinders());
-        assertEquals(TEST_HDI_IMAGE_NUM_HEADS, testIdeDriveHdiImage.getNumHeads());
-        assertEquals(TEST_HDI_IMAGE_NUM_SECTORS, testIdeDriveHdiImage.getNumSectors());
+        assertEquals(TEST_IMAGE_NUM_CYLINDERS, testIdeDriveHdiImage.getNumCylinders());
+        assertEquals(TEST_IMAGE_NUM_HEADS, testIdeDriveHdiImage.getNumHeads());
+        assertEquals(TEST_IMAGE_NUM_SECTORS, testIdeDriveHdiImage.getNumSectors());
         ideController.attachDrive(IF_0, testIdeDriveHdiImage);
         // Send identify command
         ideController.writeTaskRegister(REG_DRIVE_HEAD, 0);
         ideController.writeTaskRegister(REG_COMMAND, CMD_IDENTIFY);
         byte[] identifyData = readData();
         assertEquals(0x40, getInt16(identifyData, IDENTIFY_DEVICE_TYPE));
-        assertEquals(TEST_HDI_IMAGE_NUM_CYLINDERS, getInt16(identifyData, IDENTIFY_NUM_CYLINDERS));
-        assertEquals(TEST_HDI_IMAGE_NUM_HEADS, getInt16(identifyData, IDENTIFY_NUM_HEADS));
-        assertEquals(TEST_HDI_IMAGE_NUM_SECTORS, getInt16(identifyData, IDENTIFY_NUM_SECTORS));
+        assertEquals(TEST_IMAGE_NUM_CYLINDERS, getInt16(identifyData, IDENTIFY_NUM_CYLINDERS));
+        assertEquals(TEST_IMAGE_NUM_HEADS, getInt16(identifyData, IDENTIFY_NUM_HEADS));
+        assertEquals(TEST_IMAGE_NUM_SECTORS, getInt16(identifyData, IDENTIFY_NUM_SECTORS));
         // Read first sector
         ideController.writeTaskRegister(REG_CYLINDER_LOW, 0);
         ideController.writeTaskRegister(REG_CYLINDER_HIGH, 0);
@@ -338,5 +340,34 @@ public class IdeControllerTest extends ResourceFileTestBase {
         ideController.writeTaskRegister(REG_SECTOR_COUNT, 1);
         ideController.writeTaskRegister(REG_COMMAND, CMD_READ);
         compareData(testImageData, readData(), SECTOR_SIZE);
+    }
+
+    @Test
+    public void testIdeDriveRawImage() throws Exception {
+        File testImageFile = getTestResourceFile(TEST_RAW_IMAGE_FILE_NAME);
+        byte[] testImageData = FileUtils.readFileToByteArray(testImageFile);
+        FileDiskImage testImage = new FileDiskImage(testImageFile);
+        IdeController.IdeDriveRawImage testIdeDriveRawImage =
+                new IdeController.IdeDriveRawImage(testImage);
+        assertEquals(TEST_IMAGE_NUM_CYLINDERS, testIdeDriveRawImage.getNumCylinders());
+        assertEquals(TEST_IMAGE_NUM_HEADS, testIdeDriveRawImage.getNumHeads());
+        assertEquals(TEST_IMAGE_NUM_SECTORS, testIdeDriveRawImage.getNumSectors());
+        ideController.attachDrive(IF_0, testIdeDriveRawImage);
+        // Send identify command
+        ideController.writeTaskRegister(REG_DRIVE_HEAD, 0);
+        ideController.writeTaskRegister(REG_COMMAND, CMD_IDENTIFY);
+        byte[] identifyData = readData();
+        assertEquals(0x40, getInt16(identifyData, IDENTIFY_DEVICE_TYPE));
+        assertEquals(TEST_IMAGE_NUM_CYLINDERS, getInt16(identifyData, IDENTIFY_NUM_CYLINDERS));
+        assertEquals(TEST_IMAGE_NUM_HEADS, getInt16(identifyData, IDENTIFY_NUM_HEADS));
+        assertEquals(TEST_IMAGE_NUM_SECTORS, getInt16(identifyData, IDENTIFY_NUM_SECTORS));
+        // Read first sector
+        ideController.writeTaskRegister(REG_CYLINDER_LOW, 0);
+        ideController.writeTaskRegister(REG_CYLINDER_HIGH, 0);
+        ideController.writeTaskRegister(REG_DRIVE_HEAD, 0);
+        ideController.writeTaskRegister(REG_SECTOR_NUMBER, 1);
+        ideController.writeTaskRegister(REG_SECTOR_COUNT, 1);
+        ideController.writeTaskRegister(REG_COMMAND, CMD_READ);
+        compareData(testImageData, readData(), 0);
     }
 }

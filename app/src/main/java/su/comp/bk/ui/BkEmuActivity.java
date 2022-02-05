@@ -130,9 +130,11 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
     /** Array of file extensions for binary images */
     public final static String[] FILE_EXT_BINARY_IMAGES = new String[] { ".BIN" };
     /** Array of file extensions for floppy disk images */
-    public final static String[] FILE_EXT_FLOPPY_DISK_IMAGES = new String[] { ".BKD", ".IMG" };
+    public final static String[] FILE_EXT_FLOPPY_DISK_IMAGES = new String[] { ".BKD" };
     /** Array of file extensions for hard disk images */
     public final static String[] FILE_EXT_HARD_DISK_IMAGES = new String[] { ".HDI" };
+    /** Array of file extensions for raw disk images */
+    public final static String[] FILE_EXT_RAW_DISK_IMAGES = new String[] { ".IMG" };
 
     public final static int STACK_TOP_ADDRESS = 01000;
 
@@ -537,8 +539,8 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
         // Check for program/disk image file to run
         String intentDataString = getIntent().getDataString();
         if (intentDataString != null) {
-            String intentDataFileName = FileUtils.resolveUriFileName(this,
-                    Uri.parse(intentDataString));
+            Uri intentDataUri = Uri.parse(intentDataString);
+            String intentDataFileName = FileUtils.resolveUriFileName(this, intentDataUri);
             if (FileUtils.isFileNameExtensionMatched(intentDataFileName, FILE_EXT_BINARY_IMAGES)) {
                 this.intentDataProgramImageUri = intentDataString;
             } else if (FileUtils.isFileNameExtensionMatched(intentDataFileName,
@@ -547,6 +549,15 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
             } else if (FileUtils.isFileNameExtensionMatched(intentDataFileName,
                     FILE_EXT_HARD_DISK_IMAGES)) {
                 this.intentDataHardDiskImageUri = intentDataString;
+            } else if (FileUtils.isFileNameExtensionMatched(intentDataFileName,
+                    FILE_EXT_RAW_DISK_IMAGES)) {
+                // Try to determine intent data type from its file length
+                long intentDataLength = FileUtils.getUriFileLength(this, intentDataUri);
+                if (intentDataLength > FloppyController.MAX_BYTES_PER_DISK) {
+                    this.intentDataHardDiskImageUri = intentDataString;
+                } else if (intentDataLength > 0) {
+                    this.intentDataFloppyDiskImageUri = intentDataString;
+                }
             }
         }
     }
@@ -1162,8 +1173,10 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
                                      DiskImage image) {
         try {
             if (image != null && ideController != null) {
-                // FIXME check image type (raw / hdi)
-                IdeController.IdeDrive ideDrive = new IdeController.IdeDriveHdiImage(image);
+                IdeController.IdeDrive ideDrive = FileUtils.isFileNameExtensionMatched(
+                        image.getName(), FILE_EXT_HARD_DISK_IMAGES)
+                        ? new IdeController.IdeDriveHdiImage(image)
+                        : new IdeController.IdeDriveRawImage(image);
                 // Check the same image is attached to the another channel
                 int otherIdeInterfaceId = (ideInterfaceId == IF_0) ? IF_1 : IF_0;
                 IdeController.IdeDrive otherIdeDrive = ideController.getAttachedDrive(otherIdeInterfaceId);

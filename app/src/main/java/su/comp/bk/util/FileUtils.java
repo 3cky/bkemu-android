@@ -20,22 +20,17 @@ package su.comp.bk.util;
 
 import android.content.ContentResolver;
 import android.content.Context;
+import android.content.res.AssetFileDescriptor;
 import android.database.Cursor;
 import android.net.Uri;
-import android.os.Environment;
 import android.provider.OpenableColumns;
 
 import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
-import java.net.URI;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Objects;
 
 public class FileUtils {
@@ -138,7 +133,7 @@ public class FileUtils {
     public static String resolveUriFileName(Context context, Uri uri) {
         String result = null;
         String uriScheme = uri.getScheme();
-        if (uriScheme != null && uriScheme.equals("content")) {
+        if (ContentResolver.SCHEME_CONTENT.equals(uriScheme)) {
             try (Cursor cursor = context.getContentResolver().query(uri,
                     null, null, null, null)) {
                 if (cursor != null && cursor.moveToFirst()) {
@@ -147,6 +142,34 @@ public class FileUtils {
             }
         }
         return (result != null) ? result : uri.getLastPathSegment();
+    }
+
+    /**
+     * Get file length for given URI.
+     * @param context context reference
+     * @param uri file URI
+     * @return file length or -1 if file length can't be get
+     */
+    public static long getUriFileLength(Context context, Uri uri) {
+        long length = -1L;
+        try (AssetFileDescriptor descriptor = context.getContentResolver()
+                .openAssetFileDescriptor(uri, "r")) {
+            if (descriptor != null) {
+                length = descriptor.getLength();
+            }
+        } catch (Exception ignored) {
+        }
+        if (length < 0) {
+            if (ContentResolver.SCHEME_CONTENT.equals(uri.getScheme())) {
+                try (Cursor cursor = context.getContentResolver().query(uri,
+                        null, null, null, null)) {
+                    if (cursor != null && cursor.moveToFirst()) {
+                        length = cursor.getLong(cursor.getColumnIndex(OpenableColumns.SIZE));
+                    }
+                }
+            }
+        }
+        return length;
     }
 
     /**
