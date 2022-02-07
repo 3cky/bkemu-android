@@ -86,17 +86,11 @@ public class IdeController {
     private int nextDriveSerialNumber;
 
     public interface IdeDrive {
-        /**
-         * IDE drive max number of heads.
-         */
+        /** IDE drive max number of heads. */
         int MAX_HEADS = 16;
-        /**
-         * IDE drive max number of sectors per cylinder.
-         */
-        int MAX_SECTORS = 63;
-        /**
-         * IDE drive max number of cylinders.
-         */
+        /** IDE drive max number of sectors per cylinder. */
+        int MAX_SECTORS = 255;
+        /** IDE drive max number of cylinders. */
         int MAX_CYLINDERS = 16383;
 
         /**
@@ -156,6 +150,21 @@ public class IdeController {
     }
 
     abstract static class IdeDriveImage implements IdeDrive {
+        /** AltPro controller drive image: Partition table checksum seed */
+        public static final int ALTPRO_PT_CHECKSUM_SEED = 012701;
+        /** AltPro controller drive image: Max number of logical disks */
+        public static final int ALTPRO_MAX_NUM_LD = 125;
+        /** AltPro controller drive image: Partition table sector index */
+        public static final int ALTPRO_PT_SECTOR_INDEX = 7;
+        /** AltPro controller drive image: Number of logical disks */
+        public static final int ALTPRO_NUM_LD_OFFSET = 0770;
+        /** AltPro controller drive image: Number of sectors offset */
+        public static final int ALTPRO_NUM_SECTORS_OFFSET = 0772;
+        /** AltPro controller drive image: Number of heads offset */
+        public static final int ALTPRO_NUM_HEADS_OFFSET = 0774;
+        /** AltPro controller drive image: Number of cylinders offset */
+        public static final int ALTPRO_NUM_CYLINDERS_OFFSET = 0776;
+
         private final DiskImage image;
 
         private int numCylinders;
@@ -184,26 +193,70 @@ public class IdeController {
                     getNumCylinders(), getNumHeads(), getNumSectors(), getTotalNumSectors());
         }
 
-        protected abstract void setupGeometry();
+        protected void setupGeometry() {
+            if (!setupAltProGeometry()) {
+                setupDefaultGeometry();
+            }
+        }
+
+        private boolean setupAltProGeometry() {
+            long pos = getImageDataSectorPosition(ALTPRO_PT_SECTOR_INDEX);
+            try {
+                // Get number of logical disks (LD) in partition table
+                int numLogicalDisks = readInt16Inv(pos, ALTPRO_NUM_LD_OFFSET) & 0xFF;
+                if (numLogicalDisks > ALTPRO_MAX_NUM_LD) {
+                    // Invalid number of logical disks
+                    return false;
+                }
+
+                // AltPro partition table grows up like stack. Each LD is two words long.
+                // Checksum is one word long, computed as a simple sum of all partition table
+                // records and geometry data and written atop of partition table
+                int checksumPos = ALTPRO_NUM_LD_OFFSET - numLogicalDisks * 4 - 2;
+                int checksum = readInt16Inv(pos, checksumPos);
+                do {
+                    checksumPos += 2; // next word
+                    checksum -= readInt16Inv(pos, checksumPos);
+                } while (checksumPos < ALTPRO_NUM_CYLINDERS_OFFSET);
+
+                if ((checksum & 0xFFFF) != ALTPRO_PT_CHECKSUM_SEED) {
+                    // Partition table is invalid
+                    return false;
+                }
+
+                // Partition table is valid, get geometry from it
+                setNumSectors(readInt16Inv(pos, ALTPRO_NUM_SECTORS_OFFSET));
+                setNumHeads(readInt16Inv(pos, ALTPRO_NUM_HEADS_OFFSET) & 0xFF);
+                setNumCylinders(readInt16Inv(pos, ALTPRO_NUM_CYLINDERS_OFFSET));
+
+                return true;
+            } catch (Exception e) {
+                Timber.d("Can't set up AltPro geometry: %s", e.getMessage());
+            }
+            return false;
+        }
+
+        protected abstract void setupDefaultGeometry();
 
         protected void setNumCylinders(int numCylinders) {
-            checkGeometryParameter(numCylinders, MAX_CYLINDERS);
+            checkGeometryParameter(numCylinders, MAX_CYLINDERS, "cylinders");
             this.numCylinders = numCylinders;
         }
 
         protected void setNumHeads(int numHeads) {
-            checkGeometryParameter(numHeads, MAX_HEADS);
+            checkGeometryParameter(numHeads, MAX_HEADS, "heads");
             this.numHeads = numHeads;
         }
 
         protected void setNumSectors(int numSectors) {
-            checkGeometryParameter(numSectors, MAX_SECTORS);
+            checkGeometryParameter(numSectors, MAX_SECTORS, "sectors");
             this.numSectors = numSectors;
         }
 
-        private static void checkGeometryParameter(int value, int maxValue) {
+        private static void checkGeometryParameter(int value, int maxValue, String name) {
             if (value <= 0 || value > maxValue) {
-                throw new IllegalArgumentException("Invalid geometry parameter value: " + value);
+                throw new IllegalArgumentException("Invalid geometry parameter value: " +
+                        name + ": " + value);
             }
         }
 
@@ -313,74 +366,19 @@ public class IdeController {
      * IDE drive image stored as raw (headerless) disk data.
      */
     public static class IdeDriveRawImage extends IdeDriveImage {
-        /** AltPro controller drive image: Partition table checksum seed */
-        public static final int ALTPRO_PT_CHECKSUM_SEED = 012701;
-        /** AltPro controller drive image: Max number of logical disks */
-        public static final int ALTPRO_MAX_NUM_LD = 125;
-        /** AltPro controller drive image: Partition table sector index */
-        public static final int ALTPRO_PT_SECTOR_INDEX = 7;
-        /** AltPro controller drive image: Partition table offset */
-        public static final int ALTPRO_PT_OFFSET = 2;
-        /** AltPro controller drive image: Number of logical disks */
-        public static final int ALTPRO_NUM_LD_OFFSET = 0770;
-        /** AltPro controller drive image: Number of sectors offset */
-        public static final int ALTPRO_NUM_SECTORS_OFFSET = 0772;
-        /** AltPro controller drive image: Number of heads offset */
-        public static final int ALTPRO_NUM_HEADS_OFFSET = 0774;
-        /** AltPro controller drive image: Number of cylinders offset */
-        public static final int ALTPRO_NUM_CYLINDERS_OFFSET = 0776;
+        /** IDE drive default number of heads. */
+        public static final int DEFAULT_HEADS = MAX_HEADS;
+        /** IDE drive default number of sectors per cylinder. */
+        public static final int DEFAULT_SECTORS = 63;
 
         public IdeDriveRawImage(DiskImage image) {
             super(image);
         }
 
         @Override
-        protected void setupGeometry() {
-            if (!setupAltProGeometry()) {
-                setupDefaultGeometry();
-            }
-        }
-
-        private boolean setupAltProGeometry() {
-            long pos = getImageDataSectorPosition(ALTPRO_PT_SECTOR_INDEX);
-            try {
-                // Get number of logical disks (LD) in partition table
-                int numLogicalDisks = readInt16Inv(pos, ALTPRO_NUM_LD_OFFSET) & 0xFF;
-                if (numLogicalDisks > ALTPRO_MAX_NUM_LD) {
-                    // Invalid number of logical disks
-                    return false;
-                }
-
-                // AltPro partition table grows up like stack. Each LD is two words long.
-                // Checksum is one word long, computed as a simple sum of all partition table
-                // records and geometry data and written atop of partition table
-                int checksumPos = ALTPRO_NUM_LD_OFFSET - numLogicalDisks * 4 - 2;
-                int checksum = readInt16Inv(pos, checksumPos);
-                do {
-                    checksumPos += 2; // next word
-                    checksum -= readInt16Inv(pos, checksumPos);
-                } while (checksumPos < ALTPRO_NUM_CYLINDERS_OFFSET);
-
-                if ((checksum & 0xFFFF) != ALTPRO_PT_CHECKSUM_SEED) {
-                    // Partition table is invalid
-                    return false;
-                }
-
-                // Partition table is valid, get geometry from it
-                setNumSectors(readInt16Inv(pos, ALTPRO_NUM_SECTORS_OFFSET));
-                setNumHeads(readInt16Inv(pos, ALTPRO_NUM_HEADS_OFFSET) & 0xFF);
-                setNumCylinders(readInt16Inv(pos, ALTPRO_NUM_CYLINDERS_OFFSET));
-
-                return true;
-            } catch (Exception e) {
-                Timber.d("Can't set up AltPro geometry: %s", e.getMessage());
-            }
-            return false;
-        }
-
-        private void setupDefaultGeometry() {
-            setNumSectors(MAX_SECTORS);
-            setNumHeads(MAX_HEADS);
+        protected void setupDefaultGeometry() {
+            setNumSectors(DEFAULT_SECTORS);
+            setNumHeads(DEFAULT_HEADS);
             setNumCylinders(Math.min((int) (getTotalNumSectors() / (getNumSectors() * getNumHeads())),
                     MAX_CYLINDERS));
         }
@@ -402,7 +400,7 @@ public class IdeController {
         }
 
         @Override
-        protected void setupGeometry() {
+        protected void setupDefaultGeometry() {
             setNumCylinders(readInt16(IDENTIFY_NUM_CYLINDERS));
             setNumHeads(readInt16(IDENTIFY_NUM_HEADS));
             setNumSectors(readInt16(IDENTIFY_NUM_SECTORS));
