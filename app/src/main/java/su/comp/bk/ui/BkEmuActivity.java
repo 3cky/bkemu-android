@@ -683,6 +683,7 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
                         audioOutput.getDefaultVolume()));
             }
             bkEmuView.setComputer(computer);
+            getSupportActionBar().setSubtitle(getComputerModelName(computer.getConfiguration()));
         } else {
             throw new IllegalStateException("Can't initialize computer state");
         }
@@ -966,9 +967,7 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
         final CharSequence[] models;
         List<String> modelList = new ArrayList<>();
         for (Configuration model: Configuration.values()) {
-            int modelNameId = getResources().getIdentifier(model.name().toLowerCase(),
-                    "string", getPackageName());
-            modelList.add((modelNameId != 0) ? getString(modelNameId) : model.name());
+            modelList.add(getComputerModelName(model));
         }
         models = modelList.toArray(new String[0]);
         return new AlertDialog.Builder(this)
@@ -996,6 +995,12 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
                 // Do nothing on cancel
             })
            .create();
+    }
+
+    private String getComputerModelName(Configuration model) {
+        int modelNameId = getResources().getIdentifier(model.name().toLowerCase(),
+                "string", getPackageName());
+        return (modelNameId != 0) ? getString(modelNameId) : model.name();
     }
 
     @Override
