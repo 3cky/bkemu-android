@@ -19,8 +19,9 @@
     <string name="cancel">Cancel</string>
     <string name="bk_0010_monitor">BK 0010&#8211;01 (Monitor only)</string>
     <string name="bk_0010_basic">BK 0010&#8211;01 (Basic)</string>
-    <string name="bk_0010_mstd">BK 0010&#8211;01 (MSTD)</string>
+    <string name="bk_0010_mstd">BK 0010&#8211;01 (Focal/MSTD)</string>
     <string name="bk_0010_kngmd">BK 0010&#8211;01 (KNGMD)</string>
+    <string name="bk_0010_smk512">BK 0010&#8211;01 (SMK512)</string>
     <string name="bk_0011m_mstd">BK 0011M (MSTD)</string>
     <string name="bk_0011m_kngmd">BK 0011M (KNGMD)</string>
     <string name="bk_0011m_smk512">BK 0011M (SMK512)</string>

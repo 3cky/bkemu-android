@@ -169,6 +169,8 @@ public class Computer implements Runnable {
         BK_0010_MSTD,
         /** BK0010 with connected floppy drive controller (КНГМД) */
         BK_0010_KNGMD(true),
+        /** BK0010 with connected SMK512 controller */
+        BK_0010_SMK512(true),
         /** BK0011M - MSTD block attached */
         BK_0011M_MSTD(false, true),
         /** BK0011M with connected floppy drive controller (КНГМД) */
@@ -267,7 +269,11 @@ public class Computer implements Runnable {
             videoController = new VideoController(videoMemory);
             addDevice(videoController);
             // Set ROM configuration
-            addReadOnlyMemory(resources, 0100000, R.raw.monit10, "Monitor10");
+            ReadOnlyMemory monitorRom = new ReadOnlyMemory("Monitor10",
+                    loadReadOnlyMemoryData(resources, R.raw.monit10));
+            SelectableMemory selectableMonitorRom = new SelectableMemory(monitorRom.getId(),
+                    monitorRom, true);
+            addMemory( 0100000, selectableMonitorRom);
             switch (config) {
                 case BK_0010_BASIC:
                     addReadOnlyMemory(resources, 0120000, R.raw.basic10_1, "Basic10:1");
@@ -283,6 +289,16 @@ public class Computer implements Runnable {
                     addReadOnlyMemory(resources, 0160000, R.raw.disk_327, "FloppyBios");
                     floppyController = new FloppyController(this);
                     addDevice(floppyController);
+                    break;
+                case BK_0010_SMK512:
+                    SmkMemoryManager smkMemoryManager = getSmkMemoryManager(resources);
+                    smkMemoryManager.setSelectableBk10MonitorRom(selectableMonitorRom);
+                    addDevice(smkMemoryManager);
+                    floppyController = new FloppyController(this);
+                    addDevice(floppyController);
+                    SmkIdeController smkIdeController = new SmkIdeController(this);
+                    ideController = smkIdeController;
+                    addDevice(smkIdeController);
                     break;
                 default:
                     break;
@@ -328,27 +344,7 @@ public class Computer implements Runnable {
                     addDevice(floppyController);
                     break;
                 case BK_0011M_SMK512:
-                    ReadOnlyMemory smkBiosRom = new ReadOnlyMemory("SmkBiosRom",
-                            loadReadOnlyMemoryData(resources, R.raw.disk_smk512_v205));
-                    SelectableMemory selectableSmkBiosRom0 = new SelectableMemory(
-                            smkBiosRom.getId() + ":0", smkBiosRom, false);
-                    SelectableMemory selectableSmkBiosRom1 = new SelectableMemory(
-                            smkBiosRom.getId() + ":1", smkBiosRom, false);
-                    addMemory(SmkMemoryManager.BIOS_ROM_0_START_ADDRESS, selectableSmkBiosRom0);
-                    addMemory(SmkMemoryManager.BIOS_ROM_1_START_ADDRESS, selectableSmkBiosRom1);
-                    RandomAccessMemory smkRam = createRandomAccessMemory("SmkRam",
-                            SmkMemoryManager.MEMORY_TOTAL_SIZE, Type.K565RU5);
-                    List<SegmentedMemory> smkRamSegments = new ArrayList<>(
-                            SmkMemoryManager.NUM_MEMORY_SEGMENTS);
-                    for (int i = 0; i < SmkMemoryManager.NUM_MEMORY_SEGMENTS; i++) {
-                        SegmentedMemory smkRamSegment = new SegmentedMemory("SmkRamSegment" + i,
-                                smkRam, SmkMemoryManager.MEMORY_SEGMENT_SIZE);
-                        smkRamSegments.add(smkRamSegment);
-                        addMemory(SmkMemoryManager.MEMORY_START_ADDRESS +
-                                i * SmkMemoryManager.MEMORY_SEGMENT_SIZE * 2, smkRamSegment);
-                    }
-                    SmkMemoryManager smkMemoryManager = new SmkMemoryManager(smkRamSegments,
-                            selectableSmkBiosRom0, selectableSmkBiosRom1);
+                    SmkMemoryManager smkMemoryManager = getSmkMemoryManager(resources);
                     smkMemoryManager.setSelectableBk11BosRom(selectableBosRom);
                     smkMemoryManager.setSelectableBk11SecondBankedMemory(selectableSecondBankedMemory);
                     addDevice(smkMemoryManager);
@@ -381,6 +377,29 @@ public class Computer implements Runnable {
         addAudioOutput(new Speaker(this, config.isMemoryManagerPresent()));
         addAudioOutput(new Covox(this));
         addAudioOutput(new Ay8910(this));
+    }
+
+    private SmkMemoryManager getSmkMemoryManager(Resources resources) throws IOException {
+        ReadOnlyMemory smkBiosRom = new ReadOnlyMemory("SmkBiosRom",
+                loadReadOnlyMemoryData(resources, R.raw.disk_smk512_v205));
+        SelectableMemory selectableSmkBiosRom0 = new SelectableMemory(
+                smkBiosRom.getId() + ":0", smkBiosRom, false);
+        SelectableMemory selectableSmkBiosRom1 = new SelectableMemory(
+                smkBiosRom.getId() + ":1", smkBiosRom, false);
+        addMemory(SmkMemoryManager.BIOS_ROM_0_START_ADDRESS, selectableSmkBiosRom0);
+        addMemory(SmkMemoryManager.BIOS_ROM_1_START_ADDRESS, selectableSmkBiosRom1);
+        RandomAccessMemory smkRam = createRandomAccessMemory("SmkRam",
+                SmkMemoryManager.MEMORY_TOTAL_SIZE, Type.K565RU5);
+        List<SegmentedMemory> smkRamSegments = new ArrayList<>(
+                SmkMemoryManager.NUM_MEMORY_SEGMENTS);
+        for (int i = 0; i < SmkMemoryManager.NUM_MEMORY_SEGMENTS; i++) {
+            SegmentedMemory smkRamSegment = new SegmentedMemory("SmkRamSegment" + i,
+                    smkRam, SmkMemoryManager.MEMORY_SEGMENT_SIZE);
+            smkRamSegments.add(smkRamSegment);
+            addMemory(SmkMemoryManager.MEMORY_START_ADDRESS +
+                    i * SmkMemoryManager.MEMORY_SEGMENT_SIZE * 2, smkRamSegment);
+        }
+        return new SmkMemoryManager(smkRamSegments, selectableSmkBiosRom0, selectableSmkBiosRom1);
     }
 
     /**

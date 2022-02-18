@@ -73,6 +73,7 @@ public class SmkMemoryManager implements Device {
 
     private boolean memoryLayoutUpdateStrobe;
 
+    private SelectableMemory bk10MonitorRom;
     private SelectableMemory bk11BosRom;
     private SelectableMemory bk11SecondBankedMemory;
 
@@ -137,6 +138,16 @@ public class SmkMemoryManager implements Device {
         return true;
     }
 
+    public void setSelectableBk10MonitorRom(SelectableMemory bk10MonitorRom) {
+        this.bk10MonitorRom = bk10MonitorRom;
+    }
+
+    private void selectBk10MonitorRom(boolean isSelected) {
+        if (bk10MonitorRom != null) {
+            bk10MonitorRom.setSelected(isSelected);
+        }
+    }
+
     public void setSelectableBk11BosRom(SelectableMemory bk11BosRom) {
         this.bk11BosRom = bk11BosRom;
     }
@@ -168,6 +179,7 @@ public class SmkMemoryManager implements Device {
         }
         romSegment6.setSelected(false);
         romSegment7.setSelected(false);
+        selectBk10MonitorRom(true);
         selectBk11BosRom(true);
         selectBk11SecondBankedMemory(true);
     }
@@ -229,6 +241,7 @@ public class SmkMemoryManager implements Device {
                 setupMemorySegment(5, pageStartIndex + 5);
                 setupMemorySegment(6, pageStartIndex + 6);
                 setupMemorySegment7(pageStartIndex + 7, false, false);
+                selectBk10MonitorRom(false);
                 selectBk11SecondBankedMemory(false);
                 break;
             case MODE_ALL:
@@ -240,6 +253,7 @@ public class SmkMemoryManager implements Device {
                 setupMemorySegment(5, pageStartIndex + 1);
                 setupMemorySegment(6, pageStartIndex + 2);
                 setupMemorySegment7(pageStartIndex + 3, true, false);
+                selectBk10MonitorRom(false);
                 selectBk11BosRom(false);
                 selectBk11SecondBankedMemory(false);
                 break;
@@ -264,12 +278,14 @@ public class SmkMemoryManager implements Device {
                 setupMemorySegment(5, pageStartIndex + 5);
                 setupMemorySegment(6, pageStartIndex + 6);
                 setupMemorySegment7(pageStartIndex + 7, false, true);
+                selectBk10MonitorRom(false);
                 break;
             case MODE_HLT11:
                 setupMemorySegment(4, pageStartIndex + 4);
                 setupMemorySegment(5, pageStartIndex + 5);
                 setupMemorySegment(6, pageStartIndex + 6);
                 setupMemorySegment7(pageStartIndex + 7, false, true);
+                selectBk10MonitorRom(false);
                 selectBk11BosRom(false);
                 break;
         }

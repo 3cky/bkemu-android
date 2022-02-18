@@ -18,8 +18,9 @@
     <string name="cancel">Отмена</string>
     <string name="bk_0010_monitor">БК 0010&#8211;01 (Монитор)</string>
     <string name="bk_0010_basic">БК 0010&#8211;01 (Бейсик)</string>
-    <string name="bk_0010_mstd">БК 0010&#8211;01 (МСТД)</string>
+    <string name="bk_0010_mstd">БК 0010&#8211;01 (Фокал/МСТД)</string>
     <string name="bk_0010_kngmd">БК 0010&#8211;01 (КНГМД)</string>
+    <string name="bk_0010_smk512">БК 0010&#8211;01 (СМК512)</string>
     <string name="bk_0011m_mstd">БК 0011M (МСТД)</string>
     <string name="bk_0011m_kngmd">БК 0011M (КНГМД)</string>
     <string name="bk_0011m_smk512">БК 0011M (СМК512)</string>
