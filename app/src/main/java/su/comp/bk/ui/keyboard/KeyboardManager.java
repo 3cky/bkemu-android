@@ -467,7 +467,7 @@ public class KeyboardManager implements OnTouchListener {
                 // Apply AR2 modifier state
                 bkKeyCode = isAr2Pressed() ? (bkKeyCode | 0200) : bkKeyCode;
                 // Handle button press or release in keyboard controller
-                keyboardController.handleButton(bkKeyCode, isPressed);
+                keyboardController.handleButton(bkButton, bkKeyCode, isPressed);
                 // Set non-modifier button pressed flag
                 setWasNonModifierButtonPressed(true);
                 // Release sticky buttons on non-modifier on-screen keyboard button release

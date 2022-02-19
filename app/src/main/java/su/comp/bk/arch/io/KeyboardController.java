@@ -23,6 +23,7 @@ import android.os.Bundle;
 import su.comp.bk.arch.Computer;
 import su.comp.bk.arch.cpu.Cpu;
 import su.comp.bk.arch.io.memory.Bk11MemoryManager;
+import su.comp.bk.ui.keyboard.KeyboardManager.BkButton;
 
 /**
  * BK-0010 keyboard controller (К1801ВП1-014).
@@ -76,8 +77,8 @@ public class KeyboardController implements Device {
     private boolean isButtonPressed;
     // Last button press timestamp (in CPU clock ticks)
     private long lastButtonPressTimestamp = -1L;
-    // Last pressed button keycode
-    private int lastPressedButtonKeyCode;
+    // Last pressed button
+    private BkButton lastPressedButton;
 
     private final Computer computer;
 
@@ -136,18 +137,18 @@ public class KeyboardController implements Device {
         setButtonPressed(computer.getCpu().getTime(), isPressed);
     }
 
-    public void handleButton(int keyCode, boolean isPressed) {
+    public void handleButton(BkButton bkButton, int bkKeyCode, boolean isPressed) {
         if (isPressed) {
             // Ignore repeated button press events if already in pressed state
             if (!isButtonPressed()) {
                 // Write new key code to data register only if previous key code was read
                 if (!isStatusRegisterDataReady()) {
-                    writeDataRegister(keyCode);
+                    writeDataRegister(bkKeyCode);
                 }
-                lastPressedButtonKeyCode = keyCode;
+                lastPressedButton = bkButton;
                 setButtonPressed(true);
             }
-        } else if (keyCode == lastPressedButtonKeyCode) {
+        } else if (bkButton == lastPressedButton) {
             setButtonPressed(false);
         }
     }
