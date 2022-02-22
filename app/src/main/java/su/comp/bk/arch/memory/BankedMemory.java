@@ -116,6 +116,13 @@ public class BankedMemory extends AbstractMemory {
     }
 
     @Override
+    public void getData(short[] buf, int srcOffset, int dstOffset, int length) {
+        if (activeBank != null) {
+            activeBank.getData(buf, srcOffset, dstOffset, length);
+        }
+    }
+
+    @Override
     public int read(int offset) {
         return (activeBank != null) ? activeBank.read(offset) : Computer.BUS_ERROR;
     }

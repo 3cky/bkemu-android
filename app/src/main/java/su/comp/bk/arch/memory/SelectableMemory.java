@@ -49,6 +49,11 @@ public class SelectableMemory extends AbstractMemory {
     }
 
     @Override
+    public void getData(short[] buf, int srcOffset, int dstOffset, int length) {
+        memory.getData(buf, srcOffset, dstOffset, length);
+    }
+
+    @Override
     public int read(int offset) {
         return isSelected ? memory.read(offset) : Computer.BUS_ERROR;
     }

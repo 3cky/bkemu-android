@@ -82,6 +82,11 @@ public class SegmentedMemory extends AbstractMemory {
     }
 
     @Override
+    public void getData(short[] buf, int srcOffset, int dstOffset, int length) {
+        memory.getData(buf, srcOffset, dstOffset, length);
+    }
+
+    @Override
     public int read(int offset) {
         return !isReadableOffset(offset) || (activeSegmentIndex < 0)
                 ? Computer.BUS_ERROR

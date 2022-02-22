@@ -99,6 +99,11 @@ public class RandomAccessMemory extends AbstractMemory {
         return data;
     }
 
+    @Override
+    public void getData(short[] buf, int srcOffset, int dstOffset, int length) {
+        System.arraycopy(data, srcOffset, buf, dstOffset, length);
+    }
+
     public void putData(short[] wordData) {
         System.arraycopy(wordData, 0, data, 0, wordData.length);
     }

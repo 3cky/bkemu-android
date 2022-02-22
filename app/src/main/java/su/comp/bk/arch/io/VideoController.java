@@ -123,6 +123,9 @@ public class VideoController implements Device, Computer.UptimeListener {
         }
     }
 
+    // Screen lines pixel data
+    private short[] linesPixelData = new short[SCREEN_DATA_LENGTH];
+
     // Current color palette index
     private int colorPaletteIndex = 0;
     // Screen line color palette indexes
@@ -131,25 +134,23 @@ public class VideoController implements Device, Computer.UptimeListener {
     // VideoRAM data byte to corresponding pixels lookup table (16 palettes * 8 pixels * 256 byte values)
     private final int[] videoDataToPixelsTable = new int[16 * 8 * 256];
 
+    // State save/restore: state variable prefix
+    private static final String STATE_PREFIX = "VideoController#";
+
     // State save/restore: display mode value
-    private static final String STATE_DISPLAY_MODE =
-            VideoController.class.getName() + "#display_mode";
+    private static final String STATE_DISPLAY_MODE = STATE_PREFIX + "display_mode";
 
     // State save/restore: scroll register value
-    private static final String STATE_SCROLL_REGISTER =
-            VideoController.class.getName() + "#scroll_reg";
+    private static final String STATE_SCROLL_REGISTER = STATE_PREFIX + "scroll_reg";
 
     // State save/restore: palette index value
-    private static final String STATE_PALETTE_INDEX =
-            VideoController.class.getName() + "#palette_index";
+    private static final String STATE_PALETTE_INDEX = STATE_PREFIX + "palette_index";
 
     // State save/restore: current displayed frame number
-    private static final String STATE_CURRENT_FRAME =
-            VideoController.class.getName() + "#frame_num";
+    private static final String STATE_CURRENT_FRAME = STATE_PREFIX + "frame_num";
 
     // State save/restore: current displayed line number
-    private static final String STATE_CURRENT_LINE =
-            VideoController.class.getName() + "#line_num";
+    private static final String STATE_CURRENT_LINE = STATE_PREFIX + "line_num";
 
     // Available display modes
     public enum DisplayMode {
@@ -172,6 +173,9 @@ public class VideoController implements Device, Computer.UptimeListener {
 
     // Scroll register value
     private int scrollRegister;
+
+    // Frame scroll shift value
+    private int frameScrollShift;
 
     // Video memory reference
     private final Memory videoMemory;
@@ -346,15 +350,14 @@ public class VideoController implements Device, Computer.UptimeListener {
         short[] videoData = lastRenderedFrameData.getPixelData();
         int numLines = lastRenderedFrameData.isFullScreenMode() ? SCREEN_HEIGHT_NORMAL
                 : SCREEN_HEIGHT_EXTMEM;
-        int scrollShift = (readScrollRegister() - SCROLL_BASE_VALUE) & 0377;
-        int videoDataIdx = scrollShift * SCREEN_SCANLINE_LENGTH;
+        int videoDataIdx = 0;
         int videoBufferX, videoBufferY;
         synchronized (videoBuffer) {
             videoBuffer.eraseColor(Color.BLACK);
             synchronized (videoDataToPixelsTable) {
                 for (int lineIdx = 0; lineIdx < numLines; lineIdx++) {
                     for (int lineWordIdx = 0; lineWordIdx < SCREEN_SCANLINE_LENGTH; lineWordIdx++) {
-                        int videoDataWord = videoData[videoDataIdx % SCREEN_DATA_LENGTH];
+                        int videoDataWord = videoData[videoDataIdx];
                         if (videoDataWord != 0) {
                             int paletteOffset = lastDisplayedFrameData.getPaletteIndex(lineIdx)
                                     * (videoDataToPixelsTable.length >>> 4);
@@ -407,6 +410,12 @@ public class VideoController implements Device, Computer.UptimeListener {
             // Check for HSync
             if (currentLineFrameLine < FRAME_LINES_VISIBLE) {
                 // HSync
+                // Store pixel data for displayed screen line
+                int videoDataIdx = ((currentLineFrameLine + frameScrollShift)
+                        * SCREEN_SCANLINE_LENGTH) % SCREEN_DATA_LENGTH;
+                int pixelDataIdx = currentLineFrameLine * SCREEN_SCANLINE_LENGTH;
+                videoMemory.getData(linesPixelData, videoDataIdx, pixelDataIdx,
+                        SCREEN_SCANLINE_LENGTH);
                 // Store color palette index for displayed screen line
                 lineColorPaletteIndexes[currentLineFrameLine] = colorPaletteIndex;
             } else {
@@ -419,6 +428,8 @@ public class VideoController implements Device, Computer.UptimeListener {
                     storeLastFrameVideoData();
                     notifyFrameSyncListenersVerticalSync();
                     currentFrame = currentLineFrame + 1;
+                    // Frame scroll shift value is updated on VSync
+                    frameScrollShift = (readScrollRegister() - SCROLL_BASE_VALUE) & 0377;
                 }
             }
         }
@@ -426,7 +437,7 @@ public class VideoController implements Device, Computer.UptimeListener {
 
     private void storeLastFrameVideoData() {
         synchronized (lastDisplayedFrameData) {
-            lastDisplayedFrameData.init(videoMemory.getData(), lineColorPaletteIndexes,
+            lastDisplayedFrameData.init(linesPixelData, lineColorPaletteIndexes,
                     isFullScreenMode());
         }
     }

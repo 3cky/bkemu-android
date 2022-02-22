@@ -18,8 +18,6 @@
  */
 package su.comp.bk.arch.memory;
 
-import android.os.Bundle;
-
 /**
  * Memory (RAM/ROM) interface.
  */
@@ -41,6 +39,15 @@ public interface Memory {
      * @return memory data as words
      */
     short[] getData();
+
+    /**
+     * Get memory data.
+     * @param buf buffer to get data
+     * @param srcOffset data offset to get (0000000-0177776)
+     * @param dstOffset buffer offset
+     * @param length data length to get (in words)
+     */
+    void getData(short[] buf, int srcOffset, int dstOffset, int length);
 
     /**
      * Read word value from the memory.
