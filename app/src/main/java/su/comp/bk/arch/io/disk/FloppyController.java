@@ -93,7 +93,7 @@ public class FloppyController implements Device {
     public final static long NANOSECS_PER_INDEX_HOLE = NANOSECS_IN_MSEC;
 
     /** Maximum tracks per floppy disk */
-    public final static int MAX_TRACKS_PER_DISK = 81;
+    public final static int MAX_TRACKS_PER_DISK = 82;
     /** Sectors per track */
     public final static int SECTORS_PER_TRACK = 10;
     /** Bytes per sector */
