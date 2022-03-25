@@ -1261,14 +1261,11 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
      * @param tapeFileName file name to load (or <code>null</code> to load any file)
      */
     protected void showBinImageFileLoadDialog(int requestCode, String tapeFileName) {
-        Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
         intent.addCategory(Intent.CATEGORY_OPENABLE);
         intent.setType("*/*");
-        Intent chooserIntent = new Intent(Intent.ACTION_CHOOSER);
-        chooserIntent.putExtra(Intent.EXTRA_INTENT, intent);
-        chooserIntent.putExtra(Intent.EXTRA_TITLE, getResources().getString(
-                R.string.toast_image_load_info, tapeFileName));
-        startActivityForResult(chooserIntent, requestCode);
+        intent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        startActivityForResult(intent, requestCode);
     }
 
     /**
@@ -1338,6 +1335,11 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
             case REQUEST_MENU_BIN_IMAGE_FILE_LOAD:
                 if (resultCode == Activity.RESULT_OK) {
                     Uri binImageFileUri = data.getData();
+                    if (binImageFileUri == null) {
+                        return;
+                    }
+                    getContentResolver().takePersistableUriPermission(binImageFileUri,
+                            Intent.FLAG_GRANT_READ_URI_PERMISSION);
                     Configuration configuration = computer.getConfiguration();
                     if (configuration.isMemoryManagerPresent() ||
                             configuration.isFloppyControllerPresent()) {
@@ -1352,7 +1354,11 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
                 boolean isImageLoaded = false;
                 if (resultCode == Activity.RESULT_OK) {
                     Uri binImageFileUri = data.getData();
-                    isImageLoaded = binImageFileLoad(binImageFileUri);
+                    if (binImageFileUri != null) {
+                        getContentResolver().takePersistableUriPermission(binImageFileUri,
+                                Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                        isImageLoaded = binImageFileLoad(binImageFileUri);
+                    }
                 }
                 doFinishBinImageLoad(isImageLoaded);
                 break;
