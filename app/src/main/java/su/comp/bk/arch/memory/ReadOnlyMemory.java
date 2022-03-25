@@ -41,6 +41,11 @@ public class ReadOnlyMemory extends RandomAccessMemory {
     }
 
     @Override
+    public boolean isWritable(int offset) {
+        return false;
+    }
+
+    @Override
     public boolean write(boolean isByteMode, int offset, int value) {
         return false;
     }

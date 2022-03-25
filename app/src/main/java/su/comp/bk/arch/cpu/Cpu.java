@@ -830,7 +830,7 @@ public class Cpu {
      * or <false> if bus error happens while vector loading
      */
     public boolean processTrap(int trapVectorAddress, boolean pushReturnState) {
-//        Log.d(TAG, ">>> TRAP " + Integer.toOctalString(trapVectorAddress) +
+//        Timber.d(">>> TRAP " + Integer.toOctalString(trapVectorAddress) +
 //                ", PC: 0" + Integer.toOctalString(readRegister(false, PC)));
         boolean isVectorLoaded = false;
         if (!pushReturnState || (push(getPswState()) && push(readRegister(false, PC)))) {
@@ -848,7 +848,7 @@ public class Cpu {
         if (isVectorLoaded && onTrapListener != null) {
             listener.onTrap(this, trapVectorAddress);
         }
-//        Log.d(TAG, "<<< TRAP " + Integer.toOctalString(trapVectorAddress) +
+//        Timber.d("<<< TRAP " + Integer.toOctalString(trapVectorAddress) +
 //                ", PC: 0" + Integer.toOctalString(readRegister(false, PC)));
         return isVectorLoaded;
     }
@@ -859,7 +859,8 @@ public class Cpu {
      * <code>false</code> otherwise
      */
     public void returnFromTrap(boolean isTraceTrap) {
-//        Log.d(TAG, ">>> return from TRAP, PC: 0" + Integer.toOctalString(readRegister(false, PC)));
+//        Timber.d(">>> return from TRAP, PC: 0%s",
+//                Integer.toOctalString(readRegister(false, PC)));
         int pc = pop();
         if (pc != Computer.BUS_ERROR) {
             writeRegister(false, PC, pc);
@@ -869,7 +870,8 @@ public class Cpu {
                 setDeferredTraceTrap();
             }
         }
-//        Log.d(TAG, "<<< return from TRAP, PC: 0" + Integer.toOctalString(readRegister(false, PC)));
+//        Timber.d("<<< return from TRAP, PC: 0%s",
+//                Integer.toOctalString(readRegister(false, PC)));
     }
 
     /**

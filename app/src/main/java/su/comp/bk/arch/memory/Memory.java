@@ -43,24 +43,38 @@ public interface Memory {
     /**
      * Get memory data.
      * @param buf buffer to get data
-     * @param srcOffset data offset to get (0000000-0177776)
+     * @param srcOffset data offset to get
      * @param dstOffset buffer offset
      * @param length data length to get (in words)
      */
     void getData(short[] buf, int srcOffset, int dstOffset, int length);
 
     /**
+     * Check memory is readable.
+     * @param offset memory offset to check
+     * @return true if memory at given offset is readable, false if not readable
+     */
+    boolean isReadable(int offset);
+
+    /**
      * Read word value from the memory.
-     * @param offset value offset to read (0000000-0177776)
+     * @param offset value offset to read
      * @return read word value
      */
     int read(int offset);
 
     /**
+     * Check memory is writable.
+     * @param offset memory offset to check
+     * @return true if memory at given offset is writable, false if not writable
+     */
+    boolean isWritable(int offset);
+
+    /**
      * Write word/byte value to the memory.
      * @param isByteMode <code>true</code> to write byte value, <code>false</code> to write
      * word value
-     * @param offset value offset to write (0000000-0177777)
+     * @param offset value offset to write
      * @param value data bus word value to write to the memory. In byte mode value is in word's
      *              low byte for even offsets and in word's high byte for odd offsets)
      * @return <code>true</code> if value successfully written to memory,

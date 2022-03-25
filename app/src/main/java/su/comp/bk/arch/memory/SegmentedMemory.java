@@ -63,11 +63,13 @@ public class SegmentedMemory extends AbstractMemory {
         this.maxWritableOffset = (writableSize > 0) ? (writableSize - 1) * 2 : -1;
     }
 
-    private boolean isReadableOffset(int offset) {
+    @Override
+    public boolean isReadable(int offset) {
         return offset <= maxReadableOffset;
     }
 
-    private boolean isWritableOffset(int offset) {
+    @Override
+    public boolean isWritable(int offset) {
         return offset <= maxWritableOffset;
     }
 
@@ -88,14 +90,14 @@ public class SegmentedMemory extends AbstractMemory {
 
     @Override
     public int read(int offset) {
-        return !isReadableOffset(offset) || (activeSegmentIndex < 0)
+        return !isReadable(offset) || (activeSegmentIndex < 0)
                 ? Computer.BUS_ERROR
                 : memory.read(getActiveSegmentOffset() + offset);
     }
 
     @Override
     public boolean write(boolean isByteMode, int offset, int value) {
-        return isWritableOffset(offset) && (activeSegmentIndex >= 0) && memory.write(isByteMode,
+        return isWritable(offset) && (activeSegmentIndex >= 0) && memory.write(isByteMode,
                 getActiveSegmentOffset() + offset, value);
     }
 

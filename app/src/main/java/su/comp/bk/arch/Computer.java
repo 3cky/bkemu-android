@@ -769,9 +769,12 @@ public class Computer implements Runnable {
                 return false;
             }
             for (MemoryRange memoryRange : memoryRanges) {
-                if (memoryRange != null && memoryRange.isRelatedAddress(address)
-                        && memoryRange.getMemory() instanceof ReadOnlyMemory) {
-                    return true;
+                if (memoryRange != null && memoryRange.isRelatedAddress(address)) {
+                    int offset = address - memoryRange.getStartAddress();
+                    Memory memory = memoryRange.getMemory();
+                    if (memory.isReadable(offset) && !memory.isWritable(offset)) {
+                        return true;
+                    }
                 }
             }
         }

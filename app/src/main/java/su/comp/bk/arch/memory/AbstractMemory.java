@@ -38,6 +38,16 @@ public abstract class AbstractMemory implements Memory {
     }
 
     @Override
+    public boolean isReadable(int offset) {
+        return true;
+    }
+
+    @Override
+    public boolean isWritable(int offset) {
+        return true;
+    }
+
+    @Override
     public int hashCode() {
         return id.hashCode();
     }

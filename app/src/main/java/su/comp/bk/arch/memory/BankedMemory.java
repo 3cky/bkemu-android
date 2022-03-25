@@ -123,12 +123,22 @@ public class BankedMemory extends AbstractMemory {
     }
 
     @Override
+    public boolean isReadable(int offset) {
+        return activeBank != null && activeBank.isReadable(offset);
+    }
+
+    @Override
     public int read(int offset) {
-        return (activeBank != null) ? activeBank.read(offset) : Computer.BUS_ERROR;
+        return isReadable(offset) ? activeBank.read(offset) : Computer.BUS_ERROR;
+    }
+
+    @Override
+    public boolean isWritable(int offset) {
+        return activeBank != null && activeBank.isWritable(offset);
     }
 
     @Override
     public boolean write(boolean isByteMode, int offset, int value) {
-        return (activeBank != null) && activeBank.write(isByteMode, offset, value);
+        return isWritable(offset) && activeBank.write(isByteMode, offset, value);
     }
 }

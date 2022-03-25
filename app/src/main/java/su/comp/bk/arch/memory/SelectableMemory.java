@@ -54,13 +54,22 @@ public class SelectableMemory extends AbstractMemory {
     }
 
     @Override
+    public boolean isReadable(int offset) {
+        return isSelected && memory.isReadable(offset);
+    }
+
+    @Override
     public int read(int offset) {
         return isSelected ? memory.read(offset) : Computer.BUS_ERROR;
+    }
+
+    @Override
+    public boolean isWritable(int offset) {
+        return isSelected && memory.isWritable(offset);
     }
 
     @Override
     public boolean write(boolean isByteMode, int offset, int value) {
         return isSelected && memory.write(isByteMode, offset, value);
     }
-
 }
