@@ -99,12 +99,12 @@ public class KeyboardManager implements OnTouchListener {
         // Buttons - first row
         REPEAT(0201, KeyEvent.KEYCODE_F1), // Repeat (ПОВТ)
         KT(0003, KeyEvent.KEYCODE_F2),  // КТ
-        ERASE(0231, KeyEvent.KEYCODE_F3), // Erase from cursor to end of line (=|=>|)
+        ERASE(0213, KeyEvent.KEYCODE_F3), // Erase from cursor to end of line (=|=>|)
         COLLAPSE(0026, KeyEvent.KEYCODE_F4),  // Collapse edited line by one symbol (|<===)
         EXPAND(0027, KeyEvent.KEYCODE_F5),  // Expand edited line by one symbol (|===>)
         IND_CTRL_SYMBOL(0202, KeyEvent.KEYCODE_F6),  // Indication of control symbol (ИНД СУ)
         BLOCK_EDIT(0204, KeyEvent.KEYCODE_F7),  // Edit blocking (БЛОК РЕД)
-        STEP(0220, KeyEvent.KEYCODE_F8),  // Step (ШАГ)
+        STEP(0200, KeyEvent.KEYCODE_F8),  // Step (ШАГ)
         CLEAR(0014, KeyEvent.KEYCODE_F9), // Clear (СБР)
         STOP(BK_KEY_CODE_NONE, KeyEvent.KEYCODE_F10), // STOP (СТОП aka "КРАСНАЯ КНОПКА")
 
