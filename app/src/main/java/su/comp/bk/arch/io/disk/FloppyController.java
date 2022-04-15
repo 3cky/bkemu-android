@@ -29,7 +29,7 @@ import java.util.ArrayList;
 
 import su.comp.bk.arch.Computer;
 import su.comp.bk.arch.io.Device;
-import su.comp.bk.util.Crc16;
+import su.comp.bk.util.Crc16Utils;
 import timber.log.Timber;
 
 /**
@@ -313,7 +313,7 @@ public class FloppyController implements Device {
             // Sector number(1-10), sector size (2 for 512 bytes per sector)
             writeCurrentTrackData(dataIndex++, sectorNumber << 8 | 2);
             // CRC value (big endian)
-            writeCurrentTrackData(dataIndex++, Crc16.calculate(currentTrackData, position, 4));
+            writeCurrentTrackData(dataIndex++, Crc16Utils.calculate(currentTrackData, position, 4));
             return dataIndex;
         }
 
@@ -330,7 +330,7 @@ public class FloppyController implements Device {
             }
             // CRC value (big endian)
             int length = dataIndex - position;
-            writeCurrentTrackData(dataIndex++, Crc16.calculate(currentTrackData, position, length));
+            writeCurrentTrackData(dataIndex++, Crc16Utils.calculate(currentTrackData, position, length));
             return dataIndex;
         }
 
@@ -386,7 +386,7 @@ public class FloppyController implements Device {
                 // Check sector header CRC
                 int length = position - headerPosition;
                 int crcValue = readCurrentTrackData(position++);
-                if (crcValue != (Crc16.calculate(trackData, headerPosition, length) & 0177777)) {
+                if (crcValue != (Crc16Utils.calculate(trackData, headerPosition, length) & 0177777)) {
                     Timber.w("Invalid sector header CRC, sector: %d", sectorNumber);
                     continue;
                 }
@@ -412,7 +412,7 @@ public class FloppyController implements Device {
                 // Check sector data CRC
                 length = position - dataPosition;
                 crcValue = readCurrentTrackData(position++);
-                if (crcValue != (Crc16.calculate(trackData, dataPosition, length) & 0177777)) {
+                if (crcValue != (Crc16Utils.calculate(trackData, dataPosition, length) & 0177777)) {
                     Timber.w("Invalid sector data CRC, sector: %d", sectorNumber);
                     continue;
                 }
@@ -849,7 +849,7 @@ public class FloppyController implements Device {
                     int crcPosition = getNextTrackPosition(lastDataRegisterWritePosition);
                     short[] trackData = drive.getCurrentTrackData();
                     int length = getNumTrackDataWords(getLastMarkerPosition(), crcPosition);
-                    short crcValue = Crc16.calculate(trackData, getLastMarkerPosition(), length);
+                    short crcValue = Crc16Utils.calculate(trackData, getLastMarkerPosition(), length);
                     drive.writeCurrentTrackData(crcPosition, crcValue);
                 }
             }
@@ -899,7 +899,7 @@ public class FloppyController implements Device {
                         short[] trackData = drive.getCurrentTrackData();
                         int crcPosition = getDataReadyReadPosition();
                         int length = getNumTrackDataWords(getLastMarkerPosition(), crcPosition);
-                        short crcValue = Crc16.calculate(trackData, getLastMarkerPosition(), length);
+                        short crcValue = Crc16Utils.calculate(trackData, getLastMarkerPosition(), length);
                         setCrcFlag((crcValue & 0177777) == drive.readCurrentTrackData(crcPosition));
                         if (isDebugEnabled) {
                             d("synchronous read completed, position: " + trackPosition +

@@ -22,7 +22,7 @@ package su.comp.bk.util;
 /**
  * CRC-16/CCITT-FALSE (http://reveng.sourceforge.net/crc-catalogue/16.htm#crc.cat.crc-16-ccitt-false) calculation.
  */
-public class Crc16 {
+public class Crc16Utils {
     /** CRC initialization value */
     public static final short INIT_VALUE = (short) 0xffff;
 

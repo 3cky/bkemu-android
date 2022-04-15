@@ -24,18 +24,18 @@ import static org.junit.Assert.*;
 import org.junit.Test;
 
 /**
- * {@link Crc16} tests.
+ * {@link Crc16Utils} tests.
  */
-public class Crc16Test {
+public class Crc16UtilsTest {
 
     /**
-     * Test method for {@link su.comp.bk.util.Crc16#calculate(byte[])}.
+     * Test method for {@link Crc16Utils#calculate(byte[])}.
      * @throws Exception in case of error
      */
     @Test
     public void testCalculateByteArray() throws Exception {
         // According http://reveng.sourceforge.net/crc-catalogue/legend.htm (see "Appendix")
-        assertEquals(0x29b1, Crc16.calculate("123456789".getBytes("UTF-8")));
+        assertEquals(0x29b1, Crc16Utils.calculate("123456789".getBytes("UTF-8")));
     }
 
 }

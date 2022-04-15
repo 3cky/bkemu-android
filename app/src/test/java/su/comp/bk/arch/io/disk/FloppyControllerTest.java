@@ -41,7 +41,7 @@ import su.comp.bk.arch.io.disk.FloppyController.FloppyDriveIdentifier;
 import su.comp.bk.arch.io.disk.FloppyController.FloppyDriveSide;
 import su.comp.bk.arch.memory.RandomAccessMemory;
 import su.comp.bk.arch.memory.ReadOnlyMemory;
-import su.comp.bk.util.Crc16;
+import su.comp.bk.util.Crc16Utils;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -176,7 +176,7 @@ public class FloppyControllerTest extends ResourceFileTestBase {
                     drive.readCurrentTrackData(trackPosition++));
             // Check sector header CRC
             assertEquals("sector header CRC position: " + trackPosition,
-                    Crc16.calculate(new byte[] {
+                    Crc16Utils.calculate(new byte[] {
                             (byte) 0xa1, (byte) 0xa1, (byte) 0xa1, (byte) 0xfe,
                             (byte) drive.getCurrentTrackNumber(),
                             (byte) drive.getCurrentTrackSide().ordinal(),
@@ -200,7 +200,7 @@ public class FloppyControllerTest extends ResourceFileTestBase {
             assertEquals("DATA AM word 2 position: " + trackPosition, 0xa1fb,
                     drive.readCurrentTrackData(trackPosition++));
             // Check data
-            short crcValue = Crc16.calculate(new byte[] { (byte) 0xa1, (byte) 0xa1,
+            short crcValue = Crc16Utils.calculate(new byte[] { (byte) 0xa1, (byte) 0xa1,
                     (byte) 0xa1, (byte) 0xfb });
             wordsToCheck = FloppyController.WORDS_PER_SECTOR;
             while (wordsToCheck-- > 0) {
@@ -210,8 +210,8 @@ public class FloppyControllerTest extends ResourceFileTestBase {
                                 ", image index: " + (offset - 2),
                         ((dataByte1 << 8) & 0177400) | (dataByte2 & 0377),
                         drive.readCurrentTrackData(trackPosition++));
-                crcValue = Crc16.calculate(crcValue, dataByte1);
-                crcValue = Crc16.calculate(crcValue, dataByte2);
+                crcValue = Crc16Utils.calculate(crcValue, dataByte1);
+                crcValue = Crc16Utils.calculate(crcValue, dataByte2);
             }
             // Check sector data CRC
             assertEquals("sector data CRC", crcValue & 0177777,
