@@ -275,7 +275,8 @@ public class KeyboardManager implements OnTouchListener {
     @Override
     public boolean onTouch(View v, MotionEvent event) {
         if (event.getAction() == MotionEvent.ACTION_UP
-                || event.getAction() == MotionEvent.ACTION_DOWN) {
+                || event.getAction() == MotionEvent.ACTION_DOWN
+                || event.getAction() == MotionEvent.ACTION_CANCEL) {
             BkButton bkButton = BkButton.valueOf(v.getTag().toString());
             boolean isPressed = event.getAction() == MotionEvent.ACTION_DOWN;
             Timber.d("handle button touch event " + (isPressed ? "press" : "release") +
