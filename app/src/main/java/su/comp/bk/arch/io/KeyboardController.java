@@ -18,11 +18,10 @@
  */
 package su.comp.bk.arch.io;
 
-import android.os.Bundle;
-
 import su.comp.bk.arch.Computer;
 import su.comp.bk.arch.cpu.Cpu;
 import su.comp.bk.arch.io.memory.Bk11MemoryManager;
+import su.comp.bk.state.State;
 import su.comp.bk.ui.keyboard.KeyboardManager.BkButton;
 
 /**
@@ -55,12 +54,12 @@ public class KeyboardController implements Device {
     // VIRQ address when AR2 key is pressed
     private final static int VIRQ_ADDRESS_AR2 = 0274;
 
+    private static final String STATE_PREFIX = "KeyboardController";
     // State save/restore: Status register value
-    private static final String STATE_STATUS_REGISTER =
-            KeyboardController.class.getName() + "#status_reg";
+    public static final String STATE_STATUS_REGISTER = STATE_PREFIX + "#status_reg";
     // State save/restore: STOP button is blocked flag value
-    private static final String STATE_STOP_BUTTON_ENABLED_FLAG =
-            KeyboardController.class.getName() + "#stop_button_enabled";
+    public static final String STATE_STOP_BUTTON_ENABLED_FLAG =
+            STATE_PREFIX + "#stop_button_enabled";
 
     // Is STOP button enabled flag
     private boolean isStopButtonEnabled = true;
@@ -231,7 +230,7 @@ public class KeyboardController implements Device {
     }
 
     @Override
-    public void saveState(Bundle outState) {
+    public void saveState(State outState) {
         // Save VIRQ mask state from status register
         outState.putInt(STATE_STATUS_REGISTER, readStatusRegister() & STATUS_VIRQ_MASK);
         // Save STOP button enabled flag state
@@ -239,7 +238,7 @@ public class KeyboardController implements Device {
     }
 
     @Override
-    public void restoreState(Bundle inState) {
+    public void restoreState(State inState) {
         writeStatusRegister(inState.getInt(STATE_STATUS_REGISTER));
         setStopButtonEnabled(inState.getBoolean(STATE_STOP_BUTTON_ENABLED_FLAG));
     }

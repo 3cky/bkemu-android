@@ -19,21 +19,14 @@
 package su.comp.bk.arch;
 
 import android.content.res.Resources;
-import android.os.Bundle;
 
 import org.apache.commons.lang.ArrayUtils;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
-import java.nio.ShortBuffer;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.zip.Deflater;
-import java.util.zip.DeflaterOutputStream;
-import java.util.zip.InflaterInputStream;
 
 import su.comp.bk.R;
 import su.comp.bk.arch.cpu.Cpu;
@@ -61,18 +54,22 @@ import su.comp.bk.arch.memory.RandomAccessMemory.Type;
 import su.comp.bk.arch.memory.ReadOnlyMemory;
 import su.comp.bk.arch.memory.SegmentedMemory;
 import su.comp.bk.arch.memory.SelectableMemory;
-import su.comp.bk.util.FileUtils;
+import su.comp.bk.state.State;
+import su.comp.bk.state.StatefulEntity;
 import timber.log.Timber;
 
 /**
  * BK001x computer implementation.
  */
-public class Computer implements Runnable {
+public class Computer implements Runnable, StatefulEntity {
 
+    private static final String STATE_PREFIX = "Computer";
+    // State save/restore: Computer configuration name
+    public static final String STATE_CONFIGURATION = STATE_PREFIX + "#configuration";
     // State save/restore: Computer system uptime (in nanoseconds)
-    private static final String STATE_SYSTEM_UPTIME = Computer.class.getName() + "#sys_uptime";
+    public static final String STATE_SYSTEM_UPTIME = STATE_PREFIX + "#sys_uptime";
     // State save/restore: Computer RAM data
-    private static final String STATE_RAM_DATA = Computer.class.getName() + "#ram_data";
+    public static final String STATE_RAM_DATA = STATE_PREFIX + "#ram_data";
 
     /** Bus error constant */
     public final static int BUS_ERROR = -1;
@@ -442,11 +439,11 @@ public class Computer implements Runnable {
 
     /**
      * Save computer state.
-     * @param outState {@link Bundle} to save state
+     * @param outState {@link State} to save state
      */
-    public void saveState(Bundle outState) {
+    public void saveState(State outState) {
         // Save computer configuration
-        outState.putString(Configuration.class.getName(), getConfiguration().name());
+        outState.putString(STATE_CONFIGURATION, getConfiguration().name());
         // Save computer system uptime
         outState.putLong(STATE_SYSTEM_UPTIME, getSystemUptime());
         // Save RAM data
@@ -459,40 +456,11 @@ public class Computer implements Runnable {
         }
     }
 
-    private void saveRandomAccessMemoryData(Bundle outState) {
-        List<RandomAccessMemory> randomAccessMemoryList = getRandomAccessMemoryList();
-        // Calculate total RAM data size (in bytes)
-        int totalDataSize = 0;
-        for (RandomAccessMemory memory: randomAccessMemoryList) {
-            totalDataSize += memory.getSize() * 2;
-        }
-        // Pack all RAM data into a single buffer
-        ByteBuffer dataBuf = ByteBuffer.allocate(totalDataSize);
-        ShortBuffer shortDataBuf = dataBuf.asShortBuffer();
-        for (RandomAccessMemory memory: randomAccessMemoryList) {
-            shortDataBuf.put(memory.getData(), 0, memory.getSize());
-        }
-        dataBuf.flip();
-        // Compress RAM data
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        Deflater deflater = new Deflater(Deflater.BEST_COMPRESSION);
-        try (DeflaterOutputStream dos = new DeflaterOutputStream(baos, deflater)) {
-            dos.write(dataBuf.array());
-        } catch (IOException e) {
-            throw new IllegalStateException("Can't compress RAM data", e);
-        }
-        byte[] compressedData = baos.toByteArray();
-        outState.putByteArray(STATE_RAM_DATA, compressedData);
-        Timber.d("Saved RAM data: original %dKB, compressed %dKB",
-                totalDataSize / 1024, compressedData.length / 1024);
-    }
-
     /**
      * Restore computer state.
-     * @param inState {@link Bundle} to restore state
-     * @throws Exception in case of error while state restoring
+     * @param inState {@link State} to restore state
      */
-    public void restoreState(Bundle inState) throws Exception {
+    public void restoreState(State inState) {
         // Restore computer system uptime
         setSystemUptime(inState.getLong(STATE_SYSTEM_UPTIME));
         // Initialize CPU and devices
@@ -507,44 +475,29 @@ public class Computer implements Runnable {
         }
     }
 
-    private void restoreRandomAccessMemoryData(Bundle inState) {
-        byte[] compressedData = inState.getByteArray(STATE_RAM_DATA);
-        if (compressedData == null || compressedData.length == 0) {
-            throw new IllegalArgumentException("No RAM data to restore");
-        }
+    private void saveRandomAccessMemoryData(State outState) {
         List<RandomAccessMemory> randomAccessMemoryList = getRandomAccessMemoryList();
-        // Calculate RAM memory data size (in bytes)
-        int totalDataSize = 0;
         for (RandomAccessMemory memory: randomAccessMemoryList) {
-            totalDataSize += memory.getSize() * 2;
+            ByteBuffer memoryDataBuf = ByteBuffer.allocate(memory.getSize() * 2);
+            memoryDataBuf.asShortBuffer().put(memory.getData(), 0, memory.getSize());
+            outState.putByteArray(STATE_RAM_DATA + ":" + memory.getId(), memoryDataBuf.array());
         }
-        // Decompress RAM data
-        ByteArrayOutputStream baos = new ByteArrayOutputStream(totalDataSize);
-        ByteArrayInputStream bais = new ByteArrayInputStream(compressedData);
-        try (InflaterInputStream iis = new InflaterInputStream(bais)) {
-            FileUtils.writeFully(iis, baos);
-        } catch (IOException e) {
-            throw new IllegalArgumentException("Can't decompress RAM data", e);
-        }
-        // Check decompressed data
-        byte[] data = baos.toByteArray();
-        if (data.length != totalDataSize) {
-            throw new IllegalArgumentException(String.format("Invalid decompressed RAM " +
-                            "data length: expected %d, got %d", totalDataSize, data.length));
-        }
-        // Restore RAM data
-        ByteBuffer dataBuf = ByteBuffer.wrap(data);
-        ShortBuffer shortDataBuf = dataBuf.asShortBuffer();
+    }
+
+    private void restoreRandomAccessMemoryData(State inState) {
         for (RandomAccessMemory memory: randomAccessMemoryList) {
+            byte[] memoryDataBytes = inState.getByteArray(STATE_RAM_DATA + ":" + memory.getId());
+            ByteBuffer memoryDataBuf = ByteBuffer.wrap(memoryDataBytes);
             short[] memoryData = new short[memory.getSize()];
-            shortDataBuf.get(memoryData);
+            memoryDataBuf.asShortBuffer().get(memoryData);
             memory.putData(memoryData);
         }
     }
 
-    public static Configuration getStoredConfiguration(Bundle inState) {
-        return (inState != null) ? Configuration.valueOf(inState.getString(
-                Configuration.class.getName())) : null;
+    public static Configuration getStoredConfiguration(State inState) {
+        return (inState != null)
+                ? Configuration.valueOf(inState.getString(STATE_CONFIGURATION))
+                : null;
     }
 
     /**

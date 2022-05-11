@@ -26,13 +26,12 @@ import org.apache.commons.lang.StringUtils;
 import org.junit.Before;
 import org.junit.Test;
 
-import android.os.Bundle;
-
 import su.comp.bk.ResourceFileTestBase;
 import su.comp.bk.arch.cpu.Cpu;
 import su.comp.bk.arch.io.Device;
 import su.comp.bk.arch.memory.RandomAccessMemory;
 import su.comp.bk.arch.memory.ReadOnlyMemory;
+import su.comp.bk.state.State;
 
 /**
  * {@link Computer} class factory unit tests.
@@ -83,12 +82,12 @@ public class ComputerFactoryTest extends ResourceFileTestBase {
         }
 
         @Override
-        public void saveState(Bundle outState) {
+        public void saveState(State outState) {
             // Do nothing
         }
 
         @Override
-        public void restoreState(Bundle inState) {
+        public void restoreState(State inState) {
             // Do nothing
         }
 

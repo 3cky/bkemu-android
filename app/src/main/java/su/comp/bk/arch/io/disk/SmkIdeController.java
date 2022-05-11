@@ -18,10 +18,9 @@
 
 package su.comp.bk.arch.io.disk;
 
-import android.os.Bundle;
-
 import su.comp.bk.arch.Computer;
 import su.comp.bk.arch.io.Device;
+import su.comp.bk.state.State;
 
 /**
  * SMK512 IDE drive(s) controller.
@@ -56,12 +55,12 @@ public class SmkIdeController extends IdeController implements Device {
     }
 
     @Override
-    public void saveState(Bundle outState) {
+    public void saveState(State outState) {
         super.saveState(outState);
     }
 
     @Override
-    public void restoreState(Bundle inState) {
+    public void restoreState(State inState) {
         super.restoreState(inState);
     }
 

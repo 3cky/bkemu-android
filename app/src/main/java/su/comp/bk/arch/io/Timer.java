@@ -18,7 +18,7 @@
  */
 package su.comp.bk.arch.io;
 
-import android.os.Bundle;
+import su.comp.bk.state.State;
 
 /**
  * K1801VM1 on-chip timer (legacy of K1801VE1 MCU).
@@ -64,18 +64,15 @@ public class Timer implements Device {
     /** CPU clock prescaler divide ratio */
     public final static int PRESCALER = 128;
 
+    private static final String STATE_PREFIX = "Timer";
     // State save/restore: Preset register value
-    private static final String STATE_PRESET_REGISTER = Timer.class.getName() +
-            "#preset_reg";
+    public static final String STATE_PRESET_REGISTER = STATE_PREFIX + "#preset_reg";
     // State save/restore: Control register value
-    private static final String STATE_CONTROL_REGISTER = Timer.class.getName() +
-            "#control_reg";
+    public static final String STATE_CONTROL_REGISTER = STATE_PREFIX + "#control_reg";
     // State save/restore: Last timer settings change time (in CPU clock ticks)
-    private static final String STATE_SETTINGS_CHANGE_TIME = Timer.class.getName() +
-            "#settings_change_time";
+    public static final String STATE_SETTINGS_CHANGE_TIME = STATE_PREFIX + "#settings_change_time";
     // State save/restore: Counter start value
-    private static final String STATE_COUNTER_START_VALUE = Timer.class.getName() +
-            "#counter_start_value";
+    public static final String STATE_COUNTER_START_VALUE = STATE_PREFIX + "#counter_start_value";
 
     private final static int[] ADDRESSES = {
         PRESET_REGISTER_ADDRESS, COUNTER_REGISTER_ADDRESS, CONTROL_REGISTER_ADDRESS
@@ -113,7 +110,7 @@ public class Timer implements Device {
     }
 
     @Override
-    public void saveState(Bundle outState) {
+    public void saveState(State outState) {
         outState.putInt(STATE_PRESET_REGISTER, presetRegister);
         outState.putInt(STATE_CONTROL_REGISTER, controlRegister);
         outState.putInt(STATE_COUNTER_START_VALUE, counterStartValue);
@@ -121,7 +118,7 @@ public class Timer implements Device {
     }
 
     @Override
-    public void restoreState(Bundle inState) {
+    public void restoreState(State inState) {
         presetRegister = inState.getInt(STATE_PRESET_REGISTER);
         controlRegister = inState.getInt(STATE_CONTROL_REGISTER);
         counterStartValue = inState.getInt(STATE_COUNTER_START_VALUE);

@@ -87,6 +87,7 @@ dependencies {
     implementation 'com.samskivert:jmustache:1.9'
     implementation 'com.andkulikov:transitionseverywhere:2.0.0-alpha01'
     implementation 'com.jakewharton.timber:timber:4.7.1'
+    implementation 'org.msgpack:jackson-dataformat-msgpack:0.9.1'
 
     testImplementation 'junit:junit:4.13.1'
     testImplementation 'commons-io:commons-io:2.4'

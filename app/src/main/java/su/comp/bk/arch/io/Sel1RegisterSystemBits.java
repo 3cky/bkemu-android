@@ -18,8 +18,8 @@
  */
 package su.comp.bk.arch.io;
 
-import android.os.Bundle;
 import su.comp.bk.arch.cpu.Cpu;
+import su.comp.bk.state.State;
 
 /**
  * SEL1 register (0177716) system bits (8-15 bits - power-on CPU startup address (read only),
@@ -70,12 +70,12 @@ public class Sel1RegisterSystemBits implements Device {
 
 
     @Override
-    public void saveState(Bundle outState) {
+    public void saveState(State outState) {
         // TODO
     }
 
     @Override
-    public void restoreState(Bundle inState) {
+    public void restoreState(State inState) {
         // TODO
     }
 

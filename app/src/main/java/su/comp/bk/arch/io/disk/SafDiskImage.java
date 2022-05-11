@@ -31,7 +31,7 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.FileChannel;
 
-import su.comp.bk.util.FileUtils;
+import su.comp.bk.util.DataUtils;
 import timber.log.Timber;
 
 /**
@@ -104,7 +104,7 @@ public class SafDiskImage implements DiskImage {
 
     @Override
     public String getName() {
-        return FileUtils.resolveUriFileName(context, location);
+        return DataUtils.resolveUriFileName(context, location);
     }
 
     @Override

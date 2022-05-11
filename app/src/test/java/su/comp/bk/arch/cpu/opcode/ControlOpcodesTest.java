@@ -32,7 +32,7 @@ import su.comp.bk.arch.cpu.Cpu;
 import su.comp.bk.arch.io.Device;
 import su.comp.bk.arch.io.Sel1RegisterSystemBits;
 import su.comp.bk.arch.memory.ReadOnlyMemory;
-import android.os.Bundle;
+import su.comp.bk.state.State;
 
 /**
  * Control opcodes (RESET/WAIT/HALT) tests.
@@ -116,10 +116,10 @@ public class ControlOpcodesTest {
             }
 
             @Override
-            public void saveState(Bundle outState) {
+            public void saveState(State outState) {
             }
             @Override
-            public void restoreState(Bundle inState) {
+            public void restoreState(State inState) {
             }
         };
 
@@ -143,10 +143,10 @@ public class ControlOpcodesTest {
             }
 
             @Override
-            public void saveState(Bundle outState) {
+            public void saveState(State outState) {
             }
             @Override
-            public void restoreState(Bundle inState) {
+            public void restoreState(State inState) {
             }
         };
 

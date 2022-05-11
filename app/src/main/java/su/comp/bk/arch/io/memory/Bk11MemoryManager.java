@@ -21,15 +21,14 @@ import su.comp.bk.arch.Computer;
 import su.comp.bk.arch.cpu.Cpu;
 import su.comp.bk.arch.io.Device;
 import su.comp.bk.arch.memory.BankedMemory;
-import android.os.Bundle;
+import su.comp.bk.state.State;
 
 /**
  * BK-0011M memory manager.
  */
 public class Bk11MemoryManager implements Device {
     // State save/restore: Current memory configuration value
-    private static final String STATE_MEMORY_CONFIGURATION = Bk11MemoryManager.class.getName() +
-            "#current_config";
+    public static final String STATE_MEMORY_CONFIGURATION = "Bk11MemoryManager#current_config";
 
     private final static int[] ADDRESSES = { Cpu.REG_SEL1 };
 
@@ -77,12 +76,12 @@ public class Bk11MemoryManager implements Device {
     }
 
     @Override
-    public void saveState(Bundle outState) {
+    public void saveState(State outState) {
         outState.putInt(STATE_MEMORY_CONFIGURATION, currentMemoryConfiguration);
     }
 
     @Override
-    public void restoreState(Bundle inState) {
+    public void restoreState(State inState) {
         setMemoryConfiguration(inState.getInt(STATE_MEMORY_CONFIGURATION,
                 DEFAULT_MEMORY_CONFIGURATION));
     }

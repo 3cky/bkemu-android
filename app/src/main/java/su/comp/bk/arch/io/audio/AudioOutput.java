@@ -21,11 +21,11 @@ import android.media.AudioFormat;
 import android.media.AudioManager;
 import android.media.AudioTrack;
 import android.os.Build;
-import android.os.Bundle;
 
 import su.comp.bk.arch.Computer;
 import su.comp.bk.arch.cpu.opcode.BaseOpcode;
 import su.comp.bk.arch.io.Device;
+import su.comp.bk.state.State;
 import timber.log.Timber;
 
 /**
@@ -179,12 +179,12 @@ public abstract class AudioOutput<U extends AudioOutputUpdate> implements Device
     }
 
     @Override
-    public void saveState(Bundle outState) {
+    public void saveState(State outState) {
         // Do nothing
     }
 
     @Override
-    public void restoreState(Bundle inState) {
+    public void restoreState(State inState) {
         // Do nothing
     }
 

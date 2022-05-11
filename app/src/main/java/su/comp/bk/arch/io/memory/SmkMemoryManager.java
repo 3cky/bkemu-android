@@ -18,8 +18,6 @@
 
 package su.comp.bk.arch.io.memory;
 
-import android.os.Bundle;
-
 import java.util.List;
 
 import su.comp.bk.arch.Computer;
@@ -27,14 +25,14 @@ import su.comp.bk.arch.io.Device;
 import su.comp.bk.arch.io.disk.FloppyController;
 import su.comp.bk.arch.memory.SegmentedMemory;
 import su.comp.bk.arch.memory.SelectableMemory;
+import su.comp.bk.state.State;
 
 /**
  * SMK512 controller extended memory manager.
  */
 public class SmkMemoryManager implements Device {
     // State save/restore: Current memory layout value
-    private static final String STATE_MEMORY_CONFIGURATION = SmkMemoryManager.class.getName() +
-            "#current_layout";
+    public static final String STATE_MEMORY_CONFIGURATION = "SmkMemoryManager#current_layout";
 
     // Total size of SMK memory in words (512 Kbytes / 256 Kwords)
     public final static int MEMORY_TOTAL_SIZE = 512 * 1024 / 2;
@@ -112,12 +110,12 @@ public class SmkMemoryManager implements Device {
     }
 
     @Override
-    public void saveState(Bundle outState) {
+    public void saveState(State outState) {
         outState.putInt(STATE_MEMORY_CONFIGURATION, currentMemoryLayoutValue);
     }
 
     @Override
-    public void restoreState(Bundle inState) {
+    public void restoreState(State inState) {
         updateMemoryLayout(inState.getInt(STATE_MEMORY_CONFIGURATION, MODE_SYS));
     }
 

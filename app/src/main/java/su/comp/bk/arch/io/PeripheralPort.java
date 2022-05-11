@@ -19,8 +19,7 @@
 package su.comp.bk.arch.io;
 
 import su.comp.bk.arch.cpu.Cpu;
-
-import android.os.Bundle;
+import su.comp.bk.state.State;
 
 /**
  * BK-0010 peripheral port.
@@ -53,12 +52,12 @@ public class PeripheralPort implements Device {
     }
 
     @Override
-    public void saveState(Bundle outState) {
+    public void saveState(State outState) {
         // Do nothing
     }
 
     @Override
-    public void restoreState(Bundle inState) {
+    public void restoreState(State inState) {
         // Do nothing
     }
 

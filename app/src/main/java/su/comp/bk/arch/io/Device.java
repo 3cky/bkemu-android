@@ -18,12 +18,12 @@
  */
 package su.comp.bk.arch.io;
 
-import android.os.Bundle;
+import su.comp.bk.state.StatefulEntity;
 
 /**
  * I/O device interface.
  */
-public interface Device {
+public interface Device extends StatefulEntity {
     /**
      * Get addresses this device is mapped to.
      * @return array of register addresses this device is mapped to (in range 0160000-0177776)
@@ -37,18 +37,6 @@ public interface Device {
      *                        false if it is initiated by RESET command
      */
     void init(long cpuTime, boolean isHardwareReset);
-
-    /**
-     * Save device state.
-     * @param outState {@link Bundle} to save device state
-     */
-    void saveState(Bundle outState);
-
-    /**
-     * Read device state.
-     * @param inState {@link Bundle} to restore device state
-     */
-    void restoreState(Bundle inState);
 
     /**
      * Read value from I/O device. Devices always read as word.

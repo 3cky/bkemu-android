@@ -37,6 +37,7 @@ import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
+import su.comp.bk.state.State;
 import timber.log.Timber;
 
 /**
@@ -75,10 +76,10 @@ public class IdeController {
     /** Sector size (in bytes) */
     public static final int SECTOR_SIZE = 512;
 
-    private static final String STATE_PREFIX = "IdeController#";
-    private static final String STATE_NEXT_DRIVE_SERIAL_NUMBER = STATE_PREFIX +
-            "next_drive_serial_number";
-    private static final String STATE_CURRENT_INTERFACE = STATE_PREFIX + "current_interface";
+    private static final String STATE_PREFIX = "IdeController";
+    public static final String STATE_NEXT_DRIVE_SERIAL_NUMBER = STATE_PREFIX +
+            "#next_drive_serial_number";
+    public static final String STATE_CURRENT_INTERFACE = STATE_PREFIX + "#current_interface";
 
     private final IdeInterface[] interfaces;
     private IdeInterface currentInterface;
@@ -526,25 +527,25 @@ public class IdeController {
         private static final int ETF_FORCE_TRANSFER_STOP = 3;
 
         private static final String STATE_PREFIX = "IdeInterface";
-        private static final String STATE_NUM_CYLINDERS = "num_cylinders";
-        private static final String STATE_NUM_HEADS = "num_heads";
-        private static final String STATE_NUM_SECTORS = "num_sectors";
-        private static final String STATE_LAST_CONTROL_DATA = "last_control_data";
-        private static final String STATE_FEATURES = "features";
-        private static final String STATE_SECTOR_COUNT = "sector_count";
-        private static final String STATE_SECTOR_NUMBER = "sector_number";
-        private static final String STATE_CYLINDER_LOW = "cylinder_low";
-        private static final String STATE_CYLINDER_HIGH = "cylinder_high";
-        private static final String STATE_DRIVE_AND_HEAD = "drive_and_head";
-        private static final String STATE_STATUS = "status";
-        private static final String STATE_ERROR = "error";
-        private static final String STATE_END_TRANSFER_FUNCTION = "end_transfer_function";
-        private static final String STATE_REQUIRED_NUMBER_OF_SECTORS = "required_number_of_sectors";
-        private static final String STATE_MULTIPLE_SECTOR_COUNT = "multiple_sector_count";
-        private static final String STATE_DRIVE_SERIAL_NUMBER = "drive_serial_number";
-        private static final String STATE_DATA_BUFFER = "data_buffer";
-        private static final String STATE_DATA_BUFFER_OFFSET = "data_buffer_offset";
-        private static final String STATE_DATA_BUFFER_END = "data_buffer_end";
+        public static final String STATE_NUM_CYLINDERS = "num_cylinders";
+        public static final String STATE_NUM_HEADS = "num_heads";
+        public static final String STATE_NUM_SECTORS = "num_sectors";
+        public static final String STATE_LAST_CONTROL_DATA = "last_control_data";
+        public static final String STATE_FEATURES = "features";
+        public static final String STATE_SECTOR_COUNT = "sector_count";
+        public static final String STATE_SECTOR_NUMBER = "sector_number";
+        public static final String STATE_CYLINDER_LOW = "cylinder_low";
+        public static final String STATE_CYLINDER_HIGH = "cylinder_high";
+        public static final String STATE_DRIVE_AND_HEAD = "drive_and_head";
+        public static final String STATE_STATUS = "status";
+        public static final String STATE_ERROR = "error";
+        public static final String STATE_END_TRANSFER_FUNCTION = "end_transfer_function";
+        public static final String STATE_REQUIRED_NUMBER_OF_SECTORS = "required_number_of_sectors";
+        public static final String STATE_MULTIPLE_SECTOR_COUNT = "multiple_sector_count";
+        public static final String STATE_DRIVE_SERIAL_NUMBER = "drive_serial_number";
+        public static final String STATE_DATA_BUFFER = "data_buffer";
+        public static final String STATE_DATA_BUFFER_OFFSET = "data_buffer_offset";
+        public static final String STATE_DATA_BUFFER_END = "data_buffer_end";
 
         // Current drive geometry
         private int numCylinders, numHeads, numSectors;
@@ -601,11 +602,11 @@ public class IdeController {
             return (drive != null);
         }
 
-        private String getStateKey(String var, int id) {
+        public String getStateKey(String var, int id) {
             return STATE_PREFIX + id + "#" + var;
         }
 
-        void saveState(Bundle outState, int id) {
+        void saveState(State outState, int id) {
             outState.putInt(getStateKey(STATE_NUM_CYLINDERS, id), numCylinders);
             outState.putInt(getStateKey(STATE_NUM_HEADS, id), numHeads);
             outState.putInt(getStateKey(STATE_NUM_SECTORS, id), numSectors);
@@ -628,7 +629,7 @@ public class IdeController {
             outState.putInt(getStateKey(STATE_DATA_BUFFER_END, id), dataBufferEnd);
         }
 
-        void restoreState(Bundle inState, int id) {
+        void restoreState(State inState, int id) {
             numCylinders = inState.getInt(getStateKey(STATE_NUM_CYLINDERS, id));
             numHeads = inState.getInt(getStateKey(STATE_NUM_HEADS, id));
             numSectors = inState.getInt(getStateKey(STATE_NUM_SECTORS, id));
@@ -986,7 +987,7 @@ public class IdeController {
         setCurrentInterface(IF_0);
     }
 
-    public synchronized void saveState(Bundle outState) {
+    public synchronized void saveState(State outState) {
         outState.putInt(STATE_NEXT_DRIVE_SERIAL_NUMBER, nextDriveSerialNumber);
         for (int i = IF_0; i <= IF_1; i++) {
             IdeInterface ideInterface = interfaces[i];
@@ -997,7 +998,7 @@ public class IdeController {
         }
     }
 
-    public synchronized void restoreState(Bundle inState) {
+    public synchronized void restoreState(State inState) {
         nextDriveSerialNumber = inState.getInt(STATE_NEXT_DRIVE_SERIAL_NUMBER);
         for (int i = IF_0; i <= IF_1; i++) {
             interfaces[i].restoreState(inState, i);

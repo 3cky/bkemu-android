@@ -20,7 +20,7 @@
 package su.comp.bk.arch.io;
 
 import su.comp.bk.arch.Computer;
-import android.os.Bundle;
+import su.comp.bk.state.State;
 
 /**
  * BK0011 system timer (50 Hz, connected to CPU IRQ2 pin).
@@ -36,7 +36,7 @@ public class SystemTimer implements Device, VideoController.FrameSyncListener {
     public final static int STATE_ENABLED_FLAG = (1 << 14);
 
     // State save/restore: Timer interrupt enabled state
-    private static final String STATE_IRQ_ENABLED = SystemTimer.class.getName() + "#irq_enabled";
+    public static final String STATE_IRQ_ENABLED = "SystemTimer#irq_enabled";
 
     private final Computer computer;
 
@@ -65,12 +65,12 @@ public class SystemTimer implements Device, VideoController.FrameSyncListener {
     }
 
     @Override
-    public void saveState(Bundle outState) {
+    public void saveState(State outState) {
         outState.putBoolean(STATE_IRQ_ENABLED, isInterruptEnabled());
     }
 
     @Override
-    public void restoreState(Bundle inState) {
+    public void restoreState(State inState) {
         setInterruptEnabled(inState.getBoolean(STATE_IRQ_ENABLED));
     }
 

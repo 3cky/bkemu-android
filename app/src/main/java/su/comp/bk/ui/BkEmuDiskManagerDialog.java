@@ -24,7 +24,7 @@ import static su.comp.bk.arch.io.disk.FloppyController.FloppyDriveIdentifier.C;
 import static su.comp.bk.arch.io.disk.FloppyController.FloppyDriveIdentifier.D;
 import static su.comp.bk.arch.io.disk.IdeController.IF_0;
 import static su.comp.bk.arch.io.disk.IdeController.IF_1;
-import static su.comp.bk.util.FileUtils.ellipsizeFileName;
+import static su.comp.bk.util.StringUtils.ellipsizeFileName;
 
 import android.app.Activity;
 import android.app.Dialog;

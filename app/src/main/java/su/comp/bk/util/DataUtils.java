@@ -26,42 +26,23 @@ import android.net.Uri;
 import android.provider.OpenableColumns;
 
 import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.io.UnsupportedEncodingException;
 import java.util.Objects;
+import java.util.zip.Deflater;
+import java.util.zip.DeflaterOutputStream;
+import java.util.zip.InflaterInputStream;
 
-public class FileUtils {
+public class DataUtils {
     /** Internal I/O buffer default size */
     private static final int BUFFER_SIZE = 8 * 1024;
-
-    /**
-     * Get tape file name as string from its 16 bytes array presentation.
-     * @param fileNameData internal file name array data
-     * @return string file name presentation
-     */
-    public static String getTapeFileName(byte[] fileNameData) {
-        String fileName;
-        if (fileNameData[0] != 0) { // BK0011 flag for any file
-            try {
-                fileName = new String(fileNameData, "koi8-r");
-            } catch (UnsupportedEncodingException e) {
-                fileName = new String(fileNameData);
-            }
-            fileName = fileName.trim().toUpperCase();
-            // Strip spaces before extension (like in "NAME  .COD" in Basic)
-            int dotIndex = fileName.lastIndexOf('.');
-            if (dotIndex > 0) {
-                fileName = fileName.substring(0, dotIndex).trim().concat(
-                        fileName.substring(dotIndex));
-            }
-        } else {
-            fileName = "";
-        }
-        return fileName;
-    }
 
     /**
      * Get local file URI for given URI. If URI is not local,
@@ -100,28 +81,6 @@ public class FileUtils {
         ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
         writeUriContentToStream(context, uri, byteArrayOutputStream);
         return byteArrayOutputStream.toByteArray();
-    }
-
-    /**
-     * Checks is file name matches some of given extensions (ignoring case).
-     * @param fileName file name to check
-     * @param fileExtensions array of file extensions
-     * @return true if some of extensions matched for given file name, false otherwise
-     */
-    public static boolean isFileNameExtensionMatched(final String fileName,
-                                                     final String[] fileExtensions) {
-        boolean isMatched = false;
-        if (fileName != null) {
-            final String fileNameLwr = fileName.toLowerCase();
-            for (String fileExtension : fileExtensions) {
-                final String formatLwr = fileExtension.toLowerCase();
-                if (fileNameLwr.endsWith(formatLwr)) {
-                    isMatched = true;
-                    break;
-                }
-            }
-        }
-        return isMatched;
     }
 
     /**
@@ -209,24 +168,64 @@ public class FileUtils {
     }
 
     /**
-     * Ellipsize file name, if max file name length is exceeded.
+     * Write data to file.
      *
-     * @param fileName file name to ellipsize
-     * @param maxLength max file name length
-     * @param suffixLength max file name suffix length
-     * @return ellipsized file name
+     * @param file File to write
+     * @param data data to write
+     * @throws IOException in case of I/O error
      */
-    public static String ellipsizeFileName(String fileName, int maxLength, int suffixLength) {
-        if (fileName.length() > maxLength) {
-            int nameDotIndex = fileName.lastIndexOf('.');
-            if (nameDotIndex < 0) {
-                nameDotIndex = fileName.length();
-            }
-            int nameSuffixIndex = nameDotIndex - suffixLength;
-            int namePrefixIndex = maxLength - (fileName.length() - nameSuffixIndex);
-            fileName = fileName.substring(0, namePrefixIndex).concat("...")
-                    .concat(fileName.substring(nameSuffixIndex));
+    public static void writeDataFile(File file, byte[] data) throws IOException {
+        try (FileOutputStream fos = new FileOutputStream(file)) {
+            BufferedOutputStream bos = new BufferedOutputStream(fos);
+            bos.write(data);
+            bos.flush();
         }
-        return fileName;
+    }
+
+    /**
+     * Read data from file.
+     *
+     * @param file File to read
+     * @return read data
+     * @throws IOException in case of I/O error
+     */
+    public static byte[] readDataFile(File file) throws IOException {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        try (FileInputStream fis = new FileInputStream(file)) {
+            writeFully(fis, baos);
+        }
+        return baos.toByteArray();
+    }
+
+    /**
+     * Compress data.
+     *
+     * @param data data to compress
+     * @return compressed data in ZLIB format
+     * @throws IOException in case of compressing error
+     */
+    public static byte[] compressData(byte[] data) throws IOException {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        Deflater deflater = new Deflater(Deflater.BEST_COMPRESSION);
+        try (DeflaterOutputStream dos = new DeflaterOutputStream(baos, deflater)) {
+            dos.write(data);
+        }
+        return baos.toByteArray();
+    }
+
+    /**
+     * Decompress data.
+     *
+     * @param data data to decompress in ZLIB format
+     * @return decompressed data
+     * @throws IOException in case of decompressing error
+     */
+    public static byte[] decompressData(byte[] data) throws IOException {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream(data.length);
+        ByteArrayInputStream bais = new ByteArrayInputStream(data);
+        try (InflaterInputStream iis = new InflaterInputStream(bais)) {
+            writeFully(iis, baos);
+        }
+        return baos.toByteArray();
     }
 }

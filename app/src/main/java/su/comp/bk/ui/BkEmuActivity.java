@@ -31,7 +31,6 @@ import android.content.pm.PackageManager.NameNotFoundException;
 import android.graphics.Bitmap;
 import android.graphics.Rect;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.view.GestureDetector;
@@ -48,7 +47,6 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
@@ -58,8 +56,6 @@ import androidx.transition.Explode;
 import androidx.transition.Transition;
 import androidx.transition.TransitionManager;
 import androidx.transition.TransitionSet;
-
-import org.apache.commons.lang.StringUtils;
 
 import java.io.BufferedOutputStream;
 import java.io.ByteArrayInputStream;
@@ -94,9 +90,12 @@ import su.comp.bk.arch.io.audio.AudioOutput;
 import su.comp.bk.arch.io.disk.FileDiskImage;
 import su.comp.bk.arch.io.disk.IdeController;
 import su.comp.bk.arch.io.disk.SafDiskImage;
+import su.comp.bk.state.State;
+import su.comp.bk.state.StateManager;
 import su.comp.bk.ui.joystick.JoystickManager;
 import su.comp.bk.ui.keyboard.KeyboardManager;
-import su.comp.bk.util.FileUtils;
+import su.comp.bk.util.DataUtils;
+import su.comp.bk.util.StringUtils;
 import timber.log.Timber;
 
 /**
@@ -358,7 +357,7 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
                         tapeFileNameData[idx] = (byte) cpu.readMemory(true,
                                 tapeParamsBlockAddr + idx + 6);
                     }
-                    String tapeFileName = FileUtils.getTapeFileName(tapeFileNameData);
+                    String tapeFileName = StringUtils.getTapeFileName(tapeFileNameData);
                     lastBinImageAddress = cpu.readMemory(false, tapeParamsBlockAddr + 2);
                     if (tapeCmdCode == 2) {
                         lastBinImageLength = cpu.readMemory(false, tapeParamsBlockAddr + 4);
@@ -409,7 +408,7 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
                         tapeFileNameData[idx] = (byte) cpu.readMemory(true,
                                 tapeParamsBlockAddr + idx + 6);
                     }
-                    String tapeFileName = FileUtils.getTapeFileName(tapeFileNameData);
+                    String tapeFileName = StringUtils.getTapeFileName(tapeFileNameData);
                     lastBinImageAddress = cpu.readMemory(false, tapeParamsBlockAddr + 2);
                     Runnable tapeOperationTask;
                     if (tapeCmdCode == 0) {
@@ -483,7 +482,7 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
         decorView.setOnSystemUiVisibilityChangeListener(this);
 
         checkIntentData();
-        initializeComputer(savedInstanceState);
+        initializeComputer();
         mountIntentDataDiskImage();
 
         TransitionSet ts = new TransitionSet();
@@ -540,19 +539,19 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
         String intentDataString = getIntent().getDataString();
         if (intentDataString != null) {
             Uri intentDataUri = Uri.parse(intentDataString);
-            String intentDataFileName = FileUtils.resolveUriFileName(this, intentDataUri);
-            if (FileUtils.isFileNameExtensionMatched(intentDataFileName, FILE_EXT_BINARY_IMAGES)) {
+            String intentDataFileName = DataUtils.resolveUriFileName(this, intentDataUri);
+            if (StringUtils.isFileNameExtensionMatched(intentDataFileName, FILE_EXT_BINARY_IMAGES)) {
                 this.intentDataProgramImageUri = intentDataString;
-            } else if (FileUtils.isFileNameExtensionMatched(intentDataFileName,
+            } else if (StringUtils.isFileNameExtensionMatched(intentDataFileName,
                     FILE_EXT_FLOPPY_DISK_IMAGES)) {
                 this.intentDataFloppyDiskImageUri = intentDataString;
-            } else if (FileUtils.isFileNameExtensionMatched(intentDataFileName,
+            } else if (StringUtils.isFileNameExtensionMatched(intentDataFileName,
                     FILE_EXT_HARD_DISK_IMAGES)) {
                 this.intentDataHardDiskImageUri = intentDataString;
-            } else if (FileUtils.isFileNameExtensionMatched(intentDataFileName,
+            } else if (StringUtils.isFileNameExtensionMatched(intentDataFileName,
                     FILE_EXT_RAW_DISK_IMAGES)) {
                 // Try to determine intent data type from its file length
-                long intentDataLength = FileUtils.getUriFileLength(this, intentDataUri);
+                long intentDataLength = DataUtils.getUriFileLength(this, intentDataUri);
                 if (intentDataLength > FloppyController.MAX_BYTES_PER_DISK) {
                     this.intentDataHardDiskImageUri = intentDataString;
                 } else if (intentDataLength > 0) {
@@ -575,7 +574,7 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
 
         Uri intentDataDiskImageLocalUri;
         try {
-            intentDataDiskImageLocalUri = FileUtils.getLocalFileUri(getApplicationContext(),
+            intentDataDiskImageLocalUri = DataUtils.getLocalFileUri(getApplicationContext(),
                     intentDataDiskImageUri);
         } catch (IOException e) {
             Timber.e(e, "Can't get local file for intent disk image URI: %s",
@@ -623,25 +622,10 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
         }
     }
 
-    private void initializeComputer(Bundle savedInstanceState) {
+    private void initializeComputer() {
         computer = new Computer();
 
-        boolean isComputerInitialized = false;
-
-        if (savedInstanceState != null) {
-            // Trying to restore computer state
-            try {
-                Configuration storedConfiguration = Computer.getStoredConfiguration(savedInstanceState);
-                if (storedConfiguration != null) {
-                    computer.configure(getResources(), storedConfiguration);
-                    initializeComputerDisks();
-                    computer.restoreState(savedInstanceState);
-                    isComputerInitialized = true;
-                }
-            } catch (Exception e) {
-                Timber.e(e, "Can't restore computer state");
-            }
-        }
+        boolean isComputerInitialized = restoreComputerState();
 
         if (!isComputerInitialized) {
             // Computer state can't be restored, do startup initialization
@@ -687,6 +671,39 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
         } else {
             throw new IllegalStateException("Can't initialize computer state");
         }
+    }
+
+    private void saveComputerState() {
+        State state = StateManager.saveEntityState(computer);
+        try {
+            File stateFile = StateManager.writeStateInternalFile(this, state);
+            Timber.d("Computer state saved to file: %s", stateFile);
+        } catch (Exception e) {
+            Timber.e(e, "Can't save computer state");
+        }
+    }
+
+    private boolean restoreComputerState() {
+        boolean isStateRestored = false;
+        try {
+            State restoredState = StateManager.readStateInternalFile(this);
+            Configuration storedConfiguration = Computer.getStoredConfiguration(restoredState);
+            if (storedConfiguration != null) {
+                computer.configure(getResources(), storedConfiguration);
+                initializeComputerDisks();
+                StateManager.restoreEntityState(computer, restoredState);
+                isStateRestored = true;
+                Timber.d("Computer state restored");
+            }
+        } catch (Exception e) {
+            Timber.d("Can't restore computer state: %s", e.toString());
+        }
+        deleteComputerState();
+        return isStateRestored;
+    }
+
+    private void deleteComputerState() {
+        StateManager.deleteStateInternalFile(this);
     }
 
     private void initializeComputerDisks() {
@@ -739,7 +756,6 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
         super.onDestroy();
     }
 
-    @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN)
     @Override
     public void onSystemUiVisibilityChange(int visibility) {
         if ((visibility & View.SYSTEM_UI_FLAG_FULLSCREEN) == 0) {
@@ -767,8 +783,10 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
         // Save on-screen control states
         outState.putBoolean(STATE_ON_SCREEN_JOYSTICK_VISIBLE, isOnScreenJoystickVisible());
         keyboardManager.saveState(outState);
+
         // Save computer state
-        computer.saveState(outState);
+        saveComputerState();
+
         super.onSaveInstanceState(outState);
     }
 
@@ -848,9 +866,6 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
         boolean isFloppyControllerAttached = computer.getConfiguration().isFloppyControllerPresent();
         menu.findItem(R.id.menu_disk_manager).setEnabled(isFloppyControllerAttached);
         menu.findItem(R.id.menu_disk_manager).setVisible(isFloppyControllerAttached);
-        boolean isImmersiveModeSupported = (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT);
-        menu.findItem(R.id.menu_fullscreen_mode).setEnabled(isImmersiveModeSupported);
-        menu.findItem(R.id.menu_fullscreen_mode).setVisible(isImmersiveModeSupported);
         return true;
     }
 
@@ -885,9 +900,7 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
             showVolumeDialog();
             return true;
         } else if (itemId == R.id.menu_fullscreen_mode) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
-                enterFullscreenMode();
-            }
+            enterFullscreenMode();
             return true;
         } else if (itemId == R.id.menu_screenshot) {
             takeScreenshot();
@@ -1178,7 +1191,7 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
                                      DiskImage image) {
         try {
             if (image != null && ideController != null) {
-                IdeController.IdeDrive ideDrive = FileUtils.isFileNameExtensionMatched(
+                IdeController.IdeDrive ideDrive = StringUtils.isFileNameExtensionMatched(
                         image.getName(), FILE_EXT_HARD_DISK_IMAGES)
                         ? new IdeController.IdeDriveHdiImage(image)
                         : new IdeController.IdeDriveRawImage(image);
@@ -1419,7 +1432,7 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
 
     protected boolean binImageFileSave(Uri binImageFileUri) {
         boolean isImageSaved = doBinImageFileSave(binImageFileUri);
-        String binImageFileName = FileUtils.resolveUriFileName(this, binImageFileUri);
+        String binImageFileName = DataUtils.resolveUriFileName(this, binImageFileUri);
         if (isImageSaved) {
             Toast.makeText(getApplicationContext(),
                     getResources().getString(R.string.toast_image_save_info,
@@ -1473,7 +1486,7 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
 
     protected boolean binImageFileLoad(Uri binImageFileUri) {
         boolean isImageLoaded = doBinImageFileLoad(binImageFileUri);
-        String imageName = FileUtils.resolveUriFileName(this, binImageFileUri);
+        String imageName = DataUtils.resolveUriFileName(this, binImageFileUri);
         showAfterBinImageFileLoadToast(isImageLoaded, imageName);
         return isImageLoaded;
     }
@@ -1527,7 +1540,7 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
             comp.getCpu().writeRegister(false, Cpu.PC, BK11_BMB10_EXIT_ADDRESS);
         }
         // Write loaded image name to tape parameters block
-        String tapeFileName = FileUtils.resolveUriFileName(this, Uri.parse(lastBinImageFileUri));
+        String tapeFileName = DataUtils.resolveUriFileName(this, Uri.parse(lastBinImageFileUri));
         tapeFileName = StringUtils.substring(tapeFileName, 0, MAX_TAPE_FILE_NAME_LENGTH);
         byte[] tapeFileNameBuffer;
         try {
@@ -1726,7 +1739,7 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
      */
     protected int loadBinImageFile(Uri binImageFileUri) throws Exception {
         Timber.d("Trying to load binary image: %s", binImageFileUri);
-        byte[] binImageData = FileUtils.getUriContentData(getApplicationContext(), binImageFileUri);
+        byte[] binImageData = DataUtils.getUriContentData(getApplicationContext(), binImageFileUri);
         this.lastBinImageFileUri = binImageFileUri.toString();
         return loadBinImage(binImageData);
     }
@@ -1873,7 +1886,6 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
         videoController.setDisplayMode(displayMode);
     }
 
-    @RequiresApi(api = Build.VERSION_CODES.KITKAT)
     private void enterFullscreenMode() {
         Timber.d("entering fullscreen mode");
         setSystemUiVisibility(View.SYSTEM_UI_FLAG_IMMERSIVE
@@ -1884,7 +1896,6 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
                 | View.SYSTEM_UI_FLAG_FULLSCREEN);
     }
 
-    @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN)
     private void leaveFullscreenMode() {
         Timber.d("leaving fullscreen mode");
         setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_STABLE);

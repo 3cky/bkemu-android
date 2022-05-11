@@ -18,18 +18,18 @@
  */
 package su.comp.bk.arch.cpu;
 
-import android.os.Bundle;
-
 import su.comp.bk.arch.Computer;
 import su.comp.bk.arch.cpu.addressing.*;
 import su.comp.bk.arch.cpu.opcode.*;
 
+import su.comp.bk.state.State;
+import su.comp.bk.state.StatefulEntity;
 import timber.log.Timber;
 
 /**
  * PDP-11 compatible 1801VM1 CPU implementation.
  */
-public class Cpu {
+public class Cpu implements StatefulEntity {
 
     /** SEL1 I/O register address */
     public final static int REG_SEL1 = 0177716;
@@ -87,30 +87,23 @@ public class Cpu {
     /** IRQ2 vector address */
     public static final int TRAP_IRQ2 = 0100;
 
+    private static final String STATE_PREFIX = "Cpu";
     // State save/restore: CPU time (in clock ticks)
-    private static final String STATE_TIME =
-            Cpu.class.getName() + "#time";
+    public static final String STATE_TIME = STATE_PREFIX + "#time";
     // State save/restore: Reserved opcode was fetched flag
-    private static final String STATE_RESERVED_OPCODE =
-            Cpu.class.getName() + "#reserved_opcode";
+    public static final String STATE_RESERVED_OPCODE = STATE_PREFIX + "#reserved_opcode";
     // State save/restore: Interrupt request waiting flag
-    private static final String STATE_IRQ_WAIT =
-            Cpu.class.getName() + "#irq_wait";
+    public static final String STATE_IRQ_WAIT = STATE_PREFIX + "#irq_wait";
     // State save/restore: Deferred trace trap flag
-    private static final String STATE_DEFERRED_TRACE_TRAP =
-            Cpu.class.getName() + "#deferred_trace_trap";
+    public static final String STATE_DEFERRED_TRACE_TRAP = STATE_PREFIX + "#deferred_trace_trap";
     // State save/restore: CPU is in HALT mode flag
-    private static final String STATE_HALT_MODE =
-            Cpu.class.getName() + "#halt_mode";
+    public static final String STATE_HALT_MODE = STATE_PREFIX + "#halt_mode";
     // State save/restore: Bus error caused flag
-    private static final String STATE_BUS_ERROR =
-            Cpu.class.getName() + "#bus_error";
-    // State save/restore: Registers data
-    private static final String STATE_REGISTERS =
-            Cpu.class.getName() + "#registers";
+    public static final String STATE_BUS_ERROR = STATE_PREFIX + "#bus_error";
+    // State save/restore: Register data
+    public static final String STATE_REGISTER = STATE_PREFIX + "#register";
     // State save/restore: Processor status word data
-    private static final String STATE_PSW =
-            Cpu.class.getName() + "#psw";
+    public static final String STATE_PSW = STATE_PREFIX + "#psw";
 
     // First radial interrupt (IRQ1) requested
     private boolean isIrq1Requested;
@@ -382,13 +375,16 @@ public class Cpu {
 
     /**
      * Save CPU state.
-     * @param outState {@link Bundle} to save state
+     * @param outState {@link State} to save state
      */
-    public void saveState(Bundle outState) {
+    public void saveState(State outState) {
         // Save PSW
         outState.putInt(STATE_PSW, getPswState());
         // Save registers
-        outState.putShortArray(STATE_REGISTERS, getRegisters());
+        short[] registers = getRegisters();
+        for (int i = 0; i < registers.length; i++) {
+            outState.putInt(STATE_REGISTER + ":r" + i, registers[i] & 0177777);
+        }
         // Save state flags
         outState.putBoolean(STATE_BUS_ERROR, isBusError());
         outState.putBoolean(STATE_HALT_MODE, isHaltMode());
@@ -401,13 +397,17 @@ public class Cpu {
 
     /**
      * Restore CPU state.
-     * @param inState {@link Bundle} to restore state
+     * @param inState {@link State} to restore state
      */
-    public void restoreState(Bundle inState) {
+    public void restoreState(State inState) {
         // Restore PSW
         setPswState(inState.getInt(STATE_PSW));
         // Restore registers
-        putRegisters(inState.getShortArray(STATE_REGISTERS));
+        short[] registers = new short[8];
+        for (int i = 0; i < registers.length; i++) {
+            registers[i] = (short) inState.getInt(STATE_REGISTER + ":r" + i);
+        }
+        putRegisters(registers);
         // Restore state flags
         setBusError(inState.getBoolean(STATE_BUS_ERROR));
         setHaltMode(inState.getBoolean(STATE_HALT_MODE));

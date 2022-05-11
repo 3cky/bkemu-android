@@ -19,16 +19,18 @@ package su.comp.bk.arch.io.disk;
 
 import static su.comp.bk.arch.Computer.NANOSECS_IN_MSEC;
 
-import android.os.Bundle;
 import android.util.SparseBooleanArray;
 
 import androidx.annotation.NonNull;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.ShortBuffer;
 import java.util.ArrayList;
 
 import su.comp.bk.arch.Computer;
 import su.comp.bk.arch.io.Device;
+import su.comp.bk.state.State;
 import su.comp.bk.util.Crc16Utils;
 import timber.log.Timber;
 
@@ -107,60 +109,53 @@ public class FloppyController implements Device {
 
     private final static int[] ADDRESSES = { CONTROL_REGISTER_ADDRESS, DATA_REGISTER_ADDRESS };
 
+    private static final String STATE_PREFIX = "FloppyController";
     // State save/restore: Synchronous read flag state
-    private static final String STATE_SYNCHRONOUS_READ = FloppyController.class.getName() +
-            "#sync_read";
+    public static final String STATE_SYNCHRONOUS_READ = STATE_PREFIX + "#sync_read";
     // State save/restore: Marker found flag state
-    private static final String STATE_MARKER_FOUND = FloppyController.class.getName() +
-            "#marker_found";
+    public static final String STATE_MARKER_FOUND = STATE_PREFIX + "#marker_found";
     // State save/restore: Data ready flag state
-    private static final String STATE_DATA_READY = FloppyController.class.getName() +
-            "#data_ready";
+    public static final String STATE_DATA_READY = STATE_PREFIX + "#data_ready";
     // State save/restore: Write operation flag state
-    private static final String STATE_WRITE_OPERATION = FloppyController.class.getName() +
-            "#write_operation";
+    public static final String STATE_WRITE_OPERATION = STATE_PREFIX + "#write_operation";
     // State save/restore: Data ready read position
-    private static final String STATE_DATA_READY_READ_POSITION = FloppyController.class.getName() +
+    public static final String STATE_DATA_READY_READ_POSITION = STATE_PREFIX +
             "#data_ready_read_position";
     // State save/restore: Last marker data position
-    private static final String STATE_LAST_MARKER_POSITION = FloppyController.class.getName() +
-            "#last_marker_position";
+    public static final String STATE_LAST_MARKER_POSITION = STATE_PREFIX + "#last_marker_position";
     // State save/restore: CRC flag state
-    private static final String STATE_CRC_FLAG = FloppyController.class.getName() + "#crc_flag";
+    public static final String STATE_CRC_FLAG = STATE_PREFIX + "#crc_flag";
     // State save/restore: Last data register read time
-    private static final String STATE_LAST_DATA_REGISTER_READ_TIME =
-            FloppyController.class.getName() + "#last_data_register_read_time";
+    public static final String STATE_LAST_DATA_REGISTER_READ_TIME = STATE_PREFIX +
+            "#last_data_register_read_time";
     // State save/restore: Last data register write time
-    private static final String STATE_LAST_DATA_REGISTER_WRITE_TIME =
-            FloppyController.class.getName() + "#last_data_register_write_time";
+    public static final String STATE_LAST_DATA_REGISTER_WRITE_TIME = STATE_PREFIX +
+            "#last_data_register_write_time";
     // State save/restore: Last controller access time
-    private static final String STATE_LAST_ACCESS_TIME = FloppyController.class.getName() +
-            "#last_access_time";
+    public static final String STATE_LAST_ACCESS_TIME = STATE_PREFIX + "#last_access_time";
     // State save/restore: Selected floppy drive
-    private static final String STATE_SELECTED_FLOPPY_DRIVE = FloppyController.class.getName() +
+    public static final String STATE_SELECTED_FLOPPY_DRIVE = STATE_PREFIX +
             "#selected_floppy_drive";
     // State save/restore: Motor started flag state
-    private static final String STATE_MOTOR_STARTED = FloppyController.class.getName() +
-            "#motor_started";
+    public static final String STATE_MOTOR_STARTED = STATE_PREFIX + "#motor_started";
 
+    private static final String STATE_DRIVE_PREFIX = "FloppyDrive";
     // State save/restore: Drive current track data
-    private static final String STATE_DRIVE_CURRENT_TRACK_DATA = FloppyDrive.class.getName() +
+    public static final String STATE_DRIVE_CURRENT_TRACK_DATA = STATE_DRIVE_PREFIX +
             "#current_track_data";
     // State save/restore: Drive current track data is modified flag
-    private static final String STATE_DRIVE_CURRENT_TRACK_DATA_MODIFIED =
-            FloppyDrive.class.getName() + "#current_track_data_modified";
+    public static final String STATE_DRIVE_CURRENT_TRACK_DATA_MODIFIED = STATE_DRIVE_PREFIX +
+            "#current_track_data_modified";
     // State save/restore: Drive current track data marker positions
-    private static final String STATE_DRIVE_CURRENT_TRACK_DATA_MARKER_POSITIONS =
-            FloppyDrive.class.getName() + "#current_track_data_marker_positions";
+    public static final String STATE_DRIVE_CURRENT_TRACK_DATA_MARKER_POSITIONS =
+            STATE_DRIVE_PREFIX + "#current_track_data_marker_positions";
     // State save/restore: Drive write protect flag
-    private static final String STATE_DRIVE_WRITE_PROTECT_MODE = FloppyDrive.class.getName() +
+    public static final String STATE_DRIVE_WRITE_PROTECT_MODE = STATE_DRIVE_PREFIX +
             "#write_protect";
     // State save/restore: Drive track number
-    private static final String STATE_DRIVE_TRACK_NUMBER = FloppyDrive.class.getName() +
-            "#track_number";
+    public static final String STATE_DRIVE_TRACK_NUMBER = STATE_DRIVE_PREFIX + "#track_number";
     // State save/restore: Drive track side
-    private static final String STATE_DRIVE_TRACK_SIDE = FloppyDrive.class.getName() +
-            "#track_side";
+    public static final String STATE_DRIVE_TRACK_SIDE = STATE_DRIVE_PREFIX + "#track_side";
 
     // CPU clock ticks per track
     protected final long clockTicksPerTrack;
@@ -705,8 +700,11 @@ public class FloppyController implements Device {
     }
 
     @Override
-    public synchronized void saveState(Bundle outState) {
-        outState.putSerializable(STATE_SELECTED_FLOPPY_DRIVE, getSelectedFloppyDriveIdentifier());
+    public synchronized void saveState(State outState) {
+        FloppyDriveIdentifier selectedDriveIdentifier = getSelectedFloppyDriveIdentifier();
+        if (selectedDriveIdentifier != null) {
+            outState.putString(STATE_SELECTED_FLOPPY_DRIVE, selectedDriveIdentifier.name());
+        }
         outState.putBoolean(STATE_SYNCHRONOUS_READ, isSynchronousReadState());
         outState.putBoolean(STATE_WRITE_OPERATION, isWriteOperation());
         outState.putBoolean(STATE_MARKER_FOUND, isMarkerFound());
@@ -720,8 +718,13 @@ public class FloppyController implements Device {
         outState.putBoolean(STATE_MOTOR_STARTED, isMotorStarted());
         for (FloppyDriveIdentifier driveIdentifier : FloppyDriveIdentifier.values()) {
             FloppyDrive drive = getFloppyDrive(driveIdentifier);
-            outState.putShortArray(getFloppyDriveStateKey(STATE_DRIVE_CURRENT_TRACK_DATA,
-                    driveIdentifier), drive.getCurrentTrackData());
+            short[] trackData = drive.getCurrentTrackData();
+            ByteBuffer trackDataBuffer = ByteBuffer.allocate(trackData.length * 2);
+            for (short trackDataWord: trackData) {
+                trackDataBuffer.putShort(trackDataWord);
+            }
+            outState.putByteArray(getFloppyDriveStateKey(STATE_DRIVE_CURRENT_TRACK_DATA,
+                    driveIdentifier), trackDataBuffer.array());
             outState.putBoolean(getFloppyDriveStateKey(STATE_DRIVE_CURRENT_TRACK_DATA_MODIFIED,
                     driveIdentifier), drive.isCurrentTrackDataModified());
             ArrayList<Integer> markerPositions = new ArrayList<>();
@@ -737,14 +740,16 @@ public class FloppyController implements Device {
                     driveIdentifier), drive.isWriteProtectMode());
             outState.putInt(getFloppyDriveStateKey(STATE_DRIVE_TRACK_NUMBER, driveIdentifier),
                     drive.getCurrentTrackNumber());
-            outState.putSerializable(getFloppyDriveStateKey(STATE_DRIVE_TRACK_SIDE,
-                    driveIdentifier), drive.getCurrentTrackSide());
+            outState.putString(getFloppyDriveStateKey(STATE_DRIVE_TRACK_SIDE,
+                    driveIdentifier), drive.getCurrentTrackSide().name());
         }
     }
 
     @Override
-    public synchronized void restoreState(Bundle inState) {
-        selectFloppyDrive((FloppyDriveIdentifier) inState.getSerializable(STATE_SELECTED_FLOPPY_DRIVE));
+    public synchronized void restoreState(State inState) {
+        String selectedDriveIdentifierName = inState.getString(STATE_SELECTED_FLOPPY_DRIVE, null);
+        selectFloppyDrive((selectedDriveIdentifierName != null)
+                ? FloppyDriveIdentifier.valueOf(selectedDriveIdentifierName) : null);
         setSynchronousReadState(inState.getBoolean(STATE_SYNCHRONOUS_READ));
         setWriteOperation(inState.getBoolean(STATE_WRITE_OPERATION));
         setMarkerFound(inState.getBoolean(STATE_MARKER_FOUND));
@@ -760,15 +765,20 @@ public class FloppyController implements Device {
             FloppyDrive drive = getFloppyDrive(driveIdentifier);
             int driveTrackNumber = inState.getInt(getFloppyDriveStateKey(
                     STATE_DRIVE_TRACK_NUMBER, driveIdentifier));
-            FloppyDriveSide driveTrackSide = (FloppyDriveSide) inState.getSerializable(
-                    getFloppyDriveStateKey(STATE_DRIVE_TRACK_SIDE, driveIdentifier));
+            FloppyDriveSide driveTrackSide = FloppyDriveSide.valueOf(inState.getString(
+                    getFloppyDriveStateKey(STATE_DRIVE_TRACK_SIDE, driveIdentifier)));
             drive.setCurrentTrack(driveTrackNumber, driveTrackSide);
             drive.setWriteProtectMode(inState.getBoolean(getFloppyDriveStateKey(
                     STATE_DRIVE_WRITE_PROTECT_MODE, driveIdentifier)));
-            short[] currentTrackData = inState.getShortArray(getFloppyDriveStateKey(
+            byte[] trackDataBytes = inState.getByteArray(getFloppyDriveStateKey(
                     STATE_DRIVE_CURRENT_TRACK_DATA, driveIdentifier));
-            System.arraycopy(currentTrackData, 0, drive.getCurrentTrackData(),
-                    0, currentTrackData.length);
+            if (trackDataBytes != null) {
+                ByteBuffer trackDataBuffer = ByteBuffer.wrap(trackDataBytes);
+                short[] trackData = ShortBuffer.allocate(WORDS_PER_TRACK)
+                        .put(trackDataBuffer.asShortBuffer()).array();
+                System.arraycopy(trackData, 0, drive.getCurrentTrackData(),
+                        0, trackData.length);
+            }
             ArrayList<Integer> markerPositions = inState.getIntegerArrayList(
                     getFloppyDriveStateKey(STATE_DRIVE_CURRENT_TRACK_DATA_MARKER_POSITIONS,
                             driveIdentifier));

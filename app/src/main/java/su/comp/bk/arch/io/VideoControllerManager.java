@@ -20,7 +20,7 @@
 package su.comp.bk.arch.io;
 
 import su.comp.bk.arch.memory.BankedMemory;
-import android.os.Bundle;
+import su.comp.bk.state.State;
 
 /**
  * BK-0011M video output controller manager.
@@ -38,8 +38,7 @@ public class VideoControllerManager implements Device {
     private final static int[] ADDRESSES = { PALETTE_REGISTER_ADDRESS };
 
     // State save/restore: video page index value
-    private static final String STATE_VIDEO_PAGE_INDEX =
-            VideoControllerManager.class.getName() + "#video_page_index";
+    public static final String STATE_VIDEO_PAGE_INDEX = "VideoControllerManager#video_page_index";
 
     private final VideoController videoController;
 
@@ -67,12 +66,12 @@ public class VideoControllerManager implements Device {
     }
 
     @Override
-    public void saveState(Bundle outState) {
+    public void saveState(State outState) {
         outState.putInt(STATE_VIDEO_PAGE_INDEX, videoMemory.getActiveBankIndex());
     }
 
     @Override
-    public void restoreState(Bundle inState) {
+    public void restoreState(State inState) {
         videoMemory.setActiveBankIndex(inState.getInt(STATE_VIDEO_PAGE_INDEX));
     }
 

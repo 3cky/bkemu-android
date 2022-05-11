@@ -20,11 +20,12 @@ package su.comp.bk.arch.io;
 
 import su.comp.bk.arch.Computer;
 import su.comp.bk.arch.memory.Memory;
+import su.comp.bk.state.State;
+
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Rect;
-import android.os.Bundle;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -135,22 +136,22 @@ public class VideoController implements Device, Computer.UptimeListener {
     private final int[] videoDataToPixelsTable = new int[16 * 8 * 256];
 
     // State save/restore: state variable prefix
-    private static final String STATE_PREFIX = "VideoController#";
+    private static final String STATE_PREFIX = "VideoController";
 
     // State save/restore: display mode value
-    private static final String STATE_DISPLAY_MODE = STATE_PREFIX + "display_mode";
+    public static final String STATE_DISPLAY_MODE = STATE_PREFIX + "#display_mode";
 
     // State save/restore: scroll register value
-    private static final String STATE_SCROLL_REGISTER = STATE_PREFIX + "scroll_reg";
+    public static final String STATE_SCROLL_REGISTER = STATE_PREFIX + "#scroll_reg";
 
     // State save/restore: palette index value
-    private static final String STATE_PALETTE_INDEX = STATE_PREFIX + "palette_index";
+    public static final String STATE_PALETTE_INDEX = STATE_PREFIX + "#palette_index";
 
     // State save/restore: current displayed frame number
-    private static final String STATE_CURRENT_FRAME = STATE_PREFIX + "frame_num";
+    public static final String STATE_CURRENT_FRAME = STATE_PREFIX + "#frame_num";
 
     // State save/restore: current displayed line number
-    private static final String STATE_CURRENT_LINE = STATE_PREFIX + "line_num";
+    public static final String STATE_CURRENT_LINE = STATE_PREFIX + "#line_num";
 
     // Available display modes
     public enum DisplayMode {
@@ -449,7 +450,7 @@ public class VideoController implements Device, Computer.UptimeListener {
     }
 
     @Override
-    public void saveState(Bundle outState) {
+    public void saveState(State outState) {
         outState.putLong(STATE_CURRENT_FRAME, currentFrame);
         outState.putLong(STATE_CURRENT_LINE, currentLine);
         outState.putInt(STATE_SCROLL_REGISTER, scrollRegister);
@@ -458,7 +459,7 @@ public class VideoController implements Device, Computer.UptimeListener {
     }
 
     @Override
-    public void restoreState(Bundle inState) {
+    public void restoreState(State inState) {
         currentFrame = inState.getLong(STATE_CURRENT_FRAME);
         currentLine = inState.getLong(STATE_CURRENT_LINE);
         scrollRegister = inState.getInt(STATE_SCROLL_REGISTER);
