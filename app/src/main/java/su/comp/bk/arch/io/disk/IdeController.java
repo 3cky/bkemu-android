@@ -18,22 +18,21 @@
 
 package su.comp.bk.arch.io.disk;
 
+import static su.comp.bk.arch.io.disk.IdeController.IdeInterface.DAR_DS0;
+import static su.comp.bk.arch.io.disk.IdeController.IdeInterface.DAR_DS1;
+import static su.comp.bk.arch.io.disk.IdeController.IdeInterface.DAR_WTG;
 import static su.comp.bk.arch.io.disk.IdeController.IdeInterface.DHR_DRV;
 import static su.comp.bk.arch.io.disk.IdeController.IdeInterface.DHR_HS0;
 import static su.comp.bk.arch.io.disk.IdeController.IdeInterface.DHR_HS1;
 import static su.comp.bk.arch.io.disk.IdeController.IdeInterface.DHR_HS2;
 import static su.comp.bk.arch.io.disk.IdeController.IdeInterface.DHR_HS3;
-import static su.comp.bk.arch.io.disk.IdeController.IdeInterface.DAR_DS0;
-import static su.comp.bk.arch.io.disk.IdeController.IdeInterface.DAR_DS1;
-import static su.comp.bk.arch.io.disk.IdeController.IdeInterface.DAR_WTG;
 import static su.comp.bk.arch.io.disk.IdeController.IdeInterface.IDENTIFY_NUM_CYLINDERS;
 import static su.comp.bk.arch.io.disk.IdeController.IdeInterface.IDENTIFY_NUM_HEADS;
 import static su.comp.bk.arch.io.disk.IdeController.IdeInterface.IDENTIFY_NUM_SECTORS;
 
 import android.annotation.SuppressLint;
-import android.os.Bundle;
 
-import java.io.*;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 

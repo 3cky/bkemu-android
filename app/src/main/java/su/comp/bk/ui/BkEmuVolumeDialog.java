@@ -134,13 +134,13 @@ public class BkEmuVolumeDialog extends DialogFragment implements SeekBar.OnSeekB
         setMuted(outputName, !isMuted(outputName));
     }
 
-    private List<AudioOutput> getAudioOutputs() {
+    private List<AudioOutput<?>> getAudioOutputs() {
         return getBkEmuActivity().getComputer().getAudioOutputs();
     }
 
-    private AudioOutput getAudioOutput(String outputName) {
-        List<AudioOutput> audioOutputs = getAudioOutputs();
-        for (AudioOutput audioOutput : audioOutputs) {
+    private AudioOutput<?> getAudioOutput(String outputName) {
+        List<AudioOutput<?>> audioOutputs = getAudioOutputs();
+        for (AudioOutput<?> audioOutput : audioOutputs) {
             if (audioOutput.getName().equals(outputName)) {
                 return audioOutput;
             }

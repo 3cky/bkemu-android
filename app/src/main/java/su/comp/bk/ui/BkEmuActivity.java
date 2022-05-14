@@ -516,6 +516,30 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
 
         mountIntentDataDiskImage();
 
+        setupTransitions();
+
+        keyboardManager = new KeyboardManager(this);
+        joystickManager = new JoystickManager(this);
+
+        setupOnScreenControls();
+
+        // Show change log with latest changes once after application update
+        checkShowChangelog();
+    }
+
+    private void checkShowChangelog() {
+        BkEmuChangeLog changeLog = new BkEmuChangeLog(this);
+        if (changeLog.isCurrentVersionGreaterThanLast()) {
+            // Store current version to preferences store
+            changeLog.saveCurrentVersionName();
+            // Show change log dialog but not at the first run
+            if (!changeLog.isFirstRun()) {
+                changeLog.getDialog(false).show();
+            }
+        }
+    }
+
+    private void setupTransitions() {
         TransitionSet ts = new TransitionSet();
         ts.setOrdering(TransitionSet.ORDERING_TOGETHER);
 
@@ -536,22 +560,6 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
         ts.setDuration(250L);
 
         onScreenControlsTransition = ts;
-
-        keyboardManager = new KeyboardManager(this);
-        joystickManager = new JoystickManager(this);
-
-        setupOnScreenControls();
-
-        // Show change log with latest changes once after application update
-        BkEmuChangeLog changeLog = new BkEmuChangeLog(this);
-        if (changeLog.isCurrentVersionGreaterThanLast()) {
-            // Store current version to preferences store
-            changeLog.saveCurrentVersionName();
-            // Show change log dialog but not at the first run
-            if (!changeLog.isFirstRun()) {
-                changeLog.getDialog(false).show();
-            }
-        }
     }
 
     private void setupOnScreenControls() {
@@ -697,12 +705,15 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
                 computer.getCpu().setOnOpcodeListener(JmpOpcode.OPCODE | Cpu.R0
                             | (IndexDeferredAddressingMode.CODE << 3), handler);
             }
-            for (AudioOutput audioOutput : computer.getAudioOutputs()) {
+            for (AudioOutput<?> audioOutput : computer.getAudioOutputs()) {
                 audioOutput.setVolume(readAudioOutputVolume(audioOutput.getName(),
                         audioOutput.getDefaultVolume()));
             }
             bkEmuView.setComputer(computer);
-            getSupportActionBar().setSubtitle(getComputerModelName(computer.getConfiguration()));
+            ActionBar actionBar = getSupportActionBar();
+            if (actionBar != null) {
+                actionBar.setSubtitle(getComputerModelName(computer.getConfiguration()));
+            }
         } else {
             throw new IllegalStateException("Can't initialize computer state");
         }

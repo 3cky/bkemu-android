@@ -96,7 +96,7 @@ public class Computer implements Runnable, StatefulEntity {
     private PeripheralPort peripheralPort;
 
     // Audio outputs list
-    private List<AudioOutput> audioOutputs = new ArrayList<>();
+    private final List<AudioOutput<?>> audioOutputs = new ArrayList<>();
 
     // Floppy controller reference (<code>null</code> if no floppy controller attached)
     private FloppyController floppyController;
@@ -605,7 +605,7 @@ public class Computer implements Runnable, StatefulEntity {
      * Get list of available {@link AudioOutput}s.
      * @return audio outputs list
      */
-    public List<AudioOutput> getAudioOutputs() {
+    public List<AudioOutput<?>> getAudioOutputs() {
         return audioOutputs;
     }
 
@@ -613,7 +613,7 @@ public class Computer implements Runnable, StatefulEntity {
      * Add {@link AudioOutput} device.
      * @param audioOutput audio output device to add
      */
-    public void addAudioOutput(AudioOutput audioOutput) {
+    public void addAudioOutput(AudioOutput<?> audioOutput) {
         audioOutputs.add(audioOutput);
         addDevice(audioOutput);
     }
@@ -885,7 +885,7 @@ public class Computer implements Runnable, StatefulEntity {
             } catch (InterruptedException e) {
                 // Do nothing
             }
-            for (AudioOutput audioOutput : audioOutputs) {
+            for (AudioOutput<?> audioOutput : audioOutputs) {
                 audioOutput.start();
             }
         } else {
@@ -900,7 +900,7 @@ public class Computer implements Runnable, StatefulEntity {
         if (isRunning) {
             Timber.d("stopping computer");
             isRunning = false;
-            for (AudioOutput audioOutput : audioOutputs) {
+            for (AudioOutput<?> audioOutput : audioOutputs) {
                 audioOutput.stop();
             }
             synchronized (this) {
@@ -929,7 +929,7 @@ public class Computer implements Runnable, StatefulEntity {
         if (!isPaused) {
             Timber.d("pausing computer");
             isPaused = true;
-            for (AudioOutput audioOutput : audioOutputs) {
+            for (AudioOutput<?> audioOutput : audioOutputs) {
                 audioOutput.pause();
             }
             // Wait for the running thread actual pausing
@@ -951,7 +951,7 @@ public class Computer implements Runnable, StatefulEntity {
             synchronized (this) {
                 this.notifyAll();
             }
-            for (AudioOutput audioOutput : audioOutputs) {
+            for (AudioOutput<?> audioOutput : audioOutputs) {
                 audioOutput.resume();
             }
         }
@@ -962,7 +962,7 @@ public class Computer implements Runnable, StatefulEntity {
      */
     public void release() {
         Timber.d("releasing computer");
-        for (AudioOutput audioOutput : audioOutputs) {
+        for (AudioOutput<?> audioOutput : audioOutputs) {
             audioOutput.release();
         }
         if (floppyController != null) {
