@@ -8,11 +8,13 @@
     <string name="menu_reset">Reset computer</string>
     <string name="menu_change_model">Change model</string>
     <string name="menu_select_model">Select model</string>
-    <string name="menu_open_image">Open .BIN image</string>
+    <string name="menu_load_bin_file">Load .BIN file</string>
     <string name="menu_disk_manager">Disk manager</string>
     <string name="menu_about">About</string>
     <string name="menu_fullscreen_mode">Fullscreen mode</string>
     <string name="menu_screenshot">Screenshot</string>
+    <string name="menu_save_state">Save state</string>
+    <string name="menu_restore_state">Restore state</string>
     <string name="dialog_floppy_disk_mount_error">Floppy disk image mount error!</string>
     <string name="dialog_ide_drive_attach_error">IDE drive image attach error!</string>
     <string name="ok">OK</string>
@@ -51,11 +53,15 @@
     <string name="changelog_show_full">Full changelog</string>
     <string name="fdd_empty">(Empty)</string>
     <string name="toast_image_load_info">File to load: %1s</string>
-    <string name="toast_image_load_success">%1s: address 0%2$o, length %3$d</string>
+    <string name="toast_image_load_success">%1$s: address 0%2$o, length %3$d</string>
     <string name="toast_image_load_error">Can\'t load file \'%s\'</string>
     <string name="toast_image_save_info">File \'%s\' saved</string>
     <string name="toast_image_save_error">Can\'t save file \'%s\'</string>
     <string name="toast_take_screenshot_error">Can\'t take a screenshot</string>
+    <string name="toast_state_save_success">State successfully saved</string>
+    <string name="toast_state_save_error">State save error</string>
+    <string name="toast_state_restore_success">State successfully restored</string>
+    <string name="toast_state_restore_error">State restore error</string>
     <string name="volume">Audio volume</string>
     <string name="speaker">Speaker</string>
     <string name="covox" translatable="false">Covox</string>

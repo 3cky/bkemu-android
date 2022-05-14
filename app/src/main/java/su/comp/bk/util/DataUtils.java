@@ -96,7 +96,10 @@ public class DataUtils {
             try (Cursor cursor = context.getContentResolver().query(uri,
                     null, null, null, null)) {
                 if (cursor != null && cursor.moveToFirst()) {
-                    result = cursor.getString(cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME));
+                    int columnIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME);
+                    if (columnIndex >= 0) {
+                        result = cursor.getString(columnIndex);
+                    }
                 }
             }
         }
@@ -123,7 +126,10 @@ public class DataUtils {
                 try (Cursor cursor = context.getContentResolver().query(uri,
                         null, null, null, null)) {
                     if (cursor != null && cursor.moveToFirst()) {
-                        length = cursor.getLong(cursor.getColumnIndex(OpenableColumns.SIZE));
+                        int columnIndex = cursor.getColumnIndex(OpenableColumns.SIZE);
+                        if (columnIndex >= 0) {
+                            length = cursor.getLong(columnIndex);
+                        }
                     }
                 }
             }
@@ -183,6 +189,21 @@ public class DataUtils {
     }
 
     /**
+     * Write data to URI.
+     * @param context context reference
+     * @param uri URI to write
+     * @param data data to write
+     * @throws IOException in case of I/O error
+     */
+    public static void writeDataFile(Context context, Uri uri, byte[] data) throws IOException {
+        try (BufferedOutputStream binImageOutput = new BufferedOutputStream(
+                context.getContentResolver().openOutputStream(uri))) {
+            binImageOutput.write(data);
+            binImageOutput.flush();
+        }
+    }
+
+    /**
      * Read data from file.
      *
      * @param file File to read
@@ -193,6 +214,24 @@ public class DataUtils {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         try (FileInputStream fis = new FileInputStream(file)) {
             writeFully(fis, baos);
+        }
+        return baos.toByteArray();
+    }
+
+    /**
+     * Read data from compressed file.
+     *
+     * @param context context reference
+     * @param fileUri file URI with compressed data in ZLIB format
+     * @return read data
+     * @throws IOException in case of I/O error
+     */
+    public static byte[] readCompressedDataFile(Context context, Uri fileUri) throws IOException {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        BufferedInputStream bis = new BufferedInputStream(
+                context.getContentResolver().openInputStream(fileUri));
+        try (InflaterInputStream iis = new InflaterInputStream(bis)) {
+            writeFully(iis, baos);
         }
         return baos.toByteArray();
     }

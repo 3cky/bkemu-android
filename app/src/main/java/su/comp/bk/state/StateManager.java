@@ -19,6 +19,7 @@
 package su.comp.bk.state;
 
 import android.content.Context;
+import android.net.Uri;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -33,6 +34,10 @@ import su.comp.bk.util.DataUtils;
 
 public class StateManager {
 
+   public static final String STATE_FILE_EXT = ".bkemu_state";
+
+   public static final String STATE_INTERNAL_FILE_NAME = "internal" + STATE_FILE_EXT;
+
    public static State saveEntityState(StatefulEntity entity) {
       State state = new State();
       entity.saveState(state);
@@ -43,57 +48,61 @@ public class StateManager {
       entity.restoreState(state);
    }
 
-   public static byte[] writeStateData(State state) throws IOException {
+   public static byte[] getStateData(State state) throws IOException {
       ObjectMapper objectMapper = new MessagePackMapper();
-      return DataUtils.compressData(objectMapper.writeValueAsBytes(state.toMap()));
+      return objectMapper.writeValueAsBytes(state.toMap());
    }
 
-   public static State readStateData(byte[] stateData) throws IOException {
+   public static byte[] getCompressedStateData(State state) throws IOException {
+      return DataUtils.compressData(getStateData(state));
+   }
+
+   public static State getStateFromData(byte[] stateData) throws IOException {
       ObjectMapper objectMapper = new MessagePackMapper();
-      Map<String, Object> stateMap = objectMapper.readValue(DataUtils.decompressData(stateData),
+      Map<String, Object> stateMap = objectMapper.readValue(stateData,
               new TypeReference<Map<String, Object>>() {});
       return new State(stateMap);
    }
 
+   public static State getStateFromCompressedData(byte[] stateData) throws IOException {
+      return getStateFromData(DataUtils.decompressData(stateData));
+   }
+
    public static void writeStateFile(File stateFile, State state) throws IOException {
-      DataUtils.writeDataFile(stateFile, writeStateData(state));
+      DataUtils.writeDataFile(stateFile, getCompressedStateData(state));
    }
 
    public static State readStateFile(File stateFile) throws IOException {
-      return readStateData(DataUtils.readDataFile(stateFile));
+      return getStateFromCompressedData(DataUtils.readDataFile(stateFile));
    }
 
-   private static File writeStateFile(Context context, State state, boolean isExternalFile)
-           throws IOException {
-      File stateFile = getStateFile(context, isExternalFile);
+   public static State readStateFile(Context context, Uri stateFileUri) throws IOException {
+      return getStateFromData(DataUtils.readCompressedDataFile(context, stateFileUri));
+   }
+
+   public static File writeStateInternalFile(Context context, State state) throws IOException {
+      File stateFile = getStateInternalFile(context);
       writeStateFile(stateFile, state);
       return stateFile;
    }
 
-   public static File writeStateExternalFile(Context context, State state) throws IOException {
-      return writeStateFile(context, state, true);
-   }
-
-   public static File writeStateInternalFile(Context context, State state) throws IOException {
-      return writeStateFile(context, state, false);
-   }
-
    public static State readStateInternalFile(Context context) throws IOException {
-      return readStateFile(getStateFile(context, false));
+      return readStateFile(getStateInternalFile(context));
    }
 
-   public static void deleteStateInternalFile(Context context) {
+   public static boolean deleteStateInternalFile(Context context) {
       try {
-         getStateFile(context, false).delete();
-      } catch (Exception ignored) {}
+         return getStateInternalFile(context).delete();
+      } catch (Exception ignored) {
+         return false;
+      }
    }
 
-   private static File getStateFile(Context context, boolean isExternal) throws IOException {
-      File baseDir = isExternal ? context.getExternalCacheDir() : context.getFilesDir();
-      File stateDir = new File(baseDir, "state");
+   private static File getStateInternalFile(Context context) throws IOException {
+      File stateDir = new File(context.getFilesDir(), "state");
       if (!stateDir.exists() && !stateDir.mkdirs()) {
-         throw new IOException("Can't create state directory: " + stateDir);
+         throw new IOException("Can't create internal state directory: " + stateDir);
       }
-      return new File(stateDir, "state.bkemu");
+      return new File(stateDir, STATE_INTERNAL_FILE_NAME);
    }
 }

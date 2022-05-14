@@ -31,8 +31,12 @@
         android:icon="@drawable/ic_photo_camera_white_24"
         android:title="@string/menu_screenshot"
         app:showAsAction="ifRoom" />
-    <item android:id="@+id/menu_open_image"
-        android:title="@string/menu_open_image" />
+    <item android:id="@+id/menu_load_bin_file"
+        android:title="@string/menu_load_bin_file" />
+    <item android:id="@+id/menu_save_state"
+        android:title="@string/menu_save_state" />
+    <item android:id="@+id/menu_restore_state"
+        android:title="@string/menu_restore_state" />
     <item android:id="@+id/menu_change_model"
         android:title="@string/menu_change_model" />
     <item android:id="@+id/menu_reset"

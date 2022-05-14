@@ -57,7 +57,6 @@ import androidx.transition.Transition;
 import androidx.transition.TransitionManager;
 import androidx.transition.TransitionSet;
 
-import java.io.BufferedOutputStream;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
@@ -82,12 +81,12 @@ import su.comp.bk.arch.cpu.Cpu;
 import su.comp.bk.arch.cpu.addressing.IndexDeferredAddressingMode;
 import su.comp.bk.arch.cpu.opcode.EmtOpcode;
 import su.comp.bk.arch.cpu.opcode.JmpOpcode;
-import su.comp.bk.arch.io.disk.DiskImage;
-import su.comp.bk.arch.io.disk.FloppyController;
-import su.comp.bk.arch.io.disk.FloppyController.FloppyDriveIdentifier;
 import su.comp.bk.arch.io.VideoController;
 import su.comp.bk.arch.io.audio.AudioOutput;
+import su.comp.bk.arch.io.disk.DiskImage;
 import su.comp.bk.arch.io.disk.FileDiskImage;
+import su.comp.bk.arch.io.disk.FloppyController;
+import su.comp.bk.arch.io.disk.FloppyController.FloppyDriveIdentifier;
 import su.comp.bk.arch.io.disk.IdeController;
 import su.comp.bk.arch.io.disk.SafDiskImage;
 import su.comp.bk.state.State;
@@ -96,6 +95,7 @@ import su.comp.bk.ui.joystick.JoystickManager;
 import su.comp.bk.ui.keyboard.KeyboardManager;
 import su.comp.bk.util.DataUtils;
 import su.comp.bk.util.StringUtils;
+import static su.comp.bk.util.StringUtils.isFileNameExtensionMatched;
 import timber.log.Timber;
 
 /**
@@ -134,8 +134,10 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
     public final static String[] FILE_EXT_HARD_DISK_IMAGES = new String[] { ".HDI" };
     /** Array of file extensions for raw disk images */
     public final static String[] FILE_EXT_RAW_DISK_IMAGES = new String[] { ".IMG" };
-
-    public final static int STACK_TOP_ADDRESS = 01000;
+    /** Array of file extensions for emulator state files */
+    public final static String[] FILE_EXT_STATE_FILES = new String[] {
+            StateManager.STATE_FILE_EXT.toUpperCase()
+    };
 
     // Dialog IDs
     private static final int DIALOG_COMPUTER_MODEL = 1;
@@ -143,31 +145,42 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
     private static final int DIALOG_FLOPPY_DISK_MOUNT_ERROR = 3;
     private static final int DIALOG_IDE_DRIVE_ATTACH_ERROR = 4;
 
+    // Application package name
+    public static final String APP_PACKAGE_NAME = "su.comp.bk";
+
+    // Intent action IDs
+    private static final String ACTION_LOAD_BIN_IMAGE = APP_PACKAGE_NAME +
+            ".intent.action.LOAD_BIN_IMAGE";
+    private static final String ACTION_RESTORE_STATE = APP_PACKAGE_NAME +
+            ".intent.action.RESTORE_STATE";
+
     // Intent request IDs
     private static final int REQUEST_MENU_BIN_IMAGE_FILE_LOAD = 1;
     private static final int REQUEST_EMT_BIN_IMAGE_FILE_LOAD = 2;
     private static final int REQUEST_MENU_FLOPPY_DISK_IMAGE_FILE_SELECT = 3;
     private static final int REQUEST_EMT_BIN_IMAGE_FILE_SAVE = 4;
     private static final int REQUEST_MENU_IDE_DRIVE_IMAGE_FILE_SELECT = 5;
+    private static final int REQUEST_MENU_STATE_SAVE = 6;
+    private static final int REQUEST_MENU_STATE_RESTORE = 7;
 
     // Google Play application URL to share
     private static final String APPLICATION_SHARE_URL = "https://play.google.com" +
-            "/store/apps/details?id=su.comp.bk";
+            "/store/apps/details?id=" + APP_PACKAGE_NAME;
 
     public static final int MAX_TAPE_FILE_NAME_LENGTH = 16;
 
-    private static final String PREFS_KEY_COMPUTER_CONFIGURATION = "su.comp.bk.a.c";
+    private static final String PREFS_KEY_COMPUTER_CONFIGURATION = APP_PACKAGE_NAME + ".a.c";
     private static final String PREFS_KEY_FLOPPY_DRIVE_PREFIX =
-            "su.comp.bk.arch.io.FloppyController.FloppyDrive/";
+            APP_PACKAGE_NAME + ".arch.io.FloppyController.FloppyDrive/";
     private static final String PREFS_KEY_FLOPPY_DRIVE_IMAGE =
             PREFS_KEY_FLOPPY_DRIVE_PREFIX + "image:";
     private static final String PREFS_KEY_FLOPPY_DRIVE_WRITE_PROTECT_MODE =
             PREFS_KEY_FLOPPY_DRIVE_PREFIX + "writeProtectMode:";
     private static final String PREFS_KEY_IDE_DRIVE_PREFIX =
-            "su.comp.bk.arch.io.IdeController.IdeDrive";
+            APP_PACKAGE_NAME + ".arch.io.IdeController.IdeDrive";
     private static final String PREFS_KEY_IDE_DRIVE_IMAGE = "image:";
     private static final String PREFS_KEY_AUDIO_VOLUME =
-            "su.comp.bk.arch.io.audio.AudioOutput/volume";
+            APP_PACKAGE_NAME + ".arch.io.audio.AudioOutput/volume";
 
     // Last loaded emulator binary image address
     protected int lastBinImageAddress;
@@ -211,6 +224,8 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
     protected String intentDataFloppyDiskImageUri;
     protected String intentDataHardDiskImageUri;
 
+    protected Uri intentDataStateUri;
+
     protected Handler activityHandler;
 
     private Toolbar toolbar;
@@ -241,10 +256,15 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
      * Trying to load program image from path from intent data.
      */
     class IntentDataProgramImageLoader implements Runnable {
+        public final static int STACK_TOP_ADDRESS = 01000;
+
         @Override
         public void run() {
+            boolean isBinImageFileLoaded = false;
+            Uri binImageFileUri = null;
             try {
-                int startAddress = loadBinImageFile(Uri.parse(intentDataProgramImageUri));
+                binImageFileUri = Uri.parse(intentDataProgramImageUri);
+                int startAddress = loadBinImageFile(binImageFileUri);
                 intentDataProgramImageUri = null;
                 // Start loaded image
                 final Computer comp = computer;
@@ -255,9 +275,14 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
                     // Loaded manually starting image
                     comp.getCpu().writeRegister(false, Cpu.PC, startAddress);
                 }
+                isBinImageFileLoaded = true;
             } catch (Exception e) {
                 Timber.e(e, "Can't load bootstrap emulator program image");
             }
+            String binFileName = (binImageFileUri != null)
+                    ? DataUtils.resolveUriFileName(BkEmuActivity.this, binImageFileUri)
+                    : null;
+            showAfterBinImageFileLoadToast(isBinImageFileLoaded, binFileName);
         }
     }
 
@@ -458,8 +483,10 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
     protected void onNewIntent(Intent intent) {
         Timber.d("onNewIntent(), Intent: %s", intent);
         super.onNewIntent(intent);
-        setIntent(intent);
-        restartActivity();
+        if (!Intent.ACTION_MAIN.equals(intent.getAction())) {
+            setIntent(intent);
+            restartActivity();
+        }
     }
 
     /** Called when the activity is first created. */
@@ -481,8 +508,12 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
         View decorView = getWindow().getDecorView();
         decorView.setOnSystemUiVisibilityChangeListener(this);
 
-        checkIntentData();
+        if (savedInstanceState == null) {
+            checkIntentData();
+        }
+
         initializeComputer();
+
         mountIntentDataDiskImage();
 
         TransitionSet ts = new TransitionSet();
@@ -533,23 +564,27 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
 
     // Check intent data for program/disk image to mount
     private void checkIntentData() {
+        Timber.d("checkIntentData()");
+        Intent intent = getIntent();
         // Check for last accessed program/disk file paths
-        lastBinImageFileUri = getIntent().getStringExtra(STATE_LAST_BIN_IMAGE_FILE_URI);
+        lastBinImageFileUri = intent.getStringExtra(STATE_LAST_BIN_IMAGE_FILE_URI);
         // Check for program/disk image file to run
-        String intentDataString = getIntent().getDataString();
+        String intentDataString = intent.getDataString();
         if (intentDataString != null) {
             Uri intentDataUri = Uri.parse(intentDataString);
             String intentDataFileName = DataUtils.resolveUriFileName(this, intentDataUri);
-            if (StringUtils.isFileNameExtensionMatched(intentDataFileName, FILE_EXT_BINARY_IMAGES)) {
+            if (ACTION_RESTORE_STATE.equals(intent.getAction()) ||
+                    isFileNameExtensionMatched(intentDataFileName, FILE_EXT_STATE_FILES)) {
+                this.intentDataStateUri = intentDataUri;
+            } else if (ACTION_LOAD_BIN_IMAGE.equals(intent.getAction()) ||
+                    isFileNameExtensionMatched(intentDataFileName, FILE_EXT_BINARY_IMAGES)) {
                 this.intentDataProgramImageUri = intentDataString;
-            } else if (StringUtils.isFileNameExtensionMatched(intentDataFileName,
+            } else if (isFileNameExtensionMatched(intentDataFileName,
                     FILE_EXT_FLOPPY_DISK_IMAGES)) {
                 this.intentDataFloppyDiskImageUri = intentDataString;
-            } else if (StringUtils.isFileNameExtensionMatched(intentDataFileName,
-                    FILE_EXT_HARD_DISK_IMAGES)) {
+            } else if (isFileNameExtensionMatched(intentDataFileName, FILE_EXT_HARD_DISK_IMAGES)) {
                 this.intentDataHardDiskImageUri = intentDataString;
-            } else if (StringUtils.isFileNameExtensionMatched(intentDataFileName,
-                    FILE_EXT_RAW_DISK_IMAGES)) {
+            } else if (isFileNameExtensionMatched(intentDataFileName, FILE_EXT_RAW_DISK_IMAGES)) {
                 // Try to determine intent data type from its file length
                 long intentDataLength = DataUtils.getUriFileLength(this, intentDataUri);
                 if (intentDataLength > FloppyController.MAX_BYTES_PER_DISK) {
@@ -684,26 +719,50 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
     }
 
     private boolean restoreComputerState() {
+        boolean isStateRestored = doRestoreComputerState();
+
+        if (intentDataStateUri != null) {
+            Toast.makeText(getApplicationContext(),
+                            getResources().getString(isStateRestored
+                                    ? R.string.toast_state_restore_success
+                                    : R.string.toast_state_restore_error),
+                            Toast.LENGTH_LONG)
+                    .show();
+        }
+
+        return isStateRestored;
+    }
+
+    private boolean doRestoreComputerState() {
         boolean isStateRestored = false;
+
         try {
-            State restoredState = StateManager.readStateInternalFile(this);
+            State restoredState = (intentDataStateUri != null)
+                    ? StateManager.readStateFile(this, intentDataStateUri)
+                    : StateManager.readStateInternalFile(this);
             Configuration storedConfiguration = Computer.getStoredConfiguration(restoredState);
             if (storedConfiguration != null) {
                 computer.configure(getResources(), storedConfiguration);
                 initializeComputerDisks();
                 StateManager.restoreEntityState(computer, restoredState);
                 isStateRestored = true;
-                Timber.d("Computer state restored");
+                setComputerConfiguration(storedConfiguration);
+                Timber.d("Computer state restored from %s", (intentDataStateUri != null)
+                        ? intentDataStateUri : "saved state");
             }
         } catch (Exception e) {
-            Timber.d("Can't restore computer state: %s", e.toString());
+            Timber.d("Can't restore computer state: %s", e.getMessage());
         }
-        deleteComputerState();
+
+        deleteSavedComputerState();
+
         return isStateRestored;
     }
 
-    private void deleteComputerState() {
-        StateManager.deleteStateInternalFile(this);
+    private void deleteSavedComputerState() {
+        if (StateManager.deleteStateInternalFile(this)) {
+            Timber.d("Computer saved state deleted");
+        }
     }
 
     private void initializeComputerDisks() {
@@ -731,6 +790,7 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
     @Override
     protected void onResume() {
         Timber.d("onResume()");
+        deleteSavedComputerState();
         this.computer.resume();
         super.onResume();
     }
@@ -887,7 +947,7 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
         } else if (itemId == R.id.menu_change_model) {
             showDialog(DIALOG_COMPUTER_MODEL);
             return true;
-        } else if (itemId == R.id.menu_open_image) {
+        } else if (itemId == R.id.menu_load_bin_file) {
             showBinImageFileLoadDialog(REQUEST_MENU_BIN_IMAGE_FILE_LOAD, null);
             return true;
         } else if (itemId == R.id.menu_disk_manager) {
@@ -904,6 +964,12 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
             return true;
         } else if (itemId == R.id.menu_screenshot) {
             takeScreenshot();
+            return true;
+        } else if (itemId == R.id.menu_save_state) {
+            showStateSaveDialog();
+            return true;
+        } else if (itemId == R.id.menu_restore_state) {
+            showStateRestoreDialog();
             return true;
         }
         return super.onOptionsItemSelected(item);
@@ -985,7 +1051,7 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
         models = modelList.toArray(new String[0]);
         return new AlertDialog.Builder(this)
             .setTitle(R.string.menu_select_model)
-            .setSingleChoiceItems(models, getComputerConfiguration().ordinal(),
+            .setSingleChoiceItems(models, computer.getConfiguration().ordinal(),
                     (dialog, which) -> {
                         // Mark selected item by tag
                         ListView listView = ((AlertDialog) dialog).getListView();
@@ -1000,7 +1066,7 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
                     if (computer.getConfiguration() != config) {
                         // Set new computer configuration and restart activity
                         setComputerConfiguration(config);
-                        restartActivity(null);
+                        restartActivity(null, null);
                     }
                 }
             })
@@ -1191,7 +1257,7 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
                                      DiskImage image) {
         try {
             if (image != null && ideController != null) {
-                IdeController.IdeDrive ideDrive = StringUtils.isFileNameExtensionMatched(
+                IdeController.IdeDrive ideDrive = isFileNameExtensionMatched(
                         image.getName(), FILE_EXT_HARD_DISK_IMAGES)
                         ? new IdeController.IdeDriveHdiImage(image)
                         : new IdeController.IdeDriveRawImage(image);
@@ -1255,15 +1321,16 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
     }
 
     protected void showAfterBinImageFileLoadToast(boolean isImageLoaded, String imageName) {
+        String imageNameToShow = (imageName == null) ? "" : imageName;
         if (isImageLoaded) {
             Toast.makeText(getApplicationContext(),
-                    getResources().getString(R.string.toast_image_load_success, imageName,
+                    getResources().getString(R.string.toast_image_load_success, imageNameToShow,
                             lastBinImageAddress, lastBinImageLength),
                     Toast.LENGTH_LONG)
                     .show();
         } else {
             Toast.makeText(getApplicationContext(),
-                    getResources().getString(R.string.toast_image_load_error, imageName),
+                    getResources().getString(R.string.toast_image_load_error, imageNameToShow),
                     Toast.LENGTH_LONG)
                     .show();
         }
@@ -1339,6 +1406,28 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
         bkEmuVolumeDialogFragment.show(getSupportFragmentManager(), "volume");
     }
 
+    /**
+     * Show emulator state save dialog.
+     */
+    protected void showStateSaveDialog() {
+        Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType("application/octet-stream");
+        intent.putExtra(Intent.EXTRA_TITLE, "state" + StateManager.STATE_FILE_EXT);
+        startActivityForResult(intent, REQUEST_MENU_STATE_SAVE);
+    }
+
+    /**
+     * Show emulator state restore dialog.
+     */
+    protected void showStateRestoreDialog() {
+        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType("*/*");
+        intent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        startActivityForResult(intent, REQUEST_MENU_STATE_RESTORE);
+    }
+
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
@@ -1359,7 +1448,7 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
                         lastBinImageAddress = 0; // will get address from BIN image file header
                         binImageFileLoad(binImageFileUri);
                     } else {
-                        restartActivity(binImageFileUri);
+                        restartActivityWithBinImage(binImageFileUri);
                     }
                 }
                 break;
@@ -1425,9 +1514,65 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
                     }
                 }
                 break;
+            case REQUEST_MENU_STATE_SAVE:
+                if (resultCode == Activity.RESULT_OK) {
+                    Uri stateDataUri = data.getData();
+                    if (stateDataUri != null) {
+                        stateSave(stateDataUri);
+                    }
+                }
+                break;
+            case REQUEST_MENU_STATE_RESTORE:
+                if (resultCode == Activity.RESULT_OK) {
+                    Uri stateDataUri = data.getData();
+                    if (stateDataUri != null) {
+                        stateRestore(stateDataUri);
+                    }
+                }
+                break;
             default:
                 break;
         }
+    }
+
+    protected void stateSave(Uri stateDataUri) {
+        boolean isStateSaved = doStateSave(stateDataUri);
+
+        Toast.makeText(getApplicationContext(),
+                        getResources().getString(isStateSaved
+                                ? R.string.toast_state_save_success
+                                : R.string.toast_state_save_error),
+                        Toast.LENGTH_LONG)
+                .show();
+    }
+
+    private boolean doStateSave(Uri stateDataUri) {
+        boolean isStateSaved = false;
+
+        boolean isComputerPaused = computer.isPaused();
+
+        if (!isComputerPaused) {
+            computer.pause();
+        }
+
+        State state = StateManager.saveEntityState(computer);
+        try {
+            byte[] stateData = StateManager.getCompressedStateData(state);
+            DataUtils.writeDataFile(this, stateDataUri, stateData);
+            isStateSaved = true;
+        } catch (Exception e) {
+            Timber.e(e, "Can't save state to URI: %s", stateDataUri);
+        }
+
+        if (!isComputerPaused) {
+            computer.resume();
+        }
+
+        return isStateSaved;
+    }
+
+    protected void stateRestore(Uri stateDataUri) {
+        restartActivityWithState(stateDataUri);
     }
 
     protected boolean binImageFileSave(Uri binImageFileUri) {
@@ -1561,11 +1706,29 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
     /**
      * Do activity restart with given emulator image file.
      * @param binImageFileUri emulator image file {@link Uri} to set to restarted activity
-     * (or <code>null</code> to start activity without emulator image set)
      */
-    protected void restartActivity(Uri binImageFileUri) {
+    protected void restartActivityWithBinImage(Uri binImageFileUri) {
+        restartActivity(ACTION_LOAD_BIN_IMAGE, binImageFileUri);
+    }
+
+    /**
+     * Do activity restart with given emulator state.
+     * @param stateDataUri emulator state {@link Uri} to set to restarted activity
+     */
+    protected void restartActivityWithState(Uri stateDataUri) {
+        restartActivity(ACTION_RESTORE_STATE, stateDataUri);
+    }
+
+    /**
+     * Restart activity with given action and data.
+     * @param action action to be performed (<code>null</code> to restart activity
+     *               without action performed)
+     * @param dataUri the data URI to set to restarted activity (<code>null</code> if no data set)
+     */
+    protected void restartActivity(String action, Uri dataUri) {
         Intent intent = getIntent();
-        intent.setData(binImageFileUri);
+        intent.setAction(action);
+        intent.setData(dataUri);
         restartActivity();
     }
 
@@ -1573,12 +1736,13 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
      * Do activity restart.
      */
     protected void restartActivity() {
-        Intent intent = getIntent();
         // Pass last accessed program/disk image file paths to new activity
+        Intent intent = getIntent();
         intent.putExtra(STATE_LAST_BIN_IMAGE_FILE_URI, lastBinImageFileUri);
         finish();
         startActivity(intent);
         overridePendingTransition(0, 0);
+        deleteSavedComputerState();
     }
 
     private SharedPreferences getPreferences() {
@@ -1809,11 +1973,7 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
      * @throws IOException in case of saving error
      */
     public void saveBinImage(Uri imageUri, byte[] imageData) throws IOException {
-        try (BufferedOutputStream binImageOutput = new BufferedOutputStream(
-                getContentResolver().openOutputStream(imageUri))) {
-            binImageOutput.write(imageData);
-            binImageOutput.flush();
-        }
+        DataUtils.writeDataFile(this, imageUri, imageData);
         Timber.d("saved bin image file: address 0" + Integer.toOctalString(lastBinImageAddress) +
                 ", length: " + lastBinImageLength);
     }
@@ -1916,7 +2076,7 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
         if (computer.getConfiguration() != config) {
             // Set new computer configuration and restart activity
             setComputerConfiguration(config);
-            restartActivity(null);
+            restartActivity(null, null);
         } else {
             computer.reset();
         }
@@ -1940,7 +2100,7 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
                 screenshotBitmap.compress(Bitmap.CompressFormat.PNG, 90, stream);
             }
             screenshotBitmapUri = FileProvider.getUriForFile(this,
-                    "su.comp.bk.fileprovider", screenshotFile);
+                    APP_PACKAGE_NAME + ".fileprovider", screenshotFile);
         } catch (Exception e) {
             Timber.e(e,  "Can't store screenshot file");
         }

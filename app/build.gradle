@@ -81,7 +81,7 @@ afterEvaluate {
 
 dependencies {
     api 'androidx.legacy:legacy-support-v4:1.0.0'
-    implementation 'androidx.appcompat:appcompat:1.2.0'
+    implementation 'androidx.appcompat:appcompat:1.4.1'
 
     implementation 'commons-lang:commons-lang:2.6'
     implementation 'com.samskivert:jmustache:1.9'

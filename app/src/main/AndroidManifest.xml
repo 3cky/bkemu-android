@@ -22,7 +22,8 @@
                 android:resource="@xml/file_paths" />
         </provider>
 
-        <activity android:label="@string/app_name" android:name=".ui.BkEmuActivity"
+        <activity
+            android:name=".ui.BkEmuActivity"
                 android:windowSoftInputMode="adjustResize"
                 android:launchMode="singleTask">
             <intent-filter>
@@ -31,6 +32,8 @@
             </intent-filter>
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
+                <action android:name="su.comp.bk.intent.action.LOAD_BIN_IMAGE" />
+                <action android:name="su.comp.bk.intent.action.RESTORE_STATE" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:host="*" />
@@ -71,6 +74,14 @@
                 <data android:pathPattern="*\\..*\\.HDI"/>
                 <data android:pathPattern=".*\\..*\\..*\\.HDI"/>
                 <data android:pathPattern=".*\\..*\\..*\\..*\\.HDI"/>
+                <data android:pathPattern=".*\\.bkemu_state"/>
+                <data android:pathPattern="*\\..*\\.bkemu_state"/>
+                <data android:pathPattern=".*\\..*\\..*\\.bkemu_state"/>
+                <data android:pathPattern=".*\\..*\\..*\\..*\\.bkemu_state"/>
+                <data android:pathPattern=".*\\.BKEMU_STATE"/>
+                <data android:pathPattern="*\\..*\\.BKEMU_STATE"/>
+                <data android:pathPattern=".*\\..*\\..*\\.BKEMU_STATE"/>
+                <data android:pathPattern=".*\\..*\\..*\\..*\\.BKEMU_STATE"/>
             </intent-filter>
         </activity>
     </application>

@@ -932,6 +932,10 @@ public class Computer implements Runnable, StatefulEntity {
             for (AudioOutput audioOutput : audioOutputs) {
                 audioOutput.pause();
             }
+            // Wait for the running thread actual pausing
+            synchronized (this) {
+                this.notifyAll(); // wake up uptime sync wait if needed
+            }
         }
     }
 
