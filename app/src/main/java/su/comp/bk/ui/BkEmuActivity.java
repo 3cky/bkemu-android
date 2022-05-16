@@ -195,6 +195,11 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
     // Last selected hard disk image IDE interface identifier
     protected int lastIdeDriveImageInterfaceId;
 
+    // BK0010 system variable address - Buffer start address
+    private static final int BK10_SYSVAR_BUFSTA = 0264;
+    // BK0010 system variable address - Buffer length
+    private static final int BK10_SYSVAR_BUFDL = 0266;
+
     // BK0011M .BMB10 syscall - Read subroutine address
     private static final int BK11_BMB10_READ_ADDRESS = 0155560;
     // BK0011M .BMB10 syscall - Save subroutine address
@@ -1678,8 +1683,10 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
             comp.writeMemory(true, tapeParamsBlockAddr + 1, 0);
             // Write loaded image start address
             comp.writeMemory(false, tapeParamsBlockAddr + 22, lastBinImageAddress);
+            comp.writeMemory(false, BK10_SYSVAR_BUFSTA, lastBinImageAddress);
             // Write loaded image length
             comp.writeMemory(false, tapeParamsBlockAddr + 24, lastBinImageLength);
+            comp.writeMemory(false, BK10_SYSVAR_BUFDL, lastBinImageLength);
             // Return from EMT 36
             comp.getCpu().returnFromTrap(false);
         } else { // BK0011
