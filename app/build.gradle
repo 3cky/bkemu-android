@@ -2,6 +2,8 @@ apply plugin: 'com.android.application'
 apply plugin: 'maven-publish'
 
 android {
+    namespace 'su.comp.bk'
+
     compileSdkVersion versions.sdk.compile
 
     defaultConfig {
@@ -51,14 +53,19 @@ android {
             signingConfig signingConfigs.release
         }
     }
+    publishing {
+        singleVariant("release") {
+            withSourcesJar()
+        }
+    }
 }
 
 // Release artifacts management
 afterEvaluate {
     publishing {
         publications {
-            releaseApk(MavenPublication) {
-                from components.release_apk
+            release(MavenPublication) {
+                from components.release
 
                 groupId 'com.github.3cky'
                 artifactId 'bkemu-android'
