@@ -84,6 +84,9 @@ afterEvaluate {
             }
         }
     }
+    publishReleasePublicationToMavenLocal.configure {
+        mustRunAfter packageRelease
+    }
 }
 
 dependencies {

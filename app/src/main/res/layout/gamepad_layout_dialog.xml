@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="@dimen/gamepad_layout_padding">
+
+    <TextView
+        android:id="@+id/gamepad_name"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:textStyle="bold"
+        android:textAlignment="center"
+        android:gravity="center"
+        android:text="@string/gamepad_name_undefined"
+        tools:text="Logitech Gamepad F510"/>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginTop="@dimen/gamepad_layout_padding"
+        android:layout_marginBottom="@dimen/gamepad_layout_padding"
+        android:background="@android:color/darker_gray"/>
+
+    <ListView
+        android:id="@+id/gamepad_buttons"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:divider="@null"
+        android:scrollbars="vertical"
+        android:choiceMode="multipleChoice"
+        android:focusable="true"
+        android:focusableInTouchMode="true"
+        tools:listitem="@layout/gamepad_layout_button_item" />
+
+</LinearLayout>

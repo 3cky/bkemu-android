@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="fps_string">%d к/с</string>
-    <string name="menu_toggle_keyboard">Клавиатура</string>
-    <string name="menu_toggle_joystick">Джойстик</string>
+    <string name="menu_toggle_osd_keyboard">Клавиатура</string>
+    <string name="menu_toggle_osd_joystick">Экранный джойстик</string>
     <string name="menu_switch_display_mode">Режим экрана</string>
     <string name="menu_reset">Аппаратный сброс</string>
     <string name="menu_change_model">Выбрать модель</string>
@@ -66,4 +66,9 @@
     <string name="speaker">Аудиовыход</string>
     <string name="write_protect">Защита записи</string>
     <string name="hdd_detached">(Не подключен)</string>
+    <string name="gamepad_layout">Раскладка геймпада</string>
+    <string name="gamepad_button_left">Влево</string>
+    <string name="gamepad_button_right">Вправо</string>
+    <string name="gamepad_button_up">Вверх</string>
+    <string name="gamepad_button_down">Вниз</string>
 </resources>

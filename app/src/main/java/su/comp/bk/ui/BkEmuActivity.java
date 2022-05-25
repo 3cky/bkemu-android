@@ -21,6 +21,7 @@ package su.comp.bk.ui;
 
 import static su.comp.bk.arch.io.disk.IdeController.IF_0;
 import static su.comp.bk.arch.io.disk.IdeController.IF_1;
+import static su.comp.bk.util.StringUtils.isFileNameExtensionMatched;
 
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -92,10 +93,10 @@ import su.comp.bk.arch.io.disk.SafDiskImage;
 import su.comp.bk.state.State;
 import su.comp.bk.state.StateManager;
 import su.comp.bk.ui.joystick.JoystickManager;
+import su.comp.bk.ui.joystick.GamepadLayoutDialog;
 import su.comp.bk.ui.keyboard.KeyboardManager;
 import su.comp.bk.util.DataUtils;
 import su.comp.bk.util.StringUtils;
-import static su.comp.bk.util.StringUtils.isFileNameExtensionMatched;
 import timber.log.Timber;
 
 /**
@@ -126,15 +127,25 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
     private static final String STATE_ON_SCREEN_JOYSTICK_VISIBLE = STATE_PREFIX +
             "on_screen_joystick_visible";
 
-    /** Array of file extensions for binary images */
+    /**
+     * Array of file extensions for binary images
+     */
     public final static String[] FILE_EXT_BINARY_IMAGES = new String[] { ".BIN" };
-    /** Array of file extensions for floppy disk images */
+    /**
+     * Array of file extensions for floppy disk images
+     */
     public final static String[] FILE_EXT_FLOPPY_DISK_IMAGES = new String[] { ".BKD" };
-    /** Array of file extensions for hard disk images */
+    /**
+     * Array of file extensions for hard disk images
+     */
     public final static String[] FILE_EXT_HARD_DISK_IMAGES = new String[] { ".HDI" };
-    /** Array of file extensions for raw disk images */
+    /**
+     * Array of file extensions for raw disk images
+     */
     public final static String[] FILE_EXT_RAW_DISK_IMAGES = new String[] { ".IMG" };
-    /** Array of file extensions for emulator state files */
+    /**
+     * Array of file extensions for emulator state files
+     */
     public final static String[] FILE_EXT_STATE_FILES = new String[] {
             StateManager.STATE_FILE_EXT.toUpperCase()
     };
@@ -235,8 +246,29 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
 
     private Toolbar toolbar;
 
-    private KeyboardManager keyboardManager;
-    private JoystickManager joystickManager;
+    private final KeyboardManager keyboardManager = new KeyboardManager();
+
+    private final JoystickManager joystickManager = new JoystickManager();
+
+    private final JoystickManager.HardwareJoystickEventListener hardwareJoystickEventListener =
+            new JoystickManager.HardwareJoystickEventListener() {
+                @Override
+                public void onConnected(JoystickManager.HardwareJoystick joystick) {
+                    invalidateOptionsMenu();
+                }
+
+                @Override
+                public void onDisconnected(JoystickManager.HardwareJoystick joystick) {
+                    invalidateOptionsMenu();
+                }
+
+                @Override
+                public void onButton(JoystickManager.HardwareJoystick joystick,
+                                     String buttonEventName,
+                                     JoystickManager.JoystickButton button, boolean isPressed) {
+                    // Do nothing
+                }
+            };
 
     /**
      * Gesture listener
@@ -523,10 +555,10 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
 
         setupTransitions();
 
-        keyboardManager = new KeyboardManager(this);
-        joystickManager = new JoystickManager(this);
+        keyboardManager.init(this, computer.getKeyboardController());
 
-        setupOnScreenControls();
+        joystickManager.init(this, computer.getPeripheralPort());
+        joystickManager.addHardwareJoystickEventListener(hardwareJoystickEventListener);
 
         // Show change log with latest changes once after application update
         checkShowChangelog();
@@ -565,14 +597,6 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
         ts.setDuration(250L);
 
         onScreenControlsTransition = ts;
-    }
-
-    private void setupOnScreenControls() {
-        keyboardManager.setKeyboardController(computer.getKeyboardController());
-        joystickManager.setPeripheralPort(computer.getPeripheralPort());
-
-        keyboardManager.setOnScreenKeyboardVisibility(false);
-        joystickManager.setOnScreenJoystickVisibility(false);
     }
 
     // Check intent data for program/disk image to mount
@@ -794,6 +818,7 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
     protected void onStart() {
         Timber.d("onStart()");
         this.computer.start();
+        mainView.requestFocus();
         super.onStart();
     }
 
@@ -829,6 +854,8 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
     protected void onDestroy() {
         Timber.d("onDestroy()");
         this.computer.release();
+        joystickManager.removeHardwareJoystickEventListener(hardwareJoystickEventListener);
+        joystickManager.release();
         super.onDestroy();
     }
 
@@ -889,12 +916,20 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
 
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
+        if (JoystickManager.isHardwareJoystickKeyEvent(event)) {
+            joystickManager.handleKeyEvent(event, true);
+            return true;
+        }
         return keyboardManager.handleKeyCode(keyCode, true)
                 || super.onKeyDown(keyCode, event);
     }
 
     @Override
     public boolean onKeyUp(int keyCode, KeyEvent event) {
+        if (JoystickManager.isHardwareJoystickKeyEvent(event)) {
+            joystickManager.handleKeyEvent(event, false);
+            return true;
+        }
         return keyboardManager.handleKeyCode(keyCode, false)
                 || super.onKeyUp(keyCode, event);
     }
@@ -942,6 +977,9 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
         boolean isFloppyControllerAttached = computer.getConfiguration().isFloppyControllerPresent();
         menu.findItem(R.id.menu_disk_manager).setEnabled(isFloppyControllerAttached);
         menu.findItem(R.id.menu_disk_manager).setVisible(isFloppyControllerAttached);
+        boolean isHardwareJoystickPresent = joystickManager.isHardwareJoystickPresent();
+        menu.findItem(R.id.menu_gamepad_layout).setEnabled(isHardwareJoystickPresent);
+        menu.findItem(R.id.menu_gamepad_layout).setVisible(isHardwareJoystickPresent);
         return true;
     }
 
@@ -986,6 +1024,9 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
             return true;
         } else if (itemId == R.id.menu_restore_state) {
             showStateRestoreDialog();
+            return true;
+        } else if (itemId == R.id.menu_gamepad_layout) {
+            showGamepadLayoutSetupDialog();
             return true;
         }
         return super.onOptionsItemSelected(item);
@@ -1442,6 +1483,14 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
         intent.setType("*/*");
         intent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
         startActivityForResult(intent, REQUEST_MENU_STATE_RESTORE);
+    }
+
+    /**
+     * Show hardware gamepad layout setup dialog.
+     */
+    private void showGamepadLayoutSetupDialog() {
+        GamepadLayoutDialog gamepadLayoutDialog = GamepadLayoutDialog.newInstance();
+        gamepadLayoutDialog.show(getSupportFragmentManager(), "gamepad_layout");
     }
 
     @Override
@@ -2086,6 +2135,10 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
 
     public Computer getComputer() {
         return computer;
+    }
+
+    public JoystickManager getJoystickManager() {
+        return joystickManager;
     }
 
     private void resetComputer() {

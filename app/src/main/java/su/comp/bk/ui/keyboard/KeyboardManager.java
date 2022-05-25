@@ -237,10 +237,15 @@ public class KeyboardManager implements OnTouchListener {
         lowRegisterBkKeyCodeTable[','] = '<';
     }
 
-    public KeyboardManager(BkEmuActivity bkEmuActivity) {
+    public KeyboardManager() {
+    }
+
+    public void init(BkEmuActivity activity, KeyboardController keyboardController) {
+        setKeyboardController(keyboardController);
         setUppercaseMode(true);
         setLatinMode(true);
-        initOnScreenKeyboard(bkEmuActivity);
+        initOnScreenKeyboard(activity);
+        setOnScreenKeyboardVisibility(false);
     }
 
     private void initOnScreenKeyboard(BkEmuActivity bkEmuActivity) {

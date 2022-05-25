@@ -24,4 +24,8 @@
     <dimen name="hdd_padding">5dp</dimen>
     <dimen name="hdd_text_margin">3dp</dimen>
     <dimen name="hdd_label_size">24sp</dimen>
+
+    <dimen name="gamepad_layout_padding">10dp</dimen>
+    <dimen name="gamepad_name_padding">5dp</dimen>
+    <dimen name="gamepad_button_padding">10dp</dimen>
 </resources>
