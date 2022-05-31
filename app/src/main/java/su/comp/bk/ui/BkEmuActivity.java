@@ -93,7 +93,7 @@ import su.comp.bk.arch.io.disk.SafDiskImage;
 import su.comp.bk.state.State;
 import su.comp.bk.state.StateManager;
 import su.comp.bk.ui.joystick.JoystickManager;
-import su.comp.bk.ui.joystick.GamepadLayoutDialog;
+import su.comp.bk.ui.joystick.GamepadSetupDialog;
 import su.comp.bk.ui.keyboard.KeyboardManager;
 import su.comp.bk.util.DataUtils;
 import su.comp.bk.util.StringUtils;
@@ -123,9 +123,6 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
     // State save/restore: Tape parameters block address
     private static final String STATE_TAPE_PARAMS_BLOCK_ADDRESS = STATE_PREFIX +
             "tape_params_block_addr";
-    // State save/restore: On-screen joystick visibility state
-    private static final String STATE_ON_SCREEN_JOYSTICK_VISIBLE = STATE_PREFIX +
-            "on_screen_joystick_visible";
 
     /**
      * Array of file extensions for binary images
@@ -883,9 +880,10 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
         outState.putInt(STATE_LAST_IDE_DRIVE_IMAGE_INTERFACE_ID, lastIdeDriveImageInterfaceId);
         // Save tape parameters block address
         outState.putInt(STATE_TAPE_PARAMS_BLOCK_ADDRESS, tapeParamsBlockAddr);
-        // Save on-screen control states
-        outState.putBoolean(STATE_ON_SCREEN_JOYSTICK_VISIBLE, isOnScreenJoystickVisible());
+        // Save on-screen keyboard state
         keyboardManager.saveState(outState);
+        // Save on-screen/hardware joystick states
+        joystickManager.saveState(outState);
 
         // Save computer state
         saveComputerState();
@@ -908,30 +906,30 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
         lastIdeDriveImageInterfaceId = inState.getInt(STATE_LAST_IDE_DRIVE_IMAGE_INTERFACE_ID);
         // Restore tape parameters block address
         tapeParamsBlockAddr = inState.getInt(STATE_TAPE_PARAMS_BLOCK_ADDRESS);
-        // Restore on-screen control states
-        switchOnScreenJoystickVisibility(inState.getBoolean(STATE_ON_SCREEN_JOYSTICK_VISIBLE));
+        // Restore on-screen keyboard state
         keyboardManager.restoreState(inState);
+        // Restore on-screen/hardware joystick states
+        joystickManager.restoreState(inState);
+
         super.onRestoreInstanceState(inState);
     }
 
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
-        if (JoystickManager.isHardwareJoystickKeyEvent(event)) {
-            joystickManager.handleKeyEvent(event, true);
-            return true;
-        }
-        return keyboardManager.handleKeyCode(keyCode, true)
-                || super.onKeyDown(keyCode, event);
+        return onKey(keyCode, event, true);
     }
 
     @Override
     public boolean onKeyUp(int keyCode, KeyEvent event) {
-        if (JoystickManager.isHardwareJoystickKeyEvent(event)) {
-            joystickManager.handleKeyEvent(event, false);
-            return true;
-        }
-        return keyboardManager.handleKeyCode(keyCode, false)
-                || super.onKeyUp(keyCode, event);
+        return onKey(keyCode, event, false);
+    }
+
+    private boolean onKey(int keyCode, KeyEvent event, boolean isKeyPress) {
+        return joystickManager.handleKeyEvent(event, isKeyPress) ||
+                (!JoystickManager.isDpadKeyEvent(event)
+                        && !JoystickManager.isHardwareJoystickKeyEvent(event)
+                        && keyboardManager.handleKeyCode(keyCode, isKeyPress)) ||
+                (isKeyPress ? super.onKeyDown(keyCode, event) : super.onKeyUp(keyCode, event));
     }
 
     @Override
@@ -978,8 +976,8 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
         menu.findItem(R.id.menu_disk_manager).setEnabled(isFloppyControllerAttached);
         menu.findItem(R.id.menu_disk_manager).setVisible(isFloppyControllerAttached);
         boolean isHardwareJoystickPresent = joystickManager.isHardwareJoystickPresent();
-        menu.findItem(R.id.menu_gamepad_layout).setEnabled(isHardwareJoystickPresent);
-        menu.findItem(R.id.menu_gamepad_layout).setVisible(isHardwareJoystickPresent);
+        menu.findItem(R.id.menu_gamepad_setup).setEnabled(isHardwareJoystickPresent);
+        menu.findItem(R.id.menu_gamepad_setup).setVisible(isHardwareJoystickPresent);
         return true;
     }
 
@@ -1025,7 +1023,7 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
         } else if (itemId == R.id.menu_restore_state) {
             showStateRestoreDialog();
             return true;
-        } else if (itemId == R.id.menu_gamepad_layout) {
+        } else if (itemId == R.id.menu_gamepad_setup) {
             showGamepadLayoutSetupDialog();
             return true;
         }
@@ -1489,8 +1487,8 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
      * Show hardware gamepad layout setup dialog.
      */
     private void showGamepadLayoutSetupDialog() {
-        GamepadLayoutDialog gamepadLayoutDialog = GamepadLayoutDialog.newInstance();
-        gamepadLayoutDialog.show(getSupportFragmentManager(), "gamepad_layout");
+        GamepadSetupDialog gamepadSetupDialog = GamepadSetupDialog.newInstance();
+        gamepadSetupDialog.show(getSupportFragmentManager(), "gamepad_layout");
     }
 
     @Override

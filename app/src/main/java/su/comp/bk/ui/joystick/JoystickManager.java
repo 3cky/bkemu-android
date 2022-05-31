@@ -18,9 +18,13 @@
 
 package su.comp.bk.ui.joystick;
 
+import static su.comp.bk.ui.BkEmuActivity.APP_PACKAGE_NAME;
+
 import android.app.Activity;
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.hardware.input.InputManager;
+import android.os.Bundle;
 import android.util.SparseArray;
 import android.view.InputDevice;
 import android.view.KeyEvent;
@@ -37,6 +41,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -52,7 +57,18 @@ import timber.log.Timber;
 /**
  * On-screen and hardware joysticks manager.
  */
-public class JoystickManager implements OnTouchListener, InputManager.InputDeviceListener {
+public class JoystickManager implements OnTouchListener, InputManager.InputDeviceListener,
+        View.OnKeyListener {
+    private static final String PREFS_KEY_PREFERRED_HARDWARE_JOYSTICK_DEVICE_DESCRIPTOR =
+            APP_PACKAGE_NAME + ".ui.joystick.JoystickManager" +
+                    "/preferredHardwareJoystickDeviceDescriptor";
+
+    // State save/restore key prefix
+    private static final String STATE_PREFIX = JoystickManager.class.getName();
+    // State save/restore: On-screen joystick visibility state
+    private static final String STATE_ON_SCREEN_JOYSTICK_VISIBLE = STATE_PREFIX +
+            "on_screen_joystick_visible";
+
     public final static int JOYSTICK_UP            = 1;
     public final static int JOYSTICK_RIGHT         = 1 << 1;
     public final static int JOYSTICK_DOWN          = 1 << 2;
@@ -76,6 +92,8 @@ public class JoystickManager implements OnTouchListener, InputManager.InputDevic
 
     private final List<HardwareJoystickEventListener> hardwareJoystickEventListeners =
             new ArrayList<>();
+
+    private int selectedHardwareJoystickDeviceId = -1;
 
     public enum JoystickButton {
         UP(JOYSTICK_UP),
@@ -197,28 +215,31 @@ public class JoystickManager implements OnTouchListener, InputManager.InputDevic
         View joystickView = activity.findViewById(R.id.joystick);
         View joystickDpadView = activity.findViewById(R.id.joystick_dpad);
         View joystickButtonsView = activity.findViewById(R.id.joystick_buttons);
-        setOnScreenJoystickViews(joystickView, joystickDpadView, joystickButtonsView);
+        setupOnScreenJoystickViews(joystickView, joystickDpadView, joystickButtonsView);
         setOnScreenJoystickVisibility(false);
     }
 
-    public void setOnScreenJoystickViews(View... joystickViews) {
+    public void setupOnScreenJoystickViews(View... joystickViews) {
         this.onScreenJoystickViews = joystickViews;
         for (JoystickButton joystickButton : JoystickButton.values()) {
-            boolean isJoystickButtonFound = false;
-            for (View joystickView : joystickViews) {
-                if (joystickView != null) {
-                    View joystickButtonView = joystickView.findViewWithTag(joystickButton.name());
-                    if (joystickButtonView != null) {
-                        joystickButtonView.setOnTouchListener(this);
-                        isJoystickButtonFound = true;
-                        break;
-                    }
-                }
-            }
-            if (!isJoystickButtonFound) {
-                Timber.w("Can't find view for button: %s", joystickButton.name());
+            View joystickButtonView = findOnScreenJoystickButtonView(joystickButton);
+            if (joystickButtonView != null) {
+                joystickButtonView.setOnTouchListener(this);
+                joystickButtonView.setOnKeyListener(this);
             }
         }
+    }
+
+    private View findOnScreenJoystickButtonView(JoystickButton joystickButton) {
+        for (View joystickView : onScreenJoystickViews) {
+            if (joystickView != null) {
+                View joystickButtonView = joystickView.findViewWithTag(joystickButton.name());
+                if (joystickButtonView != null) {
+                    return joystickButtonView;
+                }
+            }
+        }
+        return null;
     }
 
     public Activity getActivity() {
@@ -260,6 +281,20 @@ public class JoystickManager implements OnTouchListener, InputManager.InputDevic
             if (!isPressed) {
                 v.performClick();
             }
+            return true;
+        }
+        return false;
+    }
+
+    @Override
+    public boolean onKey(View v, int keyCode, KeyEvent event) {
+        if (keyCode == KeyEvent.KEYCODE_DPAD_CENTER || keyCode == KeyEvent.KEYCODE_ENTER) {
+            if (event.getRepeatCount() == 0) {
+                JoystickButton joystickButton = JoystickButton.valueOf(v.getTag().toString());
+                boolean isPressed = event.getAction() == MotionEvent.ACTION_DOWN;
+                handleJoystickButton(joystickButton, isPressed);
+            }
+            return true;
         }
         return false;
     }
@@ -278,9 +313,17 @@ public class JoystickManager implements OnTouchListener, InputManager.InputDevic
         }
     }
 
+    private static boolean hasSources(int sources, int sourcesMask) {
+        return (sources & sourcesMask) == sourcesMask;
+    }
+
     public static boolean isHardwareJoystickKeyEvent(KeyEvent event) {
-        return ((event.getSource() & InputDevice.SOURCE_GAMEPAD) == InputDevice.SOURCE_GAMEPAD
-                || (event.getSource() & InputDevice.SOURCE_JOYSTICK) == InputDevice.SOURCE_JOYSTICK);
+        return hasSources(event.getSource(), InputDevice.SOURCE_GAMEPAD)
+                || hasSources(event.getSource(), InputDevice.SOURCE_JOYSTICK);
+    }
+
+    public static boolean isDpadKeyEvent(KeyEvent event) {
+        return hasSources(event.getSource(), InputDevice.SOURCE_DPAD);
     }
 
     @Override
@@ -320,9 +363,8 @@ public class JoystickManager implements OnTouchListener, InputManager.InputDevic
         if (device == null) {
             return false;
         }
-        int sources = device.getSources();
-        return ((sources & InputDevice.SOURCE_GAMEPAD) == InputDevice.SOURCE_GAMEPAD)
-                || ((sources & InputDevice.SOURCE_JOYSTICK) == InputDevice.SOURCE_JOYSTICK);
+        return hasSources(device.getSources(), InputDevice.SOURCE_GAMEPAD
+                | InputDevice.SOURCE_JOYSTICK);
     }
 
     private void addHardwareJoystick(int deviceId) {
@@ -333,14 +375,24 @@ public class JoystickManager implements OnTouchListener, InputManager.InputDevic
         }
         HardwareJoystick joystick = new HardwareJoystick(device, buttonMap);
         hardwareJoysticks.append(deviceId, joystick);
+        if (!hasSelectedHardwareJoystick() || isPreferredHardwareJoystick(joystick)) {
+            setSelectedHardwareJoystickDeviceId(deviceId);
+        }
         notifyHardwareJoystickConnected(joystick);
         Timber.d("Added hardware joystick: %s", joystick);
     }
 
     private void removeHardwareJoystick(int deviceId) {
-        HardwareJoystick joystick = getHardwareJoystick(deviceId);
+        HardwareJoystick joystick = getHardwareJoystickByDeviceId(deviceId);
         if (joystick != null) {
             hardwareJoysticks.remove(deviceId);
+            if (getSelectedHardwareJoystickDeviceId() == deviceId) {
+                if (getNumHardwareJoysticks() > 0) {
+                    setSelectedHardwareJoystickDeviceId(getHardwareJoystickByIndex(0).getDeviceId());
+                } else {
+                    setSelectedHardwareJoystickDeviceId(-1);
+                }
+            }
             notifyHardwareJoystickDisconnected(joystick);
             Timber.d("Removed hardware joystick: %s", joystick);
         }
@@ -390,19 +442,80 @@ public class JoystickManager implements OnTouchListener, InputManager.InputDevic
     }
 
     public boolean isHardwareJoystickPresent() {
-        return (hardwareJoysticks.size() > 0);
+        return (getNumHardwareJoysticks() > 0);
     }
 
-    private HardwareJoystick getHardwareJoystick(int deviceId) {
+    public int getNumHardwareJoysticks() {
+        return hardwareJoysticks.size();
+    }
+
+    public List<HardwareJoystick> getHardwareJoysticks() {
+        int numJoysticks = getNumHardwareJoysticks();
+        List<HardwareJoystick> joysticks = new ArrayList<>(numJoysticks);
+        for (int i = 0; i < numJoysticks; i++) {
+            joysticks.add(getHardwareJoystickByIndex(i));
+        }
+        return Collections.unmodifiableList(joysticks);
+    }
+
+    public HardwareJoystick getHardwareJoystickByDeviceId(int deviceId) {
         return hardwareJoysticks.get(deviceId);
     }
 
-    private HardwareJoystick getHardwareJoystickAtIndex(int index) {
+    public HardwareJoystick getHardwareJoystickByIndex(int index) {
         return hardwareJoysticks.valueAt(index);
     }
 
-    public HardwareJoystick getActiveHardwareJoystick() {
-        return isHardwareJoystickPresent() ? getHardwareJoystickAtIndex(0) : null;
+    public boolean hasSelectedHardwareJoystick() {
+        return getSelectedHardwareJoystick() != null;
+    }
+
+    public HardwareJoystick getSelectedHardwareJoystick() {
+        return (selectedHardwareJoystickDeviceId >= 0)
+                ? getHardwareJoystickByDeviceId(selectedHardwareJoystickDeviceId)
+                : null;
+    }
+
+    public int getSelectedHardwareJoystickDeviceId() {
+        return selectedHardwareJoystickDeviceId;
+    }
+
+    public void setSelectedHardwareJoystickDeviceId(int deviceId) {
+        selectedHardwareJoystickDeviceId = deviceId;
+    }
+
+    public int getSelectedHardwareJoystickIndex() {
+        return hardwareJoysticks.indexOfKey(selectedHardwareJoystickDeviceId);
+    }
+
+    private boolean isPreferredHardwareJoystick(HardwareJoystick joystick) {
+        String preferredJoystickDeviceDescriptor = readPreferredHardwareJoystickDeviceDescriptor();
+        return joystick.getDeviceDescriptor().equals(preferredJoystickDeviceDescriptor);
+    }
+
+    public void setSelectedHardwareJoystickAsPreferred() {
+        HardwareJoystick joystick = getSelectedHardwareJoystick();
+        if (joystick == null) {
+            return;
+        }
+        String joystickDeviceDescriptor = joystick.getDeviceDescriptor();
+        storePreferredHardwareJoystickDeviceDescriptor(joystickDeviceDescriptor);
+    }
+
+    private String readPreferredHardwareJoystickDeviceDescriptor() {
+        SharedPreferences prefs = getPreferences();
+        return prefs.getString(PREFS_KEY_PREFERRED_HARDWARE_JOYSTICK_DEVICE_DESCRIPTOR, null);
+    }
+
+    private void storePreferredHardwareJoystickDeviceDescriptor(String descriptor) {
+        SharedPreferences prefs = getPreferences();
+        SharedPreferences.Editor prefsEditor = prefs.edit();
+        prefsEditor.putString(PREFS_KEY_PREFERRED_HARDWARE_JOYSTICK_DEVICE_DESCRIPTOR, descriptor);
+        prefsEditor.apply();
+    }
+
+    private SharedPreferences getPreferences() {
+        return activity.getPreferences(Context.MODE_PRIVATE);
     }
 
     private Map<JoystickButton, String> getHardwareJoystickDefaultMapping() {
@@ -469,18 +582,30 @@ public class JoystickManager implements OnTouchListener, InputManager.InputDevic
 
     public boolean handleKeyEvent(KeyEvent event, boolean isPressed) {
         int deviceId = event.getDeviceId();
-        HardwareJoystick joystick = getActiveHardwareJoystick();
-        if (joystick.getDeviceId() == deviceId) {
+        HardwareJoystick joystick = getSelectedHardwareJoystick();
+        if (joystick != null && joystick.getDeviceId() == deviceId) {
             String buttonEventName = KeyEvent.keyCodeToString(event.getKeyCode());
             JoystickButton button = joystick.getButton(buttonEventName);
             if (event.getRepeatCount() == 0) {
                 if (button != null) {
                     handleJoystickButton(button, isPressed);
+                    View joystickButtonView = findOnScreenJoystickButtonView(button);
+                    if (joystickButtonView != null) {
+                        joystickButtonView.setPressed(isPressed);
+                    }
                 }
                 notifyHardwareJoystickButtonEvent(joystick, buttonEventName, button, isPressed);
-                return true;
             }
+            return true;
         }
         return false;
+    }
+
+    public void saveState(Bundle outState) {
+        outState.putBoolean(STATE_ON_SCREEN_JOYSTICK_VISIBLE, isOnScreenJoystickVisible());
+    }
+
+    public void restoreState(Bundle inState) {
+        setOnScreenJoystickVisibility(inState.getBoolean(STATE_ON_SCREEN_JOYSTICK_VISIBLE));
     }
 }

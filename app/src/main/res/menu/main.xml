@@ -14,9 +14,9 @@
         android:icon="@drawable/ic_dpad_white_24"
         android:title="@string/menu_toggle_osd_joystick"
         app:showAsAction="ifRoom" />
-    <item android:id="@+id/menu_gamepad_layout"
+    <item android:id="@+id/menu_gamepad_setup"
         android:icon="@drawable/ic_gamepad_white_24"
-        android:title="@string/gamepad_layout"
+        android:title="@string/gamepad_setup"
         android:visible="false"
         android:enabled="false"
         tools:visible="true"

@@ -18,6 +18,8 @@
 
 package su.comp.bk.ui.joystick;
 
+import static su.comp.bk.ui.joystick.JoystickManager.HardwareJoystick;
+
 import android.app.Dialog;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -29,6 +31,7 @@ import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
+import android.widget.Spinner;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -42,26 +45,33 @@ import java.util.Objects;
 
 import su.comp.bk.R;
 import su.comp.bk.ui.BkEmuActivity;
+import timber.log.Timber;
 
 /**
- * Hardware gamepad layout editor dialog.
+ * Hardware gamepad selection and layout setup dialog.
  */
-public class GamepadLayoutDialog extends DialogFragment implements DialogInterface.OnKeyListener,
-        JoystickManager.HardwareJoystickEventListener, AdapterView.OnItemClickListener {
+public class GamepadSetupDialog extends DialogFragment implements DialogInterface.OnKeyListener,
+        JoystickManager.HardwareJoystickEventListener, AdapterView.OnItemClickListener,
+        AdapterView.OnItemSelectedListener {
     private final static String KEYCODE_NAME_PREFIX = "KEYCODE_";
 
     private LayoutInflater inflater;
 
-    private final List<ButtonItem> buttonItems = new ArrayList<>();
+    private JoystickManager joystickManager;
 
-    private TextView gamepadNameTextView;
+    private final List<ButtonItem> gamepadButtonItems = new ArrayList<>();
 
-    private ListView buttonsListView;
-    private ButtonAdapter buttonAdapter;
+    private Spinner gamepadSelectorSpinner;
+    private ArrayAdapter<String> gamepadSelectorAdapter;
 
-    private JoystickManager.HardwareJoystick activeGamepad;
+    private ListView gamepadButtonsListView;
+    private ButtonAdapter gamepadButtonAdapter;
 
-    private ButtonItem currentRemapButtonItem;
+    private HardwareJoystick selectedGamepad;
+
+    private boolean isGamepadSelectedInternally;
+
+    private ButtonItem remapButtonItem;
 
 
     static class ButtonItem {
@@ -85,6 +95,7 @@ public class GamepadLayoutDialog extends DialogFragment implements DialogInterfa
             this.eventName = eventName;
         }
 
+        @NonNull
         @Override
         public String toString() {
             return "ButtonItem{" +
@@ -104,7 +115,7 @@ public class GamepadLayoutDialog extends DialogFragment implements DialogInterfa
         @Override
         public View getView(int position, @Nullable View convertView, @NonNull ViewGroup parent) {
             if (convertView == null) {
-                convertView = inflater.inflate(R.layout.gamepad_layout_button_item, null);
+                convertView = inflater.inflate(R.layout.gamepad_layout_item, null);
             }
 
             ButtonItem buttonItem = getItem(position);
@@ -153,19 +164,15 @@ public class GamepadLayoutDialog extends DialogFragment implements DialogInterfa
         }
     }
 
-    public static GamepadLayoutDialog newInstance() {
-        return new GamepadLayoutDialog();
+    public static GamepadSetupDialog newInstance() {
+        return new GamepadSetupDialog();
     }
 
-    public GamepadLayoutDialog() {
+    public GamepadSetupDialog() {
     }
 
     private BkEmuActivity getBkEmuActivity() {
         return (BkEmuActivity) requireActivity();
-    }
-
-    private JoystickManager getJoystickManager() {
-        return getBkEmuActivity().getJoystickManager();
     }
 
     private Dialog getActiveDialog() {
@@ -178,7 +185,7 @@ public class GamepadLayoutDialog extends DialogFragment implements DialogInterfa
         BkEmuActivity activity = getBkEmuActivity();
         AlertDialog.Builder builder = new AlertDialog.Builder(activity);
         inflater = activity.getLayoutInflater();
-        builder.setView(inflater.inflate(R.layout.gamepad_layout_dialog, null));
+        builder.setView(inflater.inflate(R.layout.gamepad_setup_dialog, null));
         return builder.create();
     }
 
@@ -189,35 +196,75 @@ public class GamepadLayoutDialog extends DialogFragment implements DialogInterfa
         Dialog dialog = getActiveDialog();
 
         dialog.setOnKeyListener(this);
-        JoystickManager joystickManager = getJoystickManager();
+
+        joystickManager = getBkEmuActivity().getJoystickManager();
         joystickManager.addHardwareJoystickEventListener(this);
 
+        gamepadSelectorSpinner = dialog.findViewById(R.id.gamepad_selector);
+        gamepadSelectorAdapter = new ArrayAdapter<>(dialog.getContext(),
+                android.R.layout.simple_spinner_item);
+        gamepadSelectorAdapter.setDropDownViewResource(
+                android.R.layout.simple_spinner_dropdown_item);
+        gamepadSelectorSpinner.setAdapter(gamepadSelectorAdapter);
+        gamepadSelectorSpinner.setOnItemSelectedListener(this);
+
         for (JoystickManager.JoystickButton button : JoystickManager.JoystickButton.values()) {
-            buttonItems.add(new ButtonItem(button));
+            gamepadButtonItems.add(new ButtonItem(button));
         }
 
-        gamepadNameTextView = dialog.findViewById(R.id.gamepad_name);
+        gamepadButtonsListView = dialog.findViewById(R.id.gamepad_layout);
+        gamepadButtonAdapter = new ButtonAdapter(dialog.getContext(),
+                R.layout.gamepad_setup_dialog, gamepadButtonItems);
+        gamepadButtonsListView.setAdapter(gamepadButtonAdapter);
+        gamepadButtonsListView.setFastScrollEnabled(true);
+        gamepadButtonsListView.setOnItemClickListener(this);
+        gamepadButtonsListView.requestFocus();
 
-        buttonsListView = dialog.findViewById(R.id.gamepad_buttons);
-        buttonAdapter = new ButtonAdapter(dialog.getContext(), R.layout.gamepad_layout_dialog,
-                buttonItems);
-        buttonsListView.setAdapter(buttonAdapter);
-        buttonsListView.setFastScrollEnabled(true);
-        buttonsListView.setOnItemClickListener(this);
-        buttonsListView.requestFocus();
-
-        updateActiveGamepad();
+        gamepadListUpdated();
     }
 
-    @Override
+   @Override
     public void onStop() {
         getActiveDialog().setOnKeyListener(null);
-        JoystickManager joystickManager = getJoystickManager();
         joystickManager.removeHardwareJoystickEventListener(this);
 
         super.onStop();
     }
 
+    /**
+     * Gamepad selector spinner item selected handler.
+     *
+     * @param position the position of the item in the adapter
+     */
+    @Override
+    public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+        Timber.d("onItemSelected: %d%s", position, isGamepadSelectedInternally
+                ? " (internally)" : "");
+        if (isGamepadSelectedInternally) {
+            isGamepadSelectedInternally = false;
+            return;
+        }
+        int selectedDeviceId = joystickManager.getHardwareJoystickByIndex(position).getDeviceId();
+        joystickManager.setSelectedHardwareJoystickDeviceId(selectedDeviceId);
+        joystickManager.setSelectedHardwareJoystickAsPreferred();
+        updateSelectedGamepad();
+    }
+
+    /**
+     * Gamepad selector spinner nothing selected handler.
+     *
+     * @param parent The AdapterView where the selection happened
+     */
+    @Override
+    public void onNothingSelected(AdapterView<?> parent) {
+        Timber.d("onNothingSelected");
+    }
+
+    /**
+     * Gamepad layout button list item click handler.
+     *
+     * @param position the position of the item in the adapter
+     */
     @Override
     public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
         resetButtonItemsHighlighted();
@@ -229,28 +276,56 @@ public class GamepadLayoutDialog extends DialogFragment implements DialogInterfa
             setButtonItemHighlighted(position, true);
         }
 
-        buttonAdapter.notifyDataSetChanged();
+        gamepadButtonAdapter.notifyDataSetChanged();
     }
 
+    /**
+     * Gamepad setup dialog key press event handler.
+     *
+     * @param dialog the dialog the key has been dispatched to
+     * @param keyCode the code for the physical key that was pressed
+     * @param event the KeyEvent object containing full information about
+     *              the event
+     * @return {@code true} if the key press event handled as the gamepad button press event,
+     *         {@code false} otherwise
+     */
     @Override
     public boolean onKey(DialogInterface dialog, int keyCode, KeyEvent event) {
-        return getJoystickManager().handleKeyEvent(event, event.getAction() != KeyEvent.ACTION_UP);
+        return joystickManager.handleKeyEvent(event, event.getAction() != KeyEvent.ACTION_UP);
     }
 
+    /**
+     * Joystick manager gamepad connected event handler.
+     *
+     * @param gamepad connected gamepad reference
+     */
     @Override
-    public void onConnected(JoystickManager.HardwareJoystick gamepad) {
-        updateActiveGamepad();
+    public void onConnected(HardwareJoystick gamepad) {
+        gamepadListUpdated();
     }
 
+    /**
+     * Joystick manager gamepad disconnected event handler.
+     *
+     * @param gamepad disconnected gamepad reference
+     */
     @Override
-    public void onDisconnected(JoystickManager.HardwareJoystick gamepad) {
-        updateActiveGamepad();
+    public void onDisconnected(HardwareJoystick gamepad) {
+        gamepadListUpdated();
     }
 
+    /**
+     * Joystick manager gamepad button event handler.
+     *
+     * @param gamepad event source gamepad reference
+     * @param buttonEventName button event name (like "KEYCODE_BUTTON_A")
+     * @param button joystick button mapped to event (null if no mapping defined for event)
+     * @param isPressed {@code true} if button is pressed, {@code false} if released
+     */
     @Override
-    public void onButton(JoystickManager.HardwareJoystick gamepad, String buttonEventName,
+    public void onButton(HardwareJoystick gamepad, String buttonEventName,
                          JoystickManager.JoystickButton button, boolean isPressed) {
-        if (gamepad != activeGamepad) {
+        if (gamepad != selectedGamepad) {
             return;
         }
 
@@ -258,7 +333,7 @@ public class GamepadLayoutDialog extends DialogFragment implements DialogInterfa
             if (!isPressed) {
                 doButtonRemap(button, buttonEventName);
                 resetButtonItemsHighlighted();
-                updateGamepadButtonItems(activeGamepad);
+                updateGamepadButtonItems(selectedGamepad);
             }
         } else if (button != null) {
             setButtonPressed(button, isPressed);
@@ -268,14 +343,14 @@ public class GamepadLayoutDialog extends DialogFragment implements DialogInterfa
     private void setButtonPressed(JoystickManager.JoystickButton button, boolean isPressed) {
         ButtonItem buttonItem = getButtonItem(button);
         if (buttonItem != null) {
-            int buttonItemPosition = buttonAdapter.getPosition(buttonItem);
+            int buttonItemPosition = gamepadButtonAdapter.getPosition(buttonItem);
             setButtonItemHighlighted(buttonItemPosition, isPressed);
-            buttonsListView.smoothScrollToPosition(buttonItemPosition);
+            gamepadButtonsListView.smoothScrollToPosition(buttonItemPosition);
         }
     }
 
     private ButtonItem getButtonItem(JoystickManager.JoystickButton button) {
-        for (ButtonItem buttonItem : buttonItems) {
+        for (ButtonItem buttonItem : gamepadButtonItems) {
             if (buttonItem.getButton() == button) {
                 return buttonItem;
             }
@@ -283,78 +358,90 @@ public class GamepadLayoutDialog extends DialogFragment implements DialogInterfa
         return null;
     }
 
-    private String getButtonItemEventName(JoystickManager.HardwareJoystick gamepad,
-                                          ButtonItem buttonItem) {
+    private String getButtonItemEventName(HardwareJoystick gamepad, ButtonItem buttonItem) {
         return gamepad.getButtonEventMapping(buttonItem.getButton());
     }
 
     private void resetButtonItemsHighlighted() {
-        for (ButtonItem buttonItem : buttonItems) {
+        for (ButtonItem buttonItem : gamepadButtonItems) {
             setButtonItemHighlighted(buttonItem, false);
         }
     }
 
     private void setButtonItemHighlighted(ButtonItem buttonItem, boolean isHighlighted) {
-        int buttonItemPosition = buttonAdapter.getPosition(buttonItem);
+        int buttonItemPosition = gamepadButtonAdapter.getPosition(buttonItem);
         setButtonItemHighlighted(buttonItemPosition, isHighlighted);
     }
 
     private void setButtonItemHighlighted(int buttonItemPosition, boolean isHighlighted) {
-        buttonsListView.setItemChecked(buttonItemPosition, isHighlighted);
+        gamepadButtonsListView.setItemChecked(buttonItemPosition, isHighlighted);
     }
 
-    private void updateActiveGamepad() {
-        JoystickManager.HardwareJoystick activeGamepad =
-                getJoystickManager().getActiveHardwareJoystick();
-
-        if (activeGamepad == null) {
+    private void gamepadListUpdated() {
+        if (!joystickManager.hasSelectedHardwareJoystick()) {
             dismiss();
             return;
         }
-
-        updateGamepadName(activeGamepad);
-        updateGamepadButtonItems(activeGamepad);
-
-        this.activeGamepad = activeGamepad;
+        updateGamepadSelectorState();
+        updateSelectedGamepad();
     }
 
-    private void updateGamepadName(JoystickManager.HardwareJoystick gamepad) {
-        String gamepadName = gamepad.getDeviceName();
-        gamepadNameTextView.setText((gamepadName != null) ? gamepadName
-                : getString(R.string.gamepad_name_undefined));
+    private void updateSelectedGamepad() {
+        HardwareJoystick selectedGamepad = joystickManager.getSelectedHardwareJoystick();
+        if (this.selectedGamepad != selectedGamepad) {
+            this.selectedGamepad = selectedGamepad;
+            updateSelectedGamepadLayout();
+        }
     }
 
-    private void updateGamepadButtonItems(JoystickManager.HardwareJoystick gamepad) {
-        for (ButtonItem buttonItem : buttonItems) {
+    private void updateGamepadSelectorState() {
+        List<HardwareJoystick> joysticks = joystickManager.getHardwareJoysticks();
+        gamepadSelectorAdapter.clear();
+        for (HardwareJoystick joystick : joysticks) {
+            gamepadSelectorAdapter.add(joystick.getDeviceName());
+        }
+        gamepadSelectorAdapter.notifyDataSetChanged();
+
+        int selectedGamepadIndex = joystickManager.getSelectedHardwareJoystickIndex();
+        isGamepadSelectedInternally = (gamepadSelectorSpinner
+                .getSelectedItemPosition() != selectedGamepadIndex);
+        gamepadSelectorSpinner.setSelection(selectedGamepadIndex);
+    }
+
+    private void updateSelectedGamepadLayout() {
+        updateGamepadButtonItems(selectedGamepad);
+    }
+
+    private void updateGamepadButtonItems(HardwareJoystick gamepad) {
+        for (ButtonItem buttonItem : gamepadButtonItems) {
             updateButtonItemEventName(gamepad, buttonItem);
         }
-        buttonAdapter.notifyDataSetChanged();
+        gamepadButtonAdapter.notifyDataSetChanged();
     }
 
-    private void updateButtonItemEventName(JoystickManager.HardwareJoystick gamepad,
-                                           ButtonItem buttonItem) {
+    private void updateButtonItemEventName(HardwareJoystick gamepad, ButtonItem buttonItem) {
         String buttonEventName = getButtonItemEventName(gamepad, buttonItem);
         buttonItem.setEventName(buttonEventName);
     }
 
     private boolean isButtonRemapInProgress() {
-        return currentRemapButtonItem != null;
+        return remapButtonItem != null;
     }
 
     private void startButtonRemap(int buttonItemPosition) {
-        currentRemapButtonItem = buttonItems.get(buttonItemPosition);
-        currentRemapButtonItem.setEventName(null);
+        remapButtonItem = gamepadButtonItems.get(buttonItemPosition);
+        remapButtonItem.setEventName(null);
     }
 
     private void cancelButtonRemap() {
-        updateButtonItemEventName(activeGamepad, currentRemapButtonItem);
-        currentRemapButtonItem = null;
+        updateButtonItemEventName(selectedGamepad, remapButtonItem);
+        remapButtonItem = null;
     }
 
     private void doButtonRemap(JoystickManager.JoystickButton oldButton, String buttonEventName) {
-        activeGamepad.deleteButtonEventMapping(oldButton);
-        activeGamepad.setButtonEventMapping(currentRemapButtonItem.getButton(), buttonEventName);
-        getJoystickManager().saveHardwareJoystickMapping(activeGamepad);
-        currentRemapButtonItem = null;
+        selectedGamepad.deleteButtonEventMapping(oldButton);
+        selectedGamepad.setButtonEventMapping(remapButtonItem.getButton(), buttonEventName);
+        joystickManager.saveHardwareJoystickMapping(selectedGamepad);
+        remapButtonItem = null;
     }
 }

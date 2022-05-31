@@ -18,6 +18,7 @@
 
 package su.comp.bk.ui.keyboard;
 
+import android.annotation.SuppressLint;
 import android.os.Bundle;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
@@ -32,7 +33,7 @@ import timber.log.Timber;
 /**
  * On-screen and hardware keyboards manager.
  */
-public class KeyboardManager implements OnTouchListener {
+public class KeyboardManager implements OnTouchListener, View.OnClickListener {
     // State save/restore key prefix
     private static final String STATE_PREFIX = KeyboardManager.class.getName();
     // State save/restore: On-screen keyboard is visible flag state
@@ -254,6 +255,7 @@ public class KeyboardManager implements OnTouchListener {
             View buttonView = onScreenKeyboardView.findViewWithTag(bkButton.name());
             if (buttonView != null) {
                 buttonView.setOnTouchListener(this);
+                buttonView.setOnClickListener(this);
             } else {
                 Timber.w("Can't find view for button: %s", bkButton.name());
             }
@@ -277,6 +279,7 @@ public class KeyboardManager implements OnTouchListener {
         this.keyboardController = keyboardController;
     }
 
+    @SuppressLint("ClickableViewAccessibility")
     @Override
     public boolean onTouch(View v, MotionEvent event) {
         if (event.getAction() == MotionEvent.ACTION_UP
@@ -284,11 +287,19 @@ public class KeyboardManager implements OnTouchListener {
                 || event.getAction() == MotionEvent.ACTION_CANCEL) {
             BkButton bkButton = BkButton.valueOf(v.getTag().toString());
             boolean isPressed = event.getAction() == MotionEvent.ACTION_DOWN;
-            Timber.d("handle button touch event " + (isPressed ? "press" : "release") +
-                    ", button: " + bkButton);
-            handleBkButton(bkButton, isPressed, true);
+            Timber.d("handle button touch event: %s %s", bkButton,
+                    isPressed ? "pressed" : "released");
+            return handleBkButton(bkButton, isPressed, true);
         }
         return false;
+    }
+
+    @Override
+    public void onClick(View v) {
+        BkButton bkButton = BkButton.valueOf(v.getTag().toString());
+        Timber.d("handle button click event: %s", bkButton);
+        handleBkButton(bkButton, true, true);
+        handleBkButton(bkButton, false, true);
     }
 
     public void saveState(Bundle outState) {

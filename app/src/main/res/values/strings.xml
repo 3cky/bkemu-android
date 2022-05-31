@@ -68,7 +68,7 @@
     <string name="ay8910" translatable="false">AY8910</string>
     <string name="write_protect">Write Protect</string>
     <string name="hdd_detached">(Not attached)</string>
-    <string name="gamepad_layout">Gamepad layout</string>
+    <string name="gamepad_setup">Gamepad setup</string>
     <string name="gamepad_button_left">Left</string>
     <string name="gamepad_button_right">Right</string>
     <string name="gamepad_button_up">Up</string>
@@ -78,5 +78,4 @@
     <string name="gamepad_button_select" translatable="false">Select</string>
     <string name="gamepad_button_start" translatable="false">Start</string>
     <string name="gamepad_button_not_bound" translatable="false">\?</string>
-    <string name="gamepad_name_undefined" translatable="false">--</string>
 </resources>

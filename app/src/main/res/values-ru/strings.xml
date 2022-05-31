@@ -66,7 +66,7 @@
     <string name="speaker">Аудиовыход</string>
     <string name="write_protect">Защита записи</string>
     <string name="hdd_detached">(Не подключен)</string>
-    <string name="gamepad_layout">Раскладка геймпада</string>
+    <string name="gamepad_setup">Настройка геймпада</string>
     <string name="gamepad_button_left">Влево</string>
     <string name="gamepad_button_right">Вправо</string>
     <string name="gamepad_button_up">Вверх</string>

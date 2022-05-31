@@ -6,16 +6,11 @@
     android:layout_height="match_parent"
     android:padding="@dimen/gamepad_layout_padding">
 
-    <TextView
-        android:id="@+id/gamepad_name"
-        android:layout_width="wrap_content"
+    <Spinner
+        android:id="@+id/gamepad_selector"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_gravity="center"
-        android:textStyle="bold"
-        android:textAlignment="center"
-        android:gravity="center"
-        android:text="@string/gamepad_name_undefined"
-        tools:text="Logitech Gamepad F510"/>
+        tools:listitem="@android:layout/simple_list_item_1" />
 
     <View
         android:layout_width="match_parent"
@@ -25,7 +20,7 @@
         android:background="@android:color/darker_gray"/>
 
     <ListView
-        android:id="@+id/gamepad_buttons"
+        android:id="@+id/gamepad_layout"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:divider="@null"
@@ -33,6 +28,6 @@
         android:choiceMode="multipleChoice"
         android:focusable="true"
         android:focusableInTouchMode="true"
-        tools:listitem="@layout/gamepad_layout_button_item" />
+        tools:listitem="@layout/gamepad_layout_item" />
 
 </LinearLayout>
