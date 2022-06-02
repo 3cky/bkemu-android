@@ -5,8 +5,8 @@
     <string name="menu_toggle_osd_joystick">Экранный джойстик</string>
     <string name="menu_switch_display_mode">Режим экрана</string>
     <string name="menu_reset">Аппаратный сброс</string>
-    <string name="menu_change_model">Выбрать модель</string>
-    <string name="menu_select_model">Выберите модель</string>
+    <string name="menu_change_config">Конфигурация</string>
+    <string name="menu_select_config">Выберите конфигурацию</string>
     <string name="menu_load_bin_file">Загрузить BIN-файл</string>
     <string name="menu_disk_manager">Диспетчер дисков</string>
     <string name="menu_about">Об эмуляторе</string>

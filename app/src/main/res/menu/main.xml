@@ -46,8 +46,8 @@
         android:title="@string/menu_save_state" />
     <item android:id="@+id/menu_restore_state"
         android:title="@string/menu_restore_state" />
-    <item android:id="@+id/menu_change_model"
-        android:title="@string/menu_change_model" />
+    <item android:id="@+id/menu_change_config"
+        android:title="@string/menu_change_config" />
     <item android:id="@+id/menu_reset"
         android:title="@string/menu_reset" />
     <item android:id="@+id/menu_about"

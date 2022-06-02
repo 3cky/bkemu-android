@@ -148,7 +148,7 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
     };
 
     // Dialog IDs
-    private static final int DIALOG_COMPUTER_MODEL = 1;
+    private static final int DIALOG_COMPUTER_CONFIG = 1;
     private static final int DIALOG_ABOUT = 2;
     private static final int DIALOG_FLOPPY_DISK_MOUNT_ERROR = 3;
     private static final int DIALOG_IDE_DRIVE_ATTACH_ERROR = 4;
@@ -606,7 +606,13 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
         String intentDataString = intent.getDataString();
         if (intentDataString != null) {
             Uri intentDataUri = Uri.parse(intentDataString);
-            String intentDataFileName = DataUtils.resolveUriFileName(this, intentDataUri);
+            String intentDataFileName;
+            try {
+                intentDataFileName = DataUtils.resolveUriFileName(this, intentDataUri);
+            } catch (Exception e) {
+                Timber.d(e, "Can't resolve file name for intent data URI: %s", intentDataUri);
+                return;
+            }
             if (ACTION_RESTORE_STATE.equals(intent.getAction()) ||
                     isFileNameExtensionMatched(intentDataFileName, FILE_EXT_STATE_FILES)) {
                 this.intentDataStateUri = intentDataUri;
@@ -738,7 +744,7 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
             bkEmuView.setComputer(computer);
             ActionBar actionBar = getSupportActionBar();
             if (actionBar != null) {
-                actionBar.setSubtitle(getComputerModelName(computer.getConfiguration()));
+                actionBar.setSubtitle(getComputerConfigurationName(computer.getConfiguration()));
             }
         } else {
             throw new IllegalStateException("Can't initialize computer state");
@@ -996,8 +1002,8 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
         } else if (itemId == R.id.menu_reset) {
             resetComputer();
             return true;
-        } else if (itemId == R.id.menu_change_model) {
-            showDialog(DIALOG_COMPUTER_MODEL);
+        } else if (itemId == R.id.menu_change_config) {
+            showDialog(DIALOG_COMPUTER_CONFIG);
             return true;
         } else if (itemId == R.id.menu_load_bin_file) {
             showBinImageFileLoadDialog(REQUEST_MENU_BIN_IMAGE_FILE_LOAD, null);
@@ -1033,8 +1039,8 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
     @Override
     protected Dialog onCreateDialog(int id) {
         switch (id) {
-            case DIALOG_COMPUTER_MODEL:
-                return createComputerModelDialog();
+            case DIALOG_COMPUTER_CONFIG:
+                return createComputerConfigurationDialog();
             case DIALOG_ABOUT:
                 return createAboutDialog();
             case DIALOG_FLOPPY_DISK_MOUNT_ERROR:
@@ -1097,44 +1103,36 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
         return aboutDialog;
     }
 
-    private Dialog createComputerModelDialog() {
-        final CharSequence[] models;
-        List<String> modelList = new ArrayList<>();
-        for (Configuration model: Configuration.values()) {
-            modelList.add(getComputerModelName(model));
+    private Dialog createComputerConfigurationDialog() {
+        final CharSequence[] configNames;
+        List<String> configNameList = new ArrayList<>();
+        for (Configuration configuration: Configuration.values()) {
+            configNameList.add(getComputerConfigurationName(configuration));
         }
-        models = modelList.toArray(new String[0]);
+        configNames = configNameList.toArray(new String[0]);
         return new AlertDialog.Builder(this)
-            .setTitle(R.string.menu_select_model)
-            .setSingleChoiceItems(models, computer.getConfiguration().ordinal(),
-                    (dialog, which) -> {
-                        // Mark selected item by tag
-                        ListView listView = ((AlertDialog) dialog).getListView();
-                        listView.setTag(which);
-                    })
-            .setPositiveButton(R.string.ok, (dialog, whichButton) -> {
-                // Get tagged selected item, if any
-                ListView listView = ((AlertDialog) dialog).getListView();
-                Integer selected = (Integer) listView.getTag();
-                if (selected != null) {
-                    Configuration config = Configuration.values()[selected];
-                    if (computer.getConfiguration() != config) {
-                        // Set new computer configuration and restart activity
-                        setComputerConfiguration(config);
-                        restartActivity(null, null);
-                    }
-                }
-            })
-            .setNegativeButton(R.string.cancel, (dialog, whichButton) -> {
-                // Do nothing on cancel
-            })
-           .create();
+                .setTitle(R.string.menu_select_config)
+                .setSingleChoiceItems(configNames, computer.getConfiguration().ordinal(),
+                        (dialog, which) -> {
+                            if (which >= 0) {
+                                Configuration config = Configuration.values()[which];
+                                if (computer.getConfiguration() != config) {
+                                    // Set new computer configuration and restart activity
+                                    setComputerConfiguration(config);
+                                    restartActivity(null, null);
+                                }
+                            }
+                        })
+                .setNegativeButton(R.string.cancel, (dialog, whichButton) -> {
+                    // Do nothing on cancel
+                })
+                .create();
     }
 
-    private String getComputerModelName(Configuration model) {
-        int modelNameId = getResources().getIdentifier(model.name().toLowerCase(),
+    private String getComputerConfigurationName(Configuration configuration) {
+        int configNameId = getResources().getIdentifier(configuration.name().toLowerCase(),
                 "string", getPackageName());
-        return (modelNameId != 0) ? getString(modelNameId) : model.name();
+        return (configNameId != 0) ? getString(configNameId) : configuration.name();
     }
 
     @Override

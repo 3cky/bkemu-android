@@ -6,8 +6,8 @@
     <string name="menu_toggle_osd_joystick">On-screen joystick</string>
     <string name="menu_switch_display_mode">Display mode</string>
     <string name="menu_reset">Reset computer</string>
-    <string name="menu_change_model">Change model</string>
-    <string name="menu_select_model">Select model</string>
+    <string name="menu_change_config">Configuration</string>
+    <string name="menu_select_config">Select configuration</string>
     <string name="menu_load_bin_file">Load .BIN file</string>
     <string name="menu_disk_manager">Disk manager</string>
     <string name="menu_about">About</string>
