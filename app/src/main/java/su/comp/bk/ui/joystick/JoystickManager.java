@@ -278,6 +278,7 @@ public class JoystickManager implements OnTouchListener, InputManager.InputDevic
             JoystickButton joystickButton = JoystickButton.valueOf(v.getTag().toString());
             boolean isPressed = event.getAction() == MotionEvent.ACTION_DOWN;
             handleJoystickButton(joystickButton, isPressed);
+            v.setPressed(isPressed);
             if (!isPressed) {
                 v.performClick();
             }
