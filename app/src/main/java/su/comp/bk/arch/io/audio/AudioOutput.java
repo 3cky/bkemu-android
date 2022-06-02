@@ -22,6 +22,8 @@ import android.media.AudioManager;
 import android.media.AudioTrack;
 import android.os.Build;
 
+import java.util.Arrays;
+
 import su.comp.bk.arch.Computer;
 import su.comp.bk.arch.cpu.opcode.BaseOpcode;
 import su.comp.bk.arch.io.Device;
@@ -65,6 +67,7 @@ public abstract class AudioOutput<U extends AudioOutputUpdate> implements Device
     private Thread audioOutputThread;
 
     private boolean isRunning;
+    private boolean isPaused = true;
 
     private int volume = MAX_VOLUME;
 
@@ -144,8 +147,6 @@ public abstract class AudioOutput<U extends AudioOutputUpdate> implements Device
     public void start() {
         Timber.d("%s: starting audio output", getName());
         isRunning = true;
-        lastAudioOutputUpdateTimestamp = getComputer().getUptimeTicks() -
-                samplesToCpuTime(getSamplesBufferSize());
         audioOutputThread = new Thread(this, "AudioOutputThread-" + getName());
         audioOutputThread.start();
     }
@@ -154,6 +155,9 @@ public abstract class AudioOutput<U extends AudioOutputUpdate> implements Device
         Timber.d("%s: stopping audio output", getName());
         isRunning = false;
         player.stop();
+        synchronized (this) {
+            this.notify();
+        }
         while (audioOutputThread.isAlive()) {
             try {
                 audioOutputThread.join();
@@ -161,16 +165,23 @@ public abstract class AudioOutput<U extends AudioOutputUpdate> implements Device
                 // Do nothing
             }
         }
+        flushAudioOutputUpdates();
     }
 
     public void pause() {
         Timber.d("%s: pausing audio output", getName());
+        isPaused = true;
         player.pause();
+        player.flush();
     }
 
     public void resume() {
         Timber.d("%s: resuming audio output", getName());
         player.play();
+        isPaused = false;
+        synchronized (this) {
+            this.notify();
+        }
     }
 
     public void release() {
@@ -222,6 +233,19 @@ public abstract class AudioOutput<U extends AudioOutputUpdate> implements Device
         return audioOutputUpdate;
     }
 
+    protected void flushAudioOutputUpdates() {
+        if (isRunning) {
+            throw new IllegalStateException("Can't flush audio output while it's running");
+        }
+        while (true) {
+            U audioOutputUpdate = getAudioOutputUpdate();
+            if (audioOutputUpdate == null) {
+                break;
+            }
+            handleAudioOutputUpdate(audioOutputUpdate);
+        }
+    }
+
     private long samplesToCpuTime(long numSamples) {
         return computer.nanosToCpuTime(numSamples * NANOSECS_IN_SECOND / getSampleRate());
     }
@@ -230,22 +254,33 @@ public abstract class AudioOutput<U extends AudioOutputUpdate> implements Device
         return computer.cpuTimeToNanos(cpuTime) * getSampleRate() / NANOSECS_IN_SECOND;
     }
 
+    private void syncLastAudioOutputUpdateTimestamp() {
+        lastAudioOutputUpdateTimestamp = getComputer().getUptimeTicks() -
+                samplesToCpuTime(getSamplesBufferSize());
+    }
+
     private int writeSamples(short[] samplesBuffer, int sampleIndex) {
         while (numSamples <= 0) {
             U audioOutputUpdate = getAudioOutputUpdate();
             if (audioOutputUpdate != null) {
                 handleAudioOutputUpdate(audioOutputUpdate);
+                if (audioOutputUpdate.timestamp < lastAudioOutputUpdateTimestamp) {
+                    continue;
+                }
                 numSamples = (int) (cpuTimeToSamples(audioOutputUpdate.timestamp
                         - lastAudioOutputUpdateTimestamp));
                 lastAudioOutputUpdateTimestamp += samplesToCpuTime(numSamples);
             } else {
-                numSamples = samplesBuffer.length - sampleIndex;
-                lastAudioOutputUpdateTimestamp = getComputer().getUptimeTicks() -
-                        samplesToCpuTime(getSamplesBufferSize());
+                numSamples = getSamplesBufferSize() - sampleIndex;
+                if (sampleIndex > 0) {
+                    lastAudioOutputUpdateTimestamp += samplesToCpuTime(numSamples);
+                } else {
+                    syncLastAudioOutputUpdateTimestamp();
+                }
             }
         }
 
-        int numSamplesToWrite = Math.min(numSamples, samplesBuffer.length - sampleIndex);
+        int numSamplesToWrite = Math.min(numSamples, getSamplesBufferSize() - sampleIndex);
         numSamples -= numSamplesToWrite;
 
         return writeSamples(samplesBuffer, sampleIndex, numSamplesToWrite);
@@ -254,16 +289,35 @@ public abstract class AudioOutput<U extends AudioOutputUpdate> implements Device
     @Override
     public void run() {
         Timber.d("%s: audio output started", getName());
+        syncLastAudioOutputUpdateTimestamp();
+        Arrays.fill(samplesBuffer, (short) 0);
         AudioLoop:
         while (true) {
-            int sampleIndex = 0;
-            while (sampleIndex < samplesBuffer.length) {
+            if (isPaused) {
                 if (!isRunning) {
-                    break AudioLoop;
+                    break; // AudioLoop
                 }
-                sampleIndex = writeSamples(samplesBuffer, sampleIndex);
+                synchronized (this) {
+                    try {
+                        this.wait(100L);
+                    } catch (InterruptedException ignored) {
+                    }
+                }
+                syncLastAudioOutputUpdateTimestamp();
+                Arrays.fill(samplesBuffer, (short) 0);
+            } else {
+                player.write(samplesBuffer, 0, samplesBuffer.length);
+                int sampleIndex = 0;
+                while (sampleIndex < getSamplesBufferSize()) {
+                    if (!isRunning) {
+                        break AudioLoop;
+                    }
+                    if (isPaused) {
+                        continue AudioLoop;
+                    }
+                    sampleIndex = writeSamples(samplesBuffer, sampleIndex);
+                }
             }
-            player.write(samplesBuffer, 0, samplesBuffer.length);
         }
         Timber.d("%s: audio output stopped", getName());
     }

@@ -20,6 +20,7 @@ package su.comp.bk.arch.io.audio;
 
 import su.comp.bk.arch.Computer;
 import su.comp.bk.arch.cpu.Cpu;
+import su.comp.bk.state.State;
 import timber.log.Timber;
 
 /**
@@ -27,7 +28,15 @@ import timber.log.Timber;
  * Based on https://github.com/georgemoralis/arcadeflex036/blob/master/emulator/src/sound/ay8910.java
  */
 public class Ay8910 extends AudioOutput<Ay8910.Ay8910Command> {
-    private final static int[] ADDRESSES = {Cpu.REG_SEL2};
+    private static final String STATE_PREFIX = "Ay8910";
+    public static final String STATE_CURRENT_REGISTER = STATE_PREFIX + "#current_register";
+    public static final String STATE_REG_PREFIX = STATE_PREFIX + "#reg_";
+    public static final String STATE_OUTPUT_A = STATE_PREFIX + "#output_a";
+    public static final String STATE_OUTPUT_B = STATE_PREFIX + "#output_b";
+    public static final String STATE_OUTPUT_C = STATE_PREFIX + "#output_c";
+    public static final String STATE_OUTPUT_N = STATE_PREFIX + "#output_n";
+
+    private final static int[] ADDRESSES = { Cpu.REG_SEL2 };
 
     public static final String OUTPUT_NAME = "ay8910";
 
@@ -54,18 +63,22 @@ public class Ay8910 extends AudioOutput<Ay8910.Ay8910Command> {
 
     private static final int STEP = 0x8000;
 
-    private /*unsigned*/ char[] regs = new char[16];
-    private int periodA, periodB, periodC, periodN, periodE;
+    private final /*unsigned*/ int[] volTable = new int[32];
+    private /*unsigned*/ int updateStep;
+
+    private final /*unsigned*/ char[] regs = new char[16];
     private int countA, countB, countC, countN, countE;
     private /*unsigned*/ int volA, volB, volC, volE;
-    private /*unsigned*/ char envelopeA, envelopeB, envelopeC;
     private /*unsigned*/ char outputA, outputB, outputC, outputN;
     private /*signed char*/ int countEnv;
-    private /*unsigned*/ char hold, alternate, attack, holding;
+    private /*unsigned*/ char attack, holding;
     private int rng;
-    private /*unsigned*/ int updateStep;
-    private /*unsigned*/ int[] volTable = new int[32];
-    private int register;
+
+    private int periodA, periodB, periodC, periodN, periodE;
+    private /*unsigned*/ char envelopeA, envelopeB, envelopeC;
+    private /*unsigned*/ char hold, alternate;
+
+    private int currentRegister;
 
     static class Ay8910Command extends AudioOutputUpdate {
         // Command register
@@ -133,7 +146,7 @@ public class Ay8910 extends AudioOutput<Ay8910.Ay8910Command> {
     @Override
     public synchronized void init(long cpuTime, boolean isHardwareReset) {
         super.init(cpuTime, isHardwareReset);
-        this.register = 0;
+        this.currentRegister = 0;
         this.rng = 1;
         this.outputA = 0;
         this.outputB = 0;
@@ -157,10 +170,10 @@ public class Ay8910 extends AudioOutput<Ay8910.Ay8910Command> {
     public boolean write(long cpuTime, boolean isByteMode, int address, int value) {
         int v = (value ^ 0xff) & 0xff;
         if (isByteMode) {
-            putCommand(register, v, cpuTime);
+            putCommand(currentRegister, v, cpuTime);
         } else {
-            // Set register number
-            register = v & 0x0f;
+            // Set last selected register number
+            currentRegister = v & 0x0f;
         }
         return true;
     }
@@ -586,5 +599,31 @@ public class Ay8910 extends AudioOutput<Ay8910.Ay8910Command> {
         }
 
         return sampleIndex;
+    }
+
+    @Override
+    public void saveState(State outState) {
+        super.saveState(outState);
+        outState.putInt(STATE_CURRENT_REGISTER, currentRegister);
+        for (int r = 0; r < AY_PORTA; r++) {
+            outState.putInt(STATE_REG_PREFIX + r, regs[r] & 0xffff);
+        }
+        outState.putInt(STATE_OUTPUT_A, outputA & 0xffff);
+        outState.putInt(STATE_OUTPUT_B, outputB & 0xffff);
+        outState.putInt(STATE_OUTPUT_C, outputC & 0xffff);
+        outState.putInt(STATE_OUTPUT_N, outputN & 0xffff);
+    }
+
+    @Override
+    public void restoreState(State inState) {
+        super.restoreState(inState);
+        currentRegister = inState.getInt(STATE_CURRENT_REGISTER);
+        for (int r = 0; r < AY_PORTA; r++) {
+            regs[r] = (char) inState.getInt(STATE_REG_PREFIX + r);
+        }
+        outputA = (char) inState.getInt(STATE_OUTPUT_A);
+        outputB = (char) inState.getInt(STATE_OUTPUT_B);
+        outputC = (char) inState.getInt(STATE_OUTPUT_C);
+        outputN = (char) inState.getInt(STATE_OUTPUT_N);
     }
 }
