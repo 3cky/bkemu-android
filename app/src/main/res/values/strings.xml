@@ -15,6 +15,7 @@
     <string name="menu_screenshot">Screenshot</string>
     <string name="menu_save_state">Save state</string>
     <string name="menu_restore_state">Restore state</string>
+    <string name="menu_quit">Quit</string>
     <string name="dialog_floppy_disk_mount_error">Floppy disk image mount error!</string>
     <string name="dialog_ide_drive_attach_error">IDE drive image attach error!</string>
     <string name="ok">OK</string>

@@ -5,7 +5,7 @@
     android:id="@+id/hdd_layout"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
-    android:background="@drawable/drive_case"
+    android:background="@drawable/bg_drive_case"
     android:padding="@dimen/hdd_padding"
     android:orientation="vertical">
 

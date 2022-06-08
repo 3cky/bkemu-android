@@ -14,6 +14,7 @@
     <string name="menu_screenshot">Снимок экрана</string>
     <string name="menu_save_state">Сохранить состояние</string>
     <string name="menu_restore_state">Загрузить состояние</string>
+    <string name="menu_quit">Выход</string>
     <string name="dialog_floppy_disk_mount_error">Ошибка подключения образа флоппи-диска!</string>
     <string name="dialog_ide_drive_attach_error">Ошибка подключения образа IDE-драйва!</string>
     <string name="ok">OK</string>

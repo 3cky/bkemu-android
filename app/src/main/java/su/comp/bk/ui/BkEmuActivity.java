@@ -43,7 +43,6 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
-import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -52,11 +51,17 @@ import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 import androidx.core.content.FileProvider;
+import androidx.core.view.GravityCompat;
+import androidx.drawerlayout.widget.DrawerLayout;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 import androidx.transition.ChangeBounds;
 import androidx.transition.Explode;
 import androidx.transition.Transition;
 import androidx.transition.TransitionManager;
 import androidx.transition.TransitionSet;
+
+import com.google.android.material.navigation.NavigationView;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -92,8 +97,8 @@ import su.comp.bk.arch.io.disk.IdeController;
 import su.comp.bk.arch.io.disk.SafDiskImage;
 import su.comp.bk.state.State;
 import su.comp.bk.state.StateManager;
-import su.comp.bk.ui.joystick.JoystickManager;
 import su.comp.bk.ui.joystick.GamepadSetupDialog;
+import su.comp.bk.ui.joystick.JoystickManager;
 import su.comp.bk.ui.keyboard.KeyboardManager;
 import su.comp.bk.util.DataUtils;
 import su.comp.bk.util.StringUtils;
@@ -102,7 +107,8 @@ import timber.log.Timber;
 /**
  * Main application activity.
  */
-public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiVisibilityChangeListener {
+public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiVisibilityChangeListener,
+        NavigationView.OnNavigationItemSelectedListener, DrawerLayout.DrawerListener {
     // State save/restore: Key prefix
     private static final String STATE_PREFIX = "BkEmuActivity#";
     // State save/restore: Last accessed emulator binary image file URI
@@ -243,6 +249,9 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
 
     private Toolbar toolbar;
 
+    private DrawerLayout tvNavigationDrawerLayout;
+    private NavigationView tvNavigationView;
+
     private final KeyboardManager keyboardManager = new KeyboardManager();
 
     private final JoystickManager joystickManager = new JoystickManager();
@@ -251,12 +260,12 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
             new JoystickManager.HardwareJoystickEventListener() {
                 @Override
                 public void onConnected(JoystickManager.HardwareJoystick joystick) {
-                    invalidateOptionsMenu();
+                    updateMenu();
                 }
 
                 @Override
                 public void onDisconnected(JoystickManager.HardwareJoystick joystick) {
-                    invalidateOptionsMenu();
+                    updateMenu();
                 }
 
                 @Override
@@ -533,8 +542,11 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
         Timber.d("onCreate(), Intent: %s", getIntent());
         super.onCreate(savedInstanceState);
         setContentView(R.layout.main);
-        initToolbar();
+
+        initUi();
+
         this.activityHandler = new Handler();
+
         mainView = findViewById(R.id.main_view);
         bkEmuView = findViewById(R.id.emu_view);
         bkEmuView.setGestureListener(new GestureListener());
@@ -687,7 +699,20 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
         }
     }
 
-    private void initToolbar() {
+    private boolean isTvUiMode() {
+        return tvNavigationDrawerLayout != null;
+    }
+
+    private void initUi() {
+        tvNavigationDrawerLayout = findViewById(R.id.tv_navigation_drawer);
+        if (tvNavigationDrawerLayout == null) {
+            initPhoneTabletUi();
+        } else {
+            initTvUi();
+        }
+    }
+
+    private void initPhoneTabletUi() {
         toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
         final ActionBar actionBar = getSupportActionBar();
@@ -695,6 +720,13 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
             actionBar.setHomeAsUpIndicator(R.drawable.icon_toolbar);
             actionBar.setDisplayHomeAsUpEnabled(true);
         }
+    }
+
+    private void initTvUi() {
+        tvNavigationView = findViewById(R.id.tv_navigation_menu);
+        tvNavigationView.getBackground().setAlpha((int) (0.8 * 255));
+        tvNavigationView.setNavigationItemSelectedListener(this);
+        tvNavigationDrawerLayout.addDrawerListener(this);
     }
 
     private void initializeComputer() {
@@ -742,12 +774,23 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
                         audioOutput.getDefaultVolume()));
             }
             bkEmuView.setComputer(computer);
-            ActionBar actionBar = getSupportActionBar();
-            if (actionBar != null) {
-                actionBar.setSubtitle(getComputerConfigurationName(computer.getConfiguration()));
-            }
+            updateDisplayedComputerConfigurationName();
         } else {
             throw new IllegalStateException("Can't initialize computer state");
+        }
+    }
+
+    private void updateDisplayedComputerConfigurationName() {
+        String configurationName = getComputerConfigurationName(computer.getConfiguration());
+        if (isTvUiMode()) {
+            View headerView = tvNavigationView.getHeaderView(0);
+            TextView textView = headerView.findViewById(R.id.tv_navigation_menu_header_text);
+            textView.setText(configurationName);
+        } else {
+            ActionBar actionBar = getSupportActionBar();
+            if (actionBar != null) {
+                actionBar.setSubtitle(configurationName);
+            }
         }
     }
 
@@ -932,7 +975,8 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
 
     private boolean onKey(int keyCode, KeyEvent event, boolean isKeyPress) {
         return joystickManager.handleKeyEvent(event, isKeyPress) ||
-                (!JoystickManager.isDpadKeyEvent(event)
+                ((!JoystickManager.isDpadKeyEvent(event) || !isTvUiMode() ||
+                            (!isTvNavigationMenuOpened() && !isOnScreenKeyboardVisible()))
                         && !JoystickManager.isHardwareJoystickKeyEvent(event)
                         && keyboardManager.handleKeyCode(keyCode, isKeyPress)) ||
                 (isKeyPress ? super.onKeyDown(keyCode, event) : super.onKeyUp(keyCode, event));
@@ -946,26 +990,63 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
         } else if (joystickManager.isOnScreenJoystickVisible()) {
             startOnScreenControlsTransition();
             joystickManager.setOnScreenJoystickVisibility(false);
+        } else if (isTvUiMode()) {
+            toggleTvNavigationMenu();
         } else {
-            this.computer.pause();
-            AlertDialog exitConfirmDialog = new AlertDialog.Builder(this)
-                    .setIcon(android.R.drawable.ic_dialog_alert)
-                    .setTitle(R.string.exit_confirm_title)
-                    .setMessage(R.string.exit_confirm_message)
-                    .setPositiveButton(R.string.ok, (dialog, which) -> finish())
-                    .setNegativeButton(R.string.cancel, (dialog, which) -> BkEmuActivity.this.computer.resume())
-                    .setOnKeyListener((dialog, keyCode, event) -> {
-                        if (keyCode == KeyEvent.KEYCODE_BACK &&
-                                event.getAction() == KeyEvent.ACTION_UP &&
-                                !event.isCanceled()) {
-                            BkEmuActivity.this.computer.resume();
-                        }
-                        return false;
-                    })
-                    .create();
-            exitConfirmDialog.setCanceledOnTouchOutside(true);
-            exitConfirmDialog.setOnCancelListener(dialog -> BkEmuActivity.this.computer.resume());
-            exitConfirmDialog.show();
+            showExitDialog();
+        }
+    }
+
+    private boolean isTvNavigationMenuOpened() {
+        return tvNavigationDrawerLayout.isDrawerOpen(GravityCompat.START);
+    }
+
+    private void toggleTvNavigationMenu() {
+        if (isTvNavigationMenuOpened()) {
+            tvNavigationDrawerLayout.closeDrawer(GravityCompat.START);
+        } else {
+            prepareMenu(tvNavigationView.getMenu());
+            RecyclerView recyclerView = (RecyclerView) tvNavigationView.getChildAt(0);
+            LinearLayoutManager layoutManager =
+                    (LinearLayoutManager) recyclerView.getLayoutManager();
+            if (layoutManager != null) {
+                layoutManager.scrollToPositionWithOffset(0, 0);
+            }
+            tvNavigationDrawerLayout.openDrawer(GravityCompat.START);
+        }
+    }
+
+    private void showExitDialog() {
+        this.computer.pause();
+        AlertDialog exitConfirmDialog = new AlertDialog.Builder(this)
+                .setIcon(android.R.drawable.ic_dialog_alert)
+                .setTitle(R.string.exit_confirm_title)
+                .setMessage(R.string.exit_confirm_message)
+                .setPositiveButton(R.string.ok, (dialog, which) -> finish())
+                .setNegativeButton(R.string.cancel, (dialog, which) -> BkEmuActivity.this.computer.resume())
+                .setOnKeyListener((dialog, keyCode, event) -> {
+                    if (keyCode == KeyEvent.KEYCODE_BACK &&
+                            event.getAction() == KeyEvent.ACTION_UP &&
+                            !event.isCanceled()) {
+                        BkEmuActivity.this.computer.resume();
+                    }
+                    return false;
+                })
+                .create();
+        exitConfirmDialog.setCanceledOnTouchOutside(true);
+        exitConfirmDialog.setOnCancelListener(dialog -> BkEmuActivity.this.computer.resume());
+        exitConfirmDialog.show();
+    }
+
+
+    private void updateMenu() {
+        if (isTvUiMode()) {
+            if (isTvNavigationMenuOpened()) {
+                toggleTvNavigationMenu();
+            }
+            prepareMenu(tvNavigationView.getMenu());
+        } else {
+            invalidateOptionsMenu();
         }
     }
 
@@ -978,17 +1059,48 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
 
     @Override
     public boolean onPrepareOptionsMenu(Menu menu) {
+        prepareMenu(menu);
+        return true;
+    }
+
+    private void prepareMenu(Menu menu) {
         boolean isFloppyControllerAttached = computer.getConfiguration().isFloppyControllerPresent();
         menu.findItem(R.id.menu_disk_manager).setEnabled(isFloppyControllerAttached);
         menu.findItem(R.id.menu_disk_manager).setVisible(isFloppyControllerAttached);
         boolean isHardwareJoystickPresent = joystickManager.isHardwareJoystickPresent();
         menu.findItem(R.id.menu_gamepad_setup).setEnabled(isHardwareJoystickPresent);
         menu.findItem(R.id.menu_gamepad_setup).setVisible(isHardwareJoystickPresent);
-        return true;
     }
 
     @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
+    public void onDrawerSlide(@NonNull View drawerView, float slideOffset) {
+    }
+
+    @Override
+    public void onDrawerOpened(@NonNull View drawerView) {
+        drawerView.requestFocus();
+    }
+
+    @Override
+    public void onDrawerClosed(@NonNull View drawerView) {
+    }
+
+    @Override
+    public void onDrawerStateChanged(int newState) {
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
+        return handleSelectedMenuItem(item) || super.onOptionsItemSelected(item);
+    }
+
+    @Override
+    public boolean onNavigationItemSelected(@NonNull MenuItem item) {
+        toggleTvNavigationMenu();
+        return handleSelectedMenuItem(item);
+    }
+
+    private boolean handleSelectedMenuItem(MenuItem item) {
         int itemId = item.getItemId();
         if (itemId == R.id.menu_toggle_keyboard) {
             toggleOnScreenKeyboardVisibility();
@@ -1032,8 +1144,11 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
         } else if (itemId == R.id.menu_gamepad_setup) {
             showGamepadLayoutSetupDialog();
             return true;
+        } else if (itemId == R.id.menu_quit) {
+            finish();
+            return true;
         }
-        return super.onOptionsItemSelected(item);
+        return false;
     }
 
     @Override

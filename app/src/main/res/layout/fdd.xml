@@ -1,12 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/fdd_layout"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
-    android:background="@drawable/drive_case"
+    android:background="@drawable/bg_drive_case"
     android:padding="@dimen/fdd_padding"
+    android:descendantFocusability="beforeDescendants"
+    android:nextFocusDown="@id/fdd_wp_switch"
     android:orientation="vertical">
 
     <TextView
@@ -40,11 +41,14 @@
             tools:ignore="HardcodedText" />
 
         <androidx.appcompat.widget.SwitchCompat
+            android:id="@+id/fdd_wp_switch"
             android:tag="fdd_wp_switch"
             android:theme="@style/AppTheme.SwitchCompat"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:gravity="end|center_vertical"
+            android:focusable="true"
+            android:nextFocusUp="@id/fdd_layout"
             android:textColor="@color/theme_primary_medium"
             android:text="@string/write_protect"/>
 

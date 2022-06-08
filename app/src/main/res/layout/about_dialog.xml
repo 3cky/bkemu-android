@@ -42,35 +42,39 @@
         <TextView android:id="@+id/about_link"
             android:layout_width="fill_parent"
             android:layout_height="wrap_content"
-            android:gravity="center_horizontal"
+            android:layout_marginTop="5dp"
+            android:layout_marginBottom="2dp"
+            android:gravity="center"
             android:autoLink="web"
             android:text="@string/about_link" />
 
         <TextView android:id="@+id/about_changelog"
             android:layout_width="fill_parent"
             android:layout_height="wrap_content"
-            android:paddingTop="5dp"
-            android:gravity="center_horizontal"
+            android:layout_marginBottom="2dp"
+            android:gravity="center"
             android:clickable="true"
             android:focusable="true"
-            android:textColor="@color/item_clickable"
+            android:background="@drawable/bg_text_clickable"
+            android:textColor="@color/text_clickable"
             android:text="@string/about_changelog" />
 
         <TextView android:id="@+id/about_share"
             android:layout_width="fill_parent"
             android:layout_height="wrap_content"
-            android:paddingTop="5dp"
+            android:layout_marginBottom="2dp"
             android:gravity="center_horizontal"
             android:clickable="true"
             android:focusable="true"
-            android:textColor="@color/item_clickable"
+            android:background="@drawable/bg_text_clickable"
+            android:textColor="@color/text_clickable"
             android:text="@string/about_share" />
 
         <TextView android:id="@+id/about_perf"
             android:layout_width="fill_parent"
             android:layout_height="wrap_content"
             android:textSize="10sp"
-            android:paddingTop="10dp"
+            android:paddingTop="5dp"
             android:gravity="center_horizontal"
             android:text="@string/about_perf" />
 

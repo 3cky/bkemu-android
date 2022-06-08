@@ -8,5 +8,7 @@
     <color name="hdd_label">#000000</color>
     <color name="hdd_detached">#505050</color>
     <color name="hdd_attached">#000000</color>
-    <color name="item_clickable">#7bc1bb</color>
+    <color name="text_clickable">#7bc1bb</color>
+    <color name="bg_text_clickable_normal">#00000000</color>
+    <color name="bg_text_clickable_focused">#1FFFFFFF</color>
 </resources>

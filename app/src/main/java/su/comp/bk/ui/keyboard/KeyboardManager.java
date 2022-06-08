@@ -425,6 +425,8 @@ public class KeyboardManager implements OnTouchListener, View.OnClickListener {
             // instead of two events (KEYCODE_SHIFT_LEFT + KEYCODE_2)
             setLowRegisterPressed(isKeyPress);
             keyCode = KeyEvent.KEYCODE_2;
+        } else if (keyCode == KeyEvent.KEYCODE_DPAD_CENTER) {
+            keyCode = KeyEvent.KEYCODE_ENTER;
         }
         BkButton bkButton = BkButton.getByAndroidKeyCode(keyCode);
         showOnScreenKeyboardButtonState(bkButton, isKeyPress);

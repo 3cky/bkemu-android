@@ -182,9 +182,7 @@ public class BkEmuVolumeDialog extends DialogFragment implements SeekBar.OnSeekB
     private void updateMuteButton(String outputName) {
         ImageView muteImageView = muteImageViews.get(outputName);
         if (muteImageView != null) {
-            muteImageView.setImageResource(isMuted(outputName)
-                    ? R.drawable.ic_volume_off_white_24
-                    : R.drawable.ic_volume_white_24);
+            muteImageView.setSelected(isMuted(outputName));
         }
     }
 

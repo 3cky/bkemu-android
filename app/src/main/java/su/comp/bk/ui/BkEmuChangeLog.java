@@ -19,6 +19,20 @@
  */
 package su.comp.bk.ui;
 
+import android.app.AlertDialog;
+import android.app.Dialog;
+import android.content.Context;
+import android.content.SharedPreferences;
+import android.content.pm.PackageManager.NameNotFoundException;
+import android.preference.PreferenceManager;
+import android.webkit.WebView;
+
+import com.samskivert.mustache.Mustache;
+import com.samskivert.mustache.Template;
+
+import org.xmlpull.v1.XmlPullParser;
+import org.xmlpull.v1.XmlPullParserFactory;
+
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -27,22 +41,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.xmlpull.v1.XmlPullParser;
-import org.xmlpull.v1.XmlPullParserFactory;
-
-import com.samskivert.mustache.Mustache;
-import com.samskivert.mustache.Template;
-
 import su.comp.bk.R;
 import timber.log.Timber;
-
-import android.app.AlertDialog;
-import android.app.Dialog;
-import android.content.Context;
-import android.content.SharedPreferences;
-import android.content.pm.PackageManager.NameNotFoundException;
-import android.preference.PreferenceManager;
-import android.webkit.WebView;
 
 /**
  * Provides change log dialog (with last changes information or full change log).

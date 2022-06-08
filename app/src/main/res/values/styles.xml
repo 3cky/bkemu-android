@@ -3,7 +3,7 @@
 
     <style name="AppTheme" parent="BaseTheme" />
 
-    <style name="BaseTheme" parent="Theme.AppCompat">
+    <style name="BaseTheme" parent="Theme.AppCompat.Leanback">
         <item name="windowNoTitle">true</item>
         <item name="windowActionBar">false</item>
         <!-- customize the color palette -->
@@ -17,6 +17,11 @@
     <style name="AppTheme.SwitchCompat" parent="AppTheme">
         <item name="android:textAppearance">@style/TextAppearance.AppCompat.Caption</item>
         <item name="colorControlActivated">@color/theme_primary_dark</item>
+    </style>
+
+    <style name="TvNavigationDrawerStyle">
+        <item name="android:textSize">18sp</item>
+        <item name="android:listPreferredItemHeightSmall">40dp</item>
     </style>
 
     <color name="theme_primary">#212121</color>

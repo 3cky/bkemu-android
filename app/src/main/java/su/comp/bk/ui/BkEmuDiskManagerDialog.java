@@ -235,6 +235,7 @@ public class BkEmuDiskManagerDialog extends DialogFragment {
             DiskImage mountedDiskImage = fddController.getFloppyDriveImage(fddIdentifier);
             fddWriteProtectSwitch.setChecked(fddController.isFloppyDriveInWriteProtectMode(fddIdentifier));
             fddWriteProtectSwitch.setClickable(!mountedDiskImage.isReadOnly());
+            fddWriteProtectSwitch.setEnabled(!mountedDiskImage.isReadOnly());
             fddFileTextView.setTextColor(getResources().getColor(R.color.fdd_loaded));
             String fddImageFileName = mountedDiskImage.getName();
             // Trim file name to display, if needed
@@ -244,6 +245,7 @@ public class BkEmuDiskManagerDialog extends DialogFragment {
         } else {
             fddWriteProtectSwitch.setClickable(false);
             fddWriteProtectSwitch.setChecked(false);
+            fddWriteProtectSwitch.setEnabled(false);
             fddFileTextView.setTextColor(getResources().getColor(R.color.fdd_empty));
             fddFileTextView.setText(R.string.fdd_empty);
         }
