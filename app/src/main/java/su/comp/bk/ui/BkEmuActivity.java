@@ -2458,7 +2458,7 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
                 .withOptionResources(R.string.fc_option_create_folder,
                         R.string.fc_options_delete,
                         R.string.cancel, R.string.ok)
-                .withFileIconsRes(true, -1,
+                .withFileIconsRes(false, -1,
                         R.drawable.ic_folder_white_24)
                 .withStartFile(Environment.getExternalStoragePublicDirectory(
                         Environment.DIRECTORY_DOWNLOADS).getPath())
