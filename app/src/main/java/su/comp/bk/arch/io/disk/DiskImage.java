@@ -64,7 +64,6 @@ public interface DiskImage {
      */
     int readByte(long position) throws IOException;
 
-
     /**
      * Read bytes from disk image at specified position to given buffer.
      * @param buffer buffer to read
@@ -90,20 +89,4 @@ public interface DiskImage {
      * @throws IOException in case of I/O error
      */
     void writeBytes(byte[] buffer, long position, int length) throws IOException;
-
-    /**
-     * Read word (big-endian) from disk image at specified position.
-     * @param position read position (in bytes)
-     * @return read word in sixteen lower bits of integer
-     * @throws IOException in case of I/O error
-     */
-    int readWord(long position) throws IOException;
-
-    /**
-     * Write word to disk image at specified position.
-     * @param position write position (in bytes)
-     * @param value value to write
-     * @throws IOException in case of I/O error
-     */
-    void writeWord(long position, short value) throws IOException;
 }

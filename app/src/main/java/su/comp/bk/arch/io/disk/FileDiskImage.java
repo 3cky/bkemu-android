@@ -89,18 +89,6 @@ public class FileDiskImage implements DiskImage {
     }
 
     @Override
-    public int readWord(long position) throws IOException {
-        diskImageRandomAccessFile.seek(position);
-        return diskImageRandomAccessFile.readUnsignedShort();
-    }
-
-    @Override
-    public void writeWord(long position, short value) throws IOException {
-        diskImageRandomAccessFile.seek(position);
-        diskImageRandomAccessFile.writeShort(value);
-    }
-
-    @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (!(o instanceof FileDiskImage)) return false;

@@ -247,6 +247,7 @@ public class FloppyController implements Device {
 
         private FloppyDriveSide currentTrackSide;
 
+        private final byte[] currentSectorBytes = new byte[BYTES_PER_SECTOR];
         private final short[] currentTrackData = new short[WORDS_PER_TRACK];
         private final SparseBooleanArray currentTrackDataMarkerPositions = new SparseBooleanArray();
 
@@ -319,9 +320,10 @@ public class FloppyController implements Device {
             writeCurrentTrackData(dataIndex++, SEQ_MARK_DATA);
             // Sector data
             int imageBufferOffset = getImageSectorOffset(currentTrackSide, currentTrackNumber, sectorNumber);
+            mountedDiskImage.readBytes(currentSectorBytes, imageBufferOffset, BYTES_PER_SECTOR);
             for (int wordIndex = 0; wordIndex < WORDS_PER_SECTOR; wordIndex++) {
-                writeCurrentTrackData(dataIndex++, mountedDiskImage.readWord(
-                        imageBufferOffset + wordIndex * 2));
+                writeCurrentTrackData(dataIndex++, currentSectorBytes[wordIndex * 2] << 8
+                        | (currentSectorBytes[wordIndex * 2 + 1] & 0377));
             }
             // CRC value (big endian)
             int length = dataIndex - position;
@@ -414,12 +416,14 @@ public class FloppyController implements Device {
 
                 // Save sector data to image
                 Timber.d("Saving sector data, sector number: %d", sectorNumber);
-                int imageBufferOffset = getImageSectorOffset(currentTrackSide, currentTrackNumber,
-                        sectorNumber);
                 for (int wordIndex = 0; wordIndex < WORDS_PER_SECTOR; wordIndex++) {
                     data = readCurrentTrackData(dataPosition + 2 + wordIndex);
-                    mountedDiskImage.writeWord(imageBufferOffset + wordIndex * 2, (short) data);
+                    currentSectorBytes[wordIndex * 2] = (byte) (data >> 8);
+                    currentSectorBytes[wordIndex * 2 + 1] = (byte) data;
                 }
+                int imageBufferOffset = getImageSectorOffset(currentTrackSide, currentTrackNumber,
+                        sectorNumber);
+                mountedDiskImage.writeBytes(currentSectorBytes, imageBufferOffset, BYTES_PER_SECTOR);
             }
             setCurrentTrackDataModified(false);
         }

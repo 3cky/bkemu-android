@@ -153,7 +153,6 @@ public class SafDiskImage implements DiskImage {
     private void writeBuffer(ByteBuffer buf, long pos) throws IOException {
         setDiskImageFileChannelInInputMode(false);
         diskImageFileChannel.position(pos);
-        buf.flip();
         do {
             int res = diskImageFileChannel.write(buf);
             if (res < 0) {
@@ -181,25 +180,15 @@ public class SafDiskImage implements DiskImage {
     public void writeByte(long position, byte value) throws IOException {
         diskImageBuffer.clear();
         diskImageBuffer.put(value);
+        diskImageBuffer.flip();
         writeBuffer(position);
     }
 
     @Override
     public void writeBytes(byte[] buffer, long position, int length) throws IOException {
-
-    }
-
-    @Override
-    public int readWord(long position) throws IOException {
-        readBuffer(position, 2);
-        return diskImageBuffer.getShort(0) & 0xFFFF;
-    }
-
-    @Override
-    public void writeWord(long position, short value) throws IOException {
-        diskImageBuffer.clear();
-        diskImageBuffer.putShort(value);
-        writeBuffer(position);
+        ByteBuffer buf = ByteBuffer.wrap(buffer);
+        buf.limit(length);
+        writeBuffer(buf, position);
     }
 
     @Override
