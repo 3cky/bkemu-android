@@ -11,4 +11,9 @@
     <color name="text_clickable">#7bc1bb</color>
     <color name="bg_text_clickable_normal">#00000000</color>
     <color name="bg_text_clickable_focused">#1FFFFFFF</color>
+
+    <!--  File chooser colors  -->
+    <color name="fc_li_row_selector_dark">#30ffffff</color>
+    <color name="fc_background_dark">#ff3c3c3c</color>
+    <color name="fc_overlay_dark">#90000000</color>
 </resources>

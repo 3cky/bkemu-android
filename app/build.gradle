@@ -100,9 +100,10 @@ dependencies {
     implementation 'com.andkulikov:transitionseverywhere:2.0.0-alpha01'
     implementation 'com.jakewharton.timber:timber:4.7.1'
     implementation 'org.msgpack:jackson-dataformat-msgpack:0.9.1'
+    implementation 'com.github.hedzr:android-file-chooser:v1.2.0-final'
 
     testImplementation 'junit:junit:4.13.1'
     testImplementation 'commons-io:commons-io:2.4'
-    testImplementation 'org.robolectric:robolectric:4.6'
+    testImplementation 'org.robolectric:robolectric:4.8.1'
     testImplementation 'net.lachlanmckee:timber-junit-rule:1.0.1'
 }

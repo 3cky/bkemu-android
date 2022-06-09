@@ -57,18 +57,19 @@ public class StringUtils {
      */
     public static boolean isFileNameExtensionMatched(final String fileName,
                                                      final String[] fileExtensions) {
-        boolean isMatched = false;
         if (fileName != null) {
+            if (fileExtensions == null || fileExtensions.length == 0) {
+                return true;
+            }
             final String fileNameLwr = fileName.toLowerCase();
             for (String fileExtension : fileExtensions) {
                 final String formatLwr = fileExtension.toLowerCase();
                 if (fileNameLwr.endsWith(formatLwr)) {
-                    isMatched = true;
-                    break;
+                    return true;
                 }
             }
         }
-        return isMatched;
+        return false;
     }
 
     /**

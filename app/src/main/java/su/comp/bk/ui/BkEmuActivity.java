@@ -23,16 +23,20 @@ import static su.comp.bk.arch.io.disk.IdeController.IF_0;
 import static su.comp.bk.arch.io.disk.IdeController.IF_1;
 import static su.comp.bk.util.StringUtils.isFileNameExtensionMatched;
 
+import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.content.pm.PackageManager.NameNotFoundException;
 import android.graphics.Bitmap;
 import android.graphics.Rect;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
 import android.view.GestureDetector;
 import android.view.KeyEvent;
@@ -50,6 +54,8 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
@@ -62,6 +68,7 @@ import androidx.transition.TransitionManager;
 import androidx.transition.TransitionSet;
 
 import com.google.android.material.navigation.NavigationView;
+import com.obsez.android.lib.filechooser.ChooserDialog;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -108,7 +115,8 @@ import timber.log.Timber;
  * Main application activity.
  */
 public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiVisibilityChangeListener,
-        NavigationView.OnNavigationItemSelectedListener, DrawerLayout.DrawerListener {
+        NavigationView.OnNavigationItemSelectedListener, DrawerLayout.DrawerListener,
+        ActivityCompat.OnRequestPermissionsResultCallback {
     // State save/restore: Key prefix
     private static final String STATE_PREFIX = "BkEmuActivity#";
     // State save/restore: Last accessed emulator binary image file URI
@@ -129,6 +137,9 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
     // State save/restore: Tape parameters block address
     private static final String STATE_TAPE_PARAMS_BLOCK_ADDRESS = STATE_PREFIX +
             "tape_params_block_addr";
+    // State save/restore: Emulation is paused flag
+    private static final String STATE_EMULATION_PAUSED = STATE_PREFIX +
+            "emulation_paused";
 
     /**
      * Array of file extensions for binary images
@@ -176,6 +187,7 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
     private static final int REQUEST_MENU_IDE_DRIVE_IMAGE_FILE_SELECT = 5;
     private static final int REQUEST_MENU_STATE_SAVE = 6;
     private static final int REQUEST_MENU_STATE_RESTORE = 7;
+    private static final int REQUEST_ASK_EXTERNAL_STORAGE_PERMISSIONS = 8;
 
     // Google Play application URL to share
     private static final String APPLICATION_SHARE_URL = "https://play.google.com" +
@@ -251,6 +263,10 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
 
     private DrawerLayout tvNavigationDrawerLayout;
     private NavigationView tvNavigationView;
+
+    private boolean isLegacyExternalStorageAccessGranted;
+
+    private boolean isEmulationPaused;
 
     private final KeyboardManager keyboardManager = new KeyboardManager();
 
@@ -418,7 +434,7 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
             switch (tapeCmdCode) {
                 case 2: // Save to tape
                 case 3: // Read from tape
-                    computer.pause();
+                    pauseEmulation();
                     // Get file name
                     byte[] tapeFileNameData = new byte[MAX_TAPE_FILE_NAME_LENGTH];
                     for (int idx = 0; idx < tapeFileNameData.length; idx++) {
@@ -469,7 +485,7 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
             switch (tapeCmdCode) {
                 case 0: // Save to tape
                 case 1: // Read from tape
-                    computer.pause();
+                    pauseEmulation();
                     // Get file name
                     byte[] tapeFileNameData = new byte[MAX_TAPE_FILE_NAME_LENGTH];
                     for (int idx = 0; idx < tapeFileNameData.length; idx++) {
@@ -571,6 +587,10 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
 
         // Show change log with latest changes once after application update
         checkShowChangelog();
+
+        if (isLegacyExternalStorageAccessUsed()) {
+            externalStorageAccessPermissionCheck();
+        }
     }
 
     private void checkShowChangelog() {
@@ -729,6 +749,16 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
         tvNavigationDrawerLayout.addDrawerListener(this);
     }
 
+    public void pauseEmulation() {
+        isEmulationPaused = true;
+        computer.pause();
+    }
+
+    public void resumeEmulation() {
+        isEmulationPaused = false;
+        computer.resume();
+    }
+
     private void initializeComputer() {
         computer = new Computer();
 
@@ -878,7 +908,9 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
     protected void onResume() {
         Timber.d("onResume()");
         deleteSavedComputerState();
-        this.computer.resume();
+        if (!isEmulationPaused) {
+            computer.resume();
+        }
         super.onResume();
     }
 
@@ -918,6 +950,7 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
     @Override
     protected void onSaveInstanceState(@NonNull Bundle outState) {
         Timber.d("onSaveInstanceState()");
+        outState.putBoolean(STATE_EMULATION_PAUSED, isEmulationPaused);
         // Save last accessed emulator image file parameters
         outState.putString(STATE_LAST_BIN_IMAGE_FILE_URI, lastBinImageFileUri);
         outState.putInt(STATE_LAST_BIN_IMAGE_FILE_ADDRESS, lastBinImageAddress);
@@ -943,6 +976,7 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
     @Override
     protected void onRestoreInstanceState(Bundle inState) {
         Timber.d("onRestoreInstanceState()");
+        isEmulationPaused = inState.getBoolean(STATE_EMULATION_PAUSED);
         // Restore last accessed emulator image file parameters
         lastBinImageFileUri = inState.getString(STATE_LAST_BIN_IMAGE_FILE_URI);
         lastBinImageAddress = inState.getInt(STATE_LAST_BIN_IMAGE_FILE_ADDRESS);
@@ -1017,13 +1051,13 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
     }
 
     private void showExitDialog() {
-        this.computer.pause();
+        pauseEmulation();
         AlertDialog exitConfirmDialog = new AlertDialog.Builder(this)
                 .setIcon(android.R.drawable.ic_dialog_alert)
                 .setTitle(R.string.exit_confirm_title)
                 .setMessage(R.string.exit_confirm_message)
                 .setPositiveButton(R.string.ok, (dialog, which) -> finish())
-                .setNegativeButton(R.string.cancel, (dialog, which) -> BkEmuActivity.this.computer.resume())
+                .setNegativeButton(R.string.cancel, (dialog, which) -> BkEmuActivity.this.resumeEmulation())
                 .setOnKeyListener((dialog, keyCode, event) -> {
                     if (keyCode == KeyEvent.KEYCODE_BACK &&
                             event.getAction() == KeyEvent.ACTION_UP &&
@@ -1034,7 +1068,7 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
                 })
                 .create();
         exitConfirmDialog.setCanceledOnTouchOutside(true);
-        exitConfirmDialog.setOnCancelListener(dialog -> BkEmuActivity.this.computer.resume());
+        exitConfirmDialog.setOnCancelListener(dialog -> BkEmuActivity.this.resumeEmulation());
         exitConfirmDialog.show();
     }
 
@@ -1070,6 +1104,12 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
         boolean isHardwareJoystickPresent = joystickManager.isHardwareJoystickPresent();
         menu.findItem(R.id.menu_gamepad_setup).setEnabled(isHardwareJoystickPresent);
         menu.findItem(R.id.menu_gamepad_setup).setVisible(isHardwareJoystickPresent);
+        if (isLegacyExternalStorageAccessUsed()) {
+            menu.findItem(R.id.menu_load_bin_file).setEnabled(isLegacyExternalStorageAccessGranted);
+            menu.findItem(R.id.menu_disk_manager).setEnabled(isLegacyExternalStorageAccessGranted);
+            menu.findItem(R.id.menu_restore_state).setEnabled(isLegacyExternalStorageAccessGranted);
+            menu.findItem(R.id.menu_save_state).setEnabled(isLegacyExternalStorageAccessGranted);
+        }
     }
 
     @Override
@@ -1509,6 +1549,15 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
      * @param tapeFileName file name to load (or <code>null</code> to load any file)
      */
     protected void showBinImageFileLoadDialog(int requestCode, String tapeFileName) {
+        if (isLegacyExternalStorageAccessUsed()) {
+            if (isLegacyExternalStorageAccessGranted) {
+                showPickFileLegacyDialog(requestCode, tapeFileName, FILE_EXT_BINARY_IMAGES, false);
+            } else {
+                showExternalStorageAccessRationaleToast();
+                resumeEmulation();
+            }
+            return;
+        }
         Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
         intent.addCategory(Intent.CATEGORY_OPENABLE);
         intent.setType("*/*");
@@ -1521,6 +1570,15 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
      * @param tapeFileName file name to save
      */
     protected void showBinImageFileSaveDialog(int requestCode, String tapeFileName) {
+        if (isLegacyExternalStorageAccessUsed()) {
+            if (isLegacyExternalStorageAccessGranted) {
+                showPickFileLegacyDialog(requestCode, tapeFileName, null, true);
+            } else {
+                showExternalStorageAccessRationaleToast();
+                resumeEmulation();
+            }
+            return;
+        }
         Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
         intent.addCategory(Intent.CATEGORY_OPENABLE);
         intent.setType("application/octet-stream");
@@ -1534,6 +1592,11 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
      */
     protected void showMountFloppyDiskImageFileDialog(FloppyDriveIdentifier fddIdentifier) {
         lastFloppyDiskImageDrive = fddIdentifier;
+        if (isLegacyExternalStorageAccessUsed()) {
+            showPickFileLegacyDialog(REQUEST_MENU_FLOPPY_DISK_IMAGE_FILE_SELECT,
+                    null, null, false);
+            return;
+        }
         Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
         intent.addCategory(Intent.CATEGORY_OPENABLE);
         intent.setType("*/*");
@@ -1549,6 +1612,11 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
      */
     protected void showAttachIdeDriveImageFileDialog(int ideInterfaceId) {
         lastIdeDriveImageInterfaceId = ideInterfaceId;
+        if (isLegacyExternalStorageAccessUsed()) {
+            showPickFileLegacyDialog(REQUEST_MENU_IDE_DRIVE_IMAGE_FILE_SELECT,
+                    null, null, false);
+            return;
+        }
         Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
         intent.addCategory(Intent.CATEGORY_OPENABLE);
         intent.setType("*/*");
@@ -1578,10 +1646,16 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
      * Show emulator state save dialog.
      */
     protected void showStateSaveDialog() {
+        String stateFileName = "state" + StateManager.STATE_FILE_EXT;
+        if (isLegacyExternalStorageAccessUsed()) {
+            showPickFileLegacyDialog(REQUEST_MENU_STATE_SAVE, stateFileName,
+                    FILE_EXT_STATE_FILES, true);
+            return;
+        }
         Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
         intent.addCategory(Intent.CATEGORY_OPENABLE);
         intent.setType("application/octet-stream");
-        intent.putExtra(Intent.EXTRA_TITLE, "state" + StateManager.STATE_FILE_EXT);
+        intent.putExtra(Intent.EXTRA_TITLE, stateFileName);
         startActivityForResult(intent, REQUEST_MENU_STATE_SAVE);
     }
 
@@ -1589,6 +1663,11 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
      * Show emulator state restore dialog.
      */
     protected void showStateRestoreDialog() {
+        if (isLegacyExternalStorageAccessUsed()) {
+            showPickFileLegacyDialog(REQUEST_MENU_STATE_RESTORE, null,
+                    FILE_EXT_STATE_FILES, false);
+            return;
+        }
         Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
         intent.addCategory(Intent.CATEGORY_OPENABLE);
         intent.setType("*/*");
@@ -1616,8 +1695,10 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
                     if (binImageFileUri == null) {
                         return;
                     }
-                    getContentResolver().takePersistableUriPermission(binImageFileUri,
-                            Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                    if (!isLegacyExternalStorageAccessUsed()) {
+                        getContentResolver().takePersistableUriPermission(binImageFileUri,
+                                Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                    }
                     Configuration configuration = computer.getConfiguration();
                     if (configuration.isMemoryManagerPresent() ||
                             configuration.isFloppyControllerPresent()) {
@@ -1633,8 +1714,10 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
                 if (resultCode == Activity.RESULT_OK) {
                     Uri binImageFileUri = data.getData();
                     if (binImageFileUri != null) {
-                        getContentResolver().takePersistableUriPermission(binImageFileUri,
-                                Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                        if (!isLegacyExternalStorageAccessUsed()) {
+                            getContentResolver().takePersistableUriPermission(binImageFileUri,
+                                    Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                        }
                         isImageLoaded = binImageFileLoad(binImageFileUri);
                     }
                 }
@@ -1656,9 +1739,11 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
                         break;
                     }
                     boolean isFloppyDiskImageMounted = false;
-                    getContentResolver().takePersistableUriPermission(floppyDiskImageUri,
-                            Intent.FLAG_GRANT_READ_URI_PERMISSION
-                                    | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+                    if (!isLegacyExternalStorageAccessUsed()) {
+                        getContentResolver().takePersistableUriPermission(floppyDiskImageUri,
+                                Intent.FLAG_GRANT_READ_URI_PERMISSION
+                                        | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+                    }
                     DiskImage floppyDiskImage = openDiskImage(floppyDiskImageUri);
                     if (floppyDiskImage != null) {
                         isFloppyDiskImageMounted = mountFloppyDiskImage(lastFloppyDiskImageDrive,
@@ -1677,9 +1762,11 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
                         break;
                     }
                     boolean isIdeDriveAttached = false;
-                    getContentResolver().takePersistableUriPermission(ideDriveImageUri,
-                            Intent.FLAG_GRANT_READ_URI_PERMISSION
-                                    | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+                    if (!isLegacyExternalStorageAccessUsed()) {
+                        getContentResolver().takePersistableUriPermission(ideDriveImageUri,
+                                Intent.FLAG_GRANT_READ_URI_PERMISSION
+                                        | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+                    }
                     DiskImage ideDriveImage = openDiskImage(ideDriveImageUri);
                     if (ideDriveImage != null) {
                         isIdeDriveAttached = attachIdeDrive(lastIdeDriveImageInterfaceId,
@@ -1709,6 +1796,7 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
             default:
                 break;
         }
+        resumeEmulation();
     }
 
     protected void stateSave(Uri stateDataUri) {
@@ -1879,7 +1967,7 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
             comp.getCpu().writeMemory(true, tapeParamsBlockAddr +
                     tapeParamsBlockAddrNameIdx + idx, tapeFileNameData[idx]);
         }
-    }
+     }
 
     /**
      * Do activity restart with given emulator image file.
@@ -2299,5 +2387,95 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
         intent.setType("image/png");
         intent.putExtra(Intent.EXTRA_STREAM, screenshotBitmapUri);
         startActivity(Intent.createChooser(intent, "Share"));
+    }
+
+    private boolean isLegacyExternalStorageAccessUsed() {
+        return isTvUiMode() && (android.os.Build.VERSION.SDK_INT < Build.VERSION_CODES.R);
+    }
+
+    private void setLegacyExternalStorageAccessGranted(boolean isGranted) {
+        isLegacyExternalStorageAccessGranted = isGranted;
+    }
+
+    private void externalStorageAccessPermissionCheck() {
+        int hasExternalStorageAccessPermissions = ContextCompat.checkSelfPermission(this,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE);
+        if (hasExternalStorageAccessPermissions != PackageManager.PERMISSION_GRANTED) {
+            if (ActivityCompat.shouldShowRequestPermissionRationale(this,
+                    Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
+                showExternalStorageAccessRationaleToast();
+            }
+            requestExternalStoragePermission();
+        } else {
+            setLegacyExternalStorageAccessGranted(true);
+        }
+    }
+
+    private void showExternalStorageAccessRationaleToast() {
+        Toast.makeText(getApplicationContext(),
+                        R.string.external_storage_permissions_rationale,
+                        Toast.LENGTH_LONG)
+                .show();
+    }
+
+    private void requestExternalStoragePermission() {
+        ActivityCompat.requestPermissions(BkEmuActivity.this,
+                new String[] { Manifest.permission.WRITE_EXTERNAL_STORAGE },
+                REQUEST_ASK_EXTERNAL_STORAGE_PERMISSIONS);
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
+                                           @NonNull int[] grantResults) {
+        if (requestCode == REQUEST_ASK_EXTERNAL_STORAGE_PERMISSIONS) {
+            // if request is cancelled, the result arrays are empty
+            boolean isGranted = grantResults.length > 0
+                    && grantResults[0] == PackageManager.PERMISSION_GRANTED;
+            setLegacyExternalStorageAccessGranted(isGranted);
+        } else {
+            // unknown request code
+            setLegacyExternalStorageAccessGranted(false);
+        }
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+    }
+
+    private void showPickFileLegacyDialog(int requestCode, String pickFileName,
+                                          String[] pickFileExtensions,
+                                          boolean isPickingForSaving) {
+        pauseEmulation();
+        new ChooserDialog(this)
+                .enableOptions(isPickingForSaving)
+                .withFilter(isPickingForSaving, false,
+                        pathname -> {
+                            String f = pathname.getName();
+                            return pathname.isDirectory() || f.equalsIgnoreCase(pickFileName)
+                                    || isFileNameExtensionMatched(f, pickFileExtensions);
+                        })
+                .withResources(isPickingForSaving
+                                ? R.string.fc_title_choose_directory
+                                : R.string.fc_title_choose_file,
+                        R.string.ok, R.string.cancel)
+                .withOptionResources(R.string.fc_option_create_folder,
+                        R.string.fc_options_delete,
+                        R.string.cancel, R.string.ok)
+                .withFileIconsRes(true, -1,
+                        R.drawable.ic_folder_white_24)
+                .withStartFile(Environment.getExternalStoragePublicDirectory(
+                        Environment.DIRECTORY_DOWNLOADS).getPath())
+                .withChosenListener((path, pathFile) -> {
+                    if (pathFile.isDirectory() && pickFileName != null) {
+                        pathFile = new File(pathFile, pickFileName);
+                    }
+                    Intent intent = new Intent();
+                    intent.setData(Uri.fromFile(pathFile));
+                    onActivityResult(requestCode, Activity.RESULT_OK, intent);
+                })
+                // to handle the back key pressed or clicked outside the dialog:
+                .withOnCancelListener(dialog -> {
+                    dialog.cancel();
+                    resumeEmulation();
+                })
+                .build()
+                .show();
     }
 }

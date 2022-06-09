@@ -79,4 +79,9 @@
     <string name="gamepad_button_select" translatable="false">Select</string>
     <string name="gamepad_button_start" translatable="false">Start</string>
     <string name="gamepad_button_not_bound" translatable="false">\?</string>
+    <string name="external_storage_permissions_rationale">Filesystem access is needed to work with disk and program images</string>
+    <string name="fc_title_choose_directory">Choose directory to save file</string>
+    <string name="fc_title_choose_file">Choose file to load</string>
+    <string name="fc_option_create_folder">New folder</string>
+    <string name="fc_options_delete">Delete</string>
 </resources>

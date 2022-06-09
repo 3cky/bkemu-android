@@ -72,4 +72,9 @@
     <string name="gamepad_button_right">Вправо</string>
     <string name="gamepad_button_up">Вверх</string>
     <string name="gamepad_button_down">Вниз</string>
+    <string name="external_storage_permissions_rationale">Для использования образов дисков и программ необходим доступ к файловой системе</string>
+    <string name="fc_title_choose_directory">Выберите директорию для сохранения файла</string>
+    <string name="fc_title_choose_file">Выберите файл для загрузки</string>
+    <string name="fc_option_create_folder">Новая директория</string>
+    <string name="fc_options_delete">Удалить</string>
 </resources>

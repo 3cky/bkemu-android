@@ -12,6 +12,8 @@
         <item name="android:windowBackground">@color/theme_window_background</item>
         <!-- https://stackoverflow.com/questions/63781371/cant-disable-night-mode-in-my-application-even-with-values-night -->
         <item name="android:forceDarkAllowed" tools:targetApi="q">false</item>
+        <!-- file chooser style -->
+        <item name="fileChooserStyle">@style/FileChooserStyle_Dark</item>
     </style>
 
     <style name="AppTheme.SwitchCompat" parent="AppTheme">
@@ -29,4 +31,59 @@
     <color name="theme_primary_dark">#000000</color>
     <color name="theme_window_background">#101010</color>
 
+    <!-- Dark theme for file chooser -->
+    <style name="FileChooserStyle_Dark" parent="BaseTheme">
+        <item name="fileChooserDialogGravity">center</item>
+        <item name="fileChooserDialogStyle">@style/FileChooserDialogStyle_Dark</item>
+        <item name="fileChooserListItemStyle">@style/FileChooserListItemStyle_Dark</item>
+        <item name="fileChooserPathViewStyle">@style/FileChooserPathViewStyle_Dark</item>
+        <item name="fileChooserNewFolderStyle">@style/FileChooserNewFolderStyle_Dark</item>
+    </style>
+
+    <style name="FileChooserDialogStyle_Dark" parent="ThemeOverlay.AppCompat.Dialog">
+        <item name="android:backgroundDimAmount">0.8</item>
+    </style>
+
+    <style name="FileChooserTitleStyle_Dark" parent="FileChooserTitleStyle">
+        <item name="android:textAppearance">@style/ThemeOverlay.AppCompat.Dialog</item>
+        <item name="android:colorBackground">?attr/colorBackgroundFloating</item>
+    </style>
+
+    <style name="FileChooserButtonStyle_Dark" parent="FileChooserButtonStyle">
+        <item name="android:textColor">@color/abc_primary_text_material_dark</item>
+    </style>
+
+    <style name="FileChooserListItemStyle_Dark" parent="FileChooserListItemStyle">
+        <item name="fileChooserTextNameStyle">@style/FileChooserTextNameStyle_Dark</item>
+        <item name="fileChooserTextSizeStyle">@style/FileChooserTextSizeDateStyle_Dark</item>
+        <item name="fileChooserTextDateStyle">@style/FileChooserTextSizeDateStyle_Dark</item>
+        <item name="android:background">?attr/colorBackgroundFloating</item>
+        <item name="fileListItemFocusedDrawable">@drawable/fc_item_selector</item>
+    </style>
+
+    <style name="FileChooserTextNameStyle_Dark" parent="FileChooserTextNameStyle">
+        <item name="android:textColor">@color/abc_primary_text_material_dark</item>
+        <item name="android:textSize">18sp</item>
+    </style>
+
+    <style name="FileChooserTextSizeDateStyle_Dark" parent="FileChooserTextSizeStyle">
+        <item name="android:textColor">@color/abc_primary_text_material_dark</item>
+        <item name="android:textSize">14sp</item>
+    </style>
+
+    <style name="FileChooserPathViewStyle_Dark" parent="FileChooserPathViewStyle">
+        <item name="android:background">?attr/colorBackgroundFloating</item>
+        <item name="android:textColor">@color/abc_primary_text_material_dark</item>
+        <item name="android:textSize">14sp</item>
+    </style>
+
+    <style name="FileChooserNewFolderStyle_Dark">
+        <item name="fileChooserNewFolderOverlayColor">@color/fc_overlay_dark</item>
+        <item name="fileChooserNewFolderBackgroundColor">@color/fc_background_dark</item>
+        <item name="fileChooserNewFolderWidthWeight">0.8</item>
+        <item name="fileChooserNewFolderElevation">50</item>
+        <item name="fileChooserNewFolderTextColor">@color/abc_primary_text_material_dark</item>
+        <item name="fileChooserNewFolderSoftInputMode">adjustResize</item>
+        <item name="android:textSize">18sp</item>
+    </style>
 </resources>

@@ -878,6 +878,7 @@ public class Computer implements Runnable, StatefulEntity {
             Timber.d("starting computer");
             clockThread = new Thread(this, "ComputerClockThread");
             isRunning = true;
+            isPaused = true;
             clockThread.start();
             // Waiting for emulation thread start
             try {

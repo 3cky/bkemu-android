@@ -4,10 +4,11 @@
         <changes>
             <change>Implemented SMK512 controller emulation (extended memory and IDE controller).</change>
             <change>Added the ability to save and restore the emulator state.</change>
-            <change>Disk and program image files now are saved and loaded using the system file manager.</change>
-            <change>Added displaying of the selected configuration in the toolbar.</change>
-            <change>Improved behaviour of the on-screen keyboard.</change>
             <change>Added support for hardware game controllers.</change>
+            <change>Disk and program image files now are saved and loaded using the system file manager.</change>
+            <change>Added support for Android TV.</change>
+            <change>Improved behaviour of the on-screen keyboard.</change>
+            <change>Added displaying of the selected configuration in the toolbar.</change>
             <change>Fixed screen scrolling in the extended memory mode.</change>
             <change>Improved emulation of the CRT raster effects.</change>
             <change>Fixed on-screen keyboard displaying for some devices with the dark theme enabled.</change>
