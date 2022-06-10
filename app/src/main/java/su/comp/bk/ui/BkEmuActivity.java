@@ -1635,6 +1635,17 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
     }
 
     /**
+     * Update disk manager dialog.
+     */
+    private void updateDiskManagerDialog() {
+        BkEmuDiskManagerDialog bkEmuDiskManagerDialog = (BkEmuDiskManagerDialog)
+                getSupportFragmentManager().findFragmentByTag("disk_manager");
+        if (bkEmuDiskManagerDialog != null) {
+            bkEmuDiskManagerDialog.setupDriveViews();
+        }
+    }
+
+    /**
      * Show audio devices volume adjustment dialog.
      */
     private void showVolumeDialog() {
@@ -1751,6 +1762,8 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
                     }
                     if (!isFloppyDiskImageMounted) {
                         showDialog(DIALOG_FLOPPY_DISK_MOUNT_ERROR);
+                    } else {
+                        updateDiskManagerDialog();
                     }
                 }
                 break;
@@ -1774,6 +1787,8 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
                     }
                     if (!isIdeDriveAttached) {
                         showDialog(DIALOG_IDE_DRIVE_ATTACH_ERROR);
+                    } else {
+                        updateDiskManagerDialog();
                     }
                 }
                 break;

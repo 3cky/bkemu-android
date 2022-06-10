@@ -175,7 +175,7 @@ public class BkEmuDiskManagerDialog extends DialogFragment {
         }
     }
 
-    private void setupDriveViews() {
+    void setupDriveViews() {
         Dialog dialog = Objects.requireNonNull(getDialog());
         IdeController ideController = getIdeController();
         if (ideController != null) {
