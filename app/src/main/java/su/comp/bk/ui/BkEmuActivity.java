@@ -30,7 +30,6 @@ import android.app.Dialog;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
-import android.content.pm.PackageManager.NameNotFoundException;
 import android.graphics.Bitmap;
 import android.graphics.Rect;
 import android.net.Uri;
@@ -46,7 +45,6 @@ import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.Window;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -77,14 +75,9 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Date;
 import java.util.List;
-import java.util.Locale;
-import java.util.TimeZone;
 
 import su.comp.bk.BuildConfig;
 import su.comp.bk.R;
@@ -166,7 +159,6 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
 
     // Dialog IDs
     private static final int DIALOG_COMPUTER_CONFIG = 1;
-    private static final int DIALOG_ABOUT = 2;
     private static final int DIALOG_FLOPPY_DISK_MOUNT_ERROR = 3;
     private static final int DIALOG_IDE_DRIVE_ATTACH_ERROR = 4;
 
@@ -1164,7 +1156,7 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
             showDiskManagerDialog();
             return true;
         } else if (itemId == R.id.menu_about) {
-            showDialog(DIALOG_ABOUT);
+            showAboutDialog();
             return true;
         } else if (itemId == R.id.menu_volume) {
             showVolumeDialog();
@@ -1196,8 +1188,6 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
         switch (id) {
             case DIALOG_COMPUTER_CONFIG:
                 return createComputerConfigurationDialog();
-            case DIALOG_ABOUT:
-                return createAboutDialog();
             case DIALOG_FLOPPY_DISK_MOUNT_ERROR:
                 return createFloppyDiskMountErrorDialog();
             case DIALOG_IDE_DRIVE_ATTACH_ERROR:
@@ -1224,38 +1214,9 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
             .create();
     }
 
-    private Dialog createAboutDialog() {
-        Dialog aboutDialog = new Dialog(this);
-        aboutDialog.setTitle(R.string.menu_about);
-        aboutDialog.requestWindowFeature(Window.FEATURE_LEFT_ICON);
-        aboutDialog.setContentView(R.layout.about_dialog);
-        aboutDialog.getWindow().setFeatureDrawableResource(Window.FEATURE_LEFT_ICON,
-                android.R.drawable.ic_dialog_info);
-        TextView versionTextView = aboutDialog.findViewById(R.id.about_version);
-        try {
-            versionTextView.setText(getResources().getString(R.string.about_version,
-                    getPackageManager().getPackageInfo(getPackageName(), 0).versionName));
-        } catch (NameNotFoundException e) {
-            // Do nothing
-        }
-        Date buildDate = new Date(BuildConfig.BUILD_TIMESTAMP);
-        TimeZone tz = TimeZone.getTimeZone("UTC");
-        DateFormat df = new SimpleDateFormat("yyyyMMddHHmm", Locale.US);
-        df.setTimeZone(tz);
-        String build = df.format(buildDate);
-        TextView buildTextView = aboutDialog.findViewById(R.id.about_build);
-        buildTextView.setText(getResources().getString(R.string.about_build, build));
-        TextView changelogTextView = aboutDialog.findViewById(R.id.about_changelog);
-        changelogTextView.setOnClickListener(v -> {
-            aboutDialog.dismiss();
-            showChangelogDialog();
-        });
-        TextView shareTextView = aboutDialog.findViewById(R.id.about_share);
-        shareTextView.setOnClickListener(v -> {
-            aboutDialog.dismiss();
-            shareApplication();
-        });
-        return aboutDialog;
+    private void showAboutDialog() {
+        BkEmuAboutDialog bkEmuAboutDialog = BkEmuAboutDialog.newInstance();
+        bkEmuAboutDialog.show(getSupportFragmentManager(), "about");
     }
 
     private Dialog createComputerConfigurationDialog() {
@@ -1288,22 +1249,6 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
         int configNameId = getResources().getIdentifier(configuration.name().toLowerCase(),
                 "string", getPackageName());
         return (configNameId != 0) ? getString(configNameId) : configuration.name();
-    }
-
-    @Override
-    protected void onPrepareDialog(int id, Dialog dialog) {
-        if (id == DIALOG_ABOUT) {
-            prepareAboutDialog(dialog);
-        }
-        super.onPrepareDialog(id, dialog);
-    }
-
-    protected void prepareAboutDialog(Dialog aboutDialog) {
-        TextView perfTextView = aboutDialog.findViewById(R.id.about_perf);
-        float effectiveClockFrequency = this.computer.getEffectiveClockFrequency();
-        perfTextView.setText(getResources().getString(R.string.about_perf,
-                effectiveClockFrequency / 1000f, effectiveClockFrequency
-                / this.computer.getClockFrequency() * 100f));
     }
 
     private DiskImage openDiskImage(Uri diskImageLocationUri) {
@@ -1515,7 +1460,7 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
     /**
      * Show full changelog dialog.
      */
-    private void showChangelogDialog() {
+    void showChangelogDialog() {
         new BkEmuChangeLog(this).getDialog(true).show();
     }
 
@@ -2259,7 +2204,7 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
                 ", length: " + lastBinImageLength);
     }
 
-    private void shareApplication() {
+    void shareApplication() {
         Intent appShareIntent = new Intent(Intent.ACTION_SEND);
         appShareIntent.setType("text/plain");
         appShareIntent.putExtra(Intent.EXTRA_TEXT, APPLICATION_SHARE_URL);
