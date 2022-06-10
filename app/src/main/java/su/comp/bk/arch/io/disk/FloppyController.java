@@ -802,7 +802,6 @@ public class FloppyController implements Device {
 
     @Override
     public synchronized int read(long cpuTime, int address) {
-        setLastAccessCpuTime(cpuTime);
         return (address == CONTROL_REGISTER_ADDRESS)
                 ? readControlRegister(cpuTime)
                 : readDataRegister(cpuTime);
@@ -814,7 +813,6 @@ public class FloppyController implements Device {
             d("write: " + Integer.toOctalString(address) +
                     ", value: " + Integer.toOctalString(value) + ", isByteMode: " + isByteMode);
         }
-        setLastAccessCpuTime(cpuTime);
         if ((address & 0177776) == CONTROL_REGISTER_ADDRESS) {
             writeControlRegister(cpuTime, value);
         } else {
@@ -1079,6 +1077,7 @@ public class FloppyController implements Device {
     }
 
     protected int readDataRegister(long cpuTime) {
+        setLastAccessCpuTime(cpuTime);
         endWriteOperation();
         int value = 0;
         FloppyDrive selectedDrive = getSelectedFloppyDrive();
@@ -1126,6 +1125,7 @@ public class FloppyController implements Device {
     }
 
     protected void writeDataRegister(long cpuTime, int value) {
+        setLastAccessCpuTime(cpuTime);
         FloppyDrive selectedDrive = getSelectedFloppyDrive();
         if (selectedDrive != null && isMotorStarted()) {
             int position = getTrackPosition(cpuTime);
