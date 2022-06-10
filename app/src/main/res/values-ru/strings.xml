@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="fps_string">%d к/с</string>
-    <string name="menu_toggle_osd_keyboard">Клавиатура</string>
+    <string name="menu_toggle_osd_keyboard">Экранная клавиатура</string>
     <string name="menu_toggle_osd_joystick">Экранный джойстик</string>
     <string name="menu_switch_display_mode">Режим экрана</string>
     <string name="menu_reset">Аппаратный сброс</string>
