@@ -51,7 +51,8 @@ public class BkEmuAboutDialog extends DialogFragment {
 
     private boolean isActive;
 
-    private TextView perfTextView;
+    private TextView cpuStatsTextView;
+    private TextView renderStatsTextView;
 
     public static BkEmuAboutDialog newInstance() {
         return new BkEmuAboutDialog();
@@ -79,7 +80,8 @@ public class BkEmuAboutDialog extends DialogFragment {
         super.onStart();
         Dialog aboutDialog = Objects.requireNonNull(getDialog());
         final BkEmuActivity bkEmuActivity = getBkEmuActivity();
-        perfTextView = aboutDialog.findViewById(R.id.about_perf);
+        cpuStatsTextView = aboutDialog.findViewById(R.id.about_cpu_stats);
+        renderStatsTextView = aboutDialog.findViewById(R.id.about_render_stats);
         TextView versionTextView = aboutDialog.findViewById(R.id.about_version);
         try {
             versionTextView.setText(getResources().getString(R.string.about_version,
@@ -116,6 +118,7 @@ public class BkEmuAboutDialog extends DialogFragment {
     private void updateStats() {
         if (isActive) {
             updateCpuStats();
+            updateRenderStats();
             handler.postDelayed(this::updateStats, STATS_UPDATE_INTERVAL_MSECS);
         }
     }
@@ -134,8 +137,18 @@ public class BkEmuAboutDialog extends DialogFragment {
     private void updateCpuStats() {
         Computer computer = getComputer();
         float effectiveClockFrequency = computer.getEffectiveClockFrequency();
-        perfTextView.setText(getResources().getString(R.string.about_perf,
+        cpuStatsTextView.setText(getResources().getString(R.string.about_cpu_stats,
                 effectiveClockFrequency / 1000f, effectiveClockFrequency
                         / computer.getClockFrequency() * 100f));
+    }
+
+    private void updateRenderStats() {
+        BkEmuView bkEmuView = getBkEmuActivity().getBkEmuView();
+        if (bkEmuView == null) {
+            return;
+        }
+        float uiUpdateThreadCpuUsagePercent = bkEmuView.getUiUpdateThreadCpuUsagePercent();
+        renderStatsTextView.setText(getResources().getString(R.string.about_render_stats,
+                uiUpdateThreadCpuUsagePercent));
     }
 }

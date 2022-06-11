@@ -70,13 +70,21 @@
             android:textColor="@color/text_clickable"
             android:text="@string/about_share" />
 
-        <TextView android:id="@+id/about_perf"
+        <TextView android:id="@+id/about_cpu_stats"
             android:layout_width="fill_parent"
             android:layout_height="wrap_content"
             android:textSize="10sp"
             android:paddingTop="5dp"
             android:gravity="center_horizontal"
-            android:text="@string/about_perf" />
+            android:text="@string/about_cpu_stats" />
+
+        <TextView android:id="@+id/about_render_stats"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:textSize="10sp"
+            android:paddingTop="5dp"
+            android:gravity="center_horizontal"
+            android:text="@string/about_render_stats" />
 
     </LinearLayout>
 

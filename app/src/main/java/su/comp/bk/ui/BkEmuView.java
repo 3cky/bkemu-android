@@ -143,6 +143,8 @@ public class BkEmuView extends TextureView implements TextureView.SurfaceTexture
         private boolean isRunning = true;
         private boolean isUpdateScheduled = false;
 
+        private long lastFrameRenderTimeNanos = -1;
+
         BkEmuViewUpdateThread(BkEmuView bkEmuView) {
             this.bkEmuView = bkEmuView;
         }
@@ -169,6 +171,7 @@ public class BkEmuView extends TextureView implements TextureView.SurfaceTexture
                 Computer comp = computer;
                 if (comp != null && !comp.isPaused()) {
                     // Repaint canvas
+                    long timestamp = System.nanoTime();
                     canvas = bkEmuView.lockCanvas(null);
                     if (canvas != null) {
                         try {
@@ -182,6 +185,7 @@ public class BkEmuView extends TextureView implements TextureView.SurfaceTexture
                             bkEmuView.unlockCanvasAndPost(canvas);
                         }
                     }
+                    lastFrameRenderTimeNanos = System.nanoTime() - timestamp;
                 }
 
                 synchronized (this) {
@@ -384,6 +388,14 @@ public class BkEmuView extends TextureView implements TextureView.SurfaceTexture
         m.setScale(bitmapScaleX, bitmapScaleY);
         m.postTranslate(bitmapTranslateX, bitmapTranslateY);
         videoBufferBitmapTransformMatrix = m;
+    }
+
+    public float getUiUpdateThreadCpuUsagePercent() {
+        if (uiUpdateThread == null || uiUpdateThread.lastFrameRenderTimeNanos < 0) {
+            return 0;
+        }
+        return (100f * uiUpdateThread.lastFrameRenderTimeNanos
+                / (VideoController.FRAME_SYNC_PERIOD_HORIZONTAL * VideoController.FRAME_LINES_TOTAL));
     }
 
     @Override

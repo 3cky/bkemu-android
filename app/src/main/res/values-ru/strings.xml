@@ -44,7 +44,8 @@
     <string name="about_version">BkEmu версии %s</string>
     <string name="about_build">Сборка %s</string>
     <string name="about_info">Эмулятор семейства 16-разрядных PDP-11-совместимых советских домашних компьютеров <b>Электроника БК&#8211;0010/11M</b></string>
-    <string name="about_perf">Эффективная частота процессора: %1$.3f МГц (%2$.2f%%)</string>
+    <string name="about_cpu_stats">Эффективная частота процессора: %1$.3f МГц (%2$.2f%%)</string>
+    <string name="about_render_stats">Загрузка цикла обновления экрана: %1$.0f%%</string>
     <string name="about_link">https://github.com/3cky/bkemu-android</string>
     <string name="about_changelog">Список изменений</string>
     <string name="about_share">Поделиться!</string>

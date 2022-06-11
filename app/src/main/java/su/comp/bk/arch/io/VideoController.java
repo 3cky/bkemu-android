@@ -191,11 +191,11 @@ public class VideoController implements Device, Computer.UptimeListener {
     private final Bitmap videoBuffer;
 
     // Total lines per frame (including vertical sync)
-    private final static int FRAME_LINES_TOTAL = 320;
+    public final static int FRAME_LINES_TOTAL = 320;
     // Visible lines per frame
     private final static int FRAME_LINES_VISIBLE = SCREEN_HEIGHT_NORMAL;
     // Frame horizontal sync period (64 uS, in nanoseconds)
-    private final static long FRAME_SYNC_PERIOD_HORIZONTAL = 64 * 1000L;
+    public final static long FRAME_SYNC_PERIOD_HORIZONTAL = 64 * 1000L;
     // Frame vertical sync line number
     private final static long FRAME_SYNC_LINE_VERTICAL = FRAME_LINES_VISIBLE + 1;
     // Current displayed line number
@@ -444,7 +444,8 @@ public class VideoController implements Device, Computer.UptimeListener {
     }
 
     private void notifyFrameSyncListenersVerticalSync() {
-        for (FrameSyncListener l : frameSyncListeners) {
+        for (int i = 0; i < frameSyncListeners.size(); i++) {
+            FrameSyncListener l = frameSyncListeners.get(i);
             l.verticalSync(currentFrame);
         }
     }

@@ -2296,6 +2296,10 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
         return computer;
     }
 
+    public BkEmuView getBkEmuView() {
+        return bkEmuView;
+    }
+
     public JoystickManager getJoystickManager() {
         return joystickManager;
     }
