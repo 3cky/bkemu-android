@@ -255,6 +255,7 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
 
     private DrawerLayout tvNavigationDrawerLayout;
     private NavigationView tvNavigationView;
+    private int lastSelectedTvNavigationMenuItemId = -1;
 
     private boolean isLegacyExternalStorageAccessGranted;
 
@@ -1110,7 +1111,42 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
 
     @Override
     public void onDrawerOpened(@NonNull View drawerView) {
-        drawerView.requestFocus();
+        tryFocusOnLastSelectedTvNavigationMenuItem();
+    }
+
+    private void tryFocusOnLastSelectedTvNavigationMenuItem() {
+        View viewToFocus = null;
+        if (lastSelectedTvNavigationMenuItemId >= 0) {
+            int itemPosition = findTvNavigationMenuItemPosition(lastSelectedTvNavigationMenuItemId);
+            if (itemPosition >= 0) {
+                viewToFocus = findTvNavigationMenuItemView(itemPosition + 1); // skip header at position 0
+            }
+        }
+        if (viewToFocus == null) {
+            viewToFocus = tvNavigationView;
+        }
+        viewToFocus.requestFocus();
+    }
+
+    private int findTvNavigationMenuItemPosition(int menuItemId) {
+        Menu menu = tvNavigationView.getMenu();
+        int position = 0;
+        for (int i = 0; i < menu.size(); i++) {
+            MenuItem menuItem = menu.getItem(i);
+            if (menuItem.getItemId() == menuItemId) {
+                return menuItem.isVisible() ? position : -1;
+            }
+            if (menuItem.isVisible()) {
+                position++;
+            }
+        }
+        return -1;
+    }
+
+    private View findTvNavigationMenuItemView(int position) {
+        RecyclerView recyclerView = (RecyclerView) tvNavigationView.getChildAt(0);
+        RecyclerView.LayoutManager lm = recyclerView.getLayoutManager();
+        return (lm != null) ? lm.findViewByPosition(position) : null;
     }
 
     @Override
@@ -1129,6 +1165,7 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
     @Override
     public boolean onNavigationItemSelected(@NonNull MenuItem item) {
         toggleTvNavigationMenu();
+        lastSelectedTvNavigationMenuItemId = item.getItemId();
         return handleSelectedMenuItem(item);
     }
 
