@@ -1641,8 +1641,7 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
     protected void showStateSaveDialog() {
         String stateFileName = "state" + StateManager.STATE_FILE_EXT;
         if (isLegacyExternalStorageAccessUsed()) {
-            showPickFileLegacyDialog(REQUEST_MENU_STATE_SAVE, stateFileName,
-                    FILE_EXT_STATE_FILES, true);
+            showPickFileLegacyDialog(REQUEST_MENU_STATE_SAVE, stateFileName, null, true);
             return;
         }
         Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
@@ -2449,8 +2448,9 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
                 .withFilter(isPickingForSaving, false,
                         pathname -> {
                             String f = pathname.getName();
-                            return pathname.isDirectory() || f.equalsIgnoreCase(pickFileName)
-                                    || isFileNameExtensionMatched(f, pickFileExtensions);
+                            return pathname.isDirectory() || (!isPickingForSaving &&
+                                    (f.equalsIgnoreCase(pickFileName)
+                                            || isFileNameExtensionMatched(f, pickFileExtensions)));
                         })
                 .withResources(isPickingForSaving
                                 ? R.string.fc_title_choose_directory
