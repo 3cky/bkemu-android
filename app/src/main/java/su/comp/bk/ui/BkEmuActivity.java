@@ -132,6 +132,9 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
     // State save/restore: Emulation is paused flag
     private static final String STATE_EMULATION_PAUSED = STATE_PREFIX +
             "emulation_paused";
+    // State save/restore: ID of last selected item ov TV navigation menu
+    private static final String STATE_LAST_SELECTED_TV_NAV_ITEM_ID = STATE_PREFIX +
+            "last_selected_tv_nav_item_id";
 
     /**
      * Array of file extensions for binary images
@@ -626,6 +629,8 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
     private void checkIntentData() {
         Timber.d("checkIntentData()");
         Intent intent = getIntent();
+        lastSelectedTvNavigationMenuItemId = intent.getIntExtra(
+                STATE_LAST_SELECTED_TV_NAV_ITEM_ID, -1);
         // Check for last accessed program/disk file paths
         lastBinImageFileUri = intent.getStringExtra(STATE_LAST_BIN_IMAGE_FILE_URI);
         // Check for program/disk image file to run
@@ -945,6 +950,7 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
     protected void onSaveInstanceState(@NonNull Bundle outState) {
         Timber.d("onSaveInstanceState()");
         outState.putBoolean(STATE_EMULATION_PAUSED, isEmulationPaused);
+        outState.putInt(STATE_LAST_SELECTED_TV_NAV_ITEM_ID, lastSelectedTvNavigationMenuItemId);
         // Save last accessed emulator image file parameters
         outState.putString(STATE_LAST_BIN_IMAGE_FILE_URI, lastBinImageFileUri);
         outState.putInt(STATE_LAST_BIN_IMAGE_FILE_ADDRESS, lastBinImageAddress);
@@ -971,6 +977,7 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
     protected void onRestoreInstanceState(Bundle inState) {
         Timber.d("onRestoreInstanceState()");
         isEmulationPaused = inState.getBoolean(STATE_EMULATION_PAUSED);
+        lastSelectedTvNavigationMenuItemId = inState.getInt(STATE_LAST_SELECTED_TV_NAV_ITEM_ID, -1);
         // Restore last accessed emulator image file parameters
         lastBinImageFileUri = inState.getString(STATE_LAST_BIN_IMAGE_FILE_URI);
         lastBinImageAddress = inState.getInt(STATE_LAST_BIN_IMAGE_FILE_ADDRESS);
@@ -2002,6 +2009,7 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
         // Pass last accessed program/disk image file paths to new activity
         Intent intent = getIntent();
         intent.putExtra(STATE_LAST_BIN_IMAGE_FILE_URI, lastBinImageFileUri);
+        intent.putExtra(STATE_LAST_SELECTED_TV_NAV_ITEM_ID, lastSelectedTvNavigationMenuItemId);
         finish();
         startActivity(intent);
         overridePendingTransition(0, 0);
