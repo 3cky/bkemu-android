@@ -35,7 +35,6 @@ import android.graphics.Rect;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Environment;
 import android.os.Handler;
 import android.view.GestureDetector;
 import android.view.KeyEvent;
@@ -199,6 +198,8 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
     private static final String PREFS_KEY_IDE_DRIVE_IMAGE = "image:";
     private static final String PREFS_KEY_AUDIO_VOLUME =
             APP_PACKAGE_NAME + ".arch.io.audio.AudioOutput/volume";
+    private static final String PREFS_KEY_LEGACY_FILE_DIALOG_LAST_DIR = APP_PACKAGE_NAME +
+            "legacy_file_dialog_last_dir";
 
     // Last loaded emulator binary image address
     protected int lastBinImageAddress;
@@ -2158,6 +2159,26 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
     }
 
     /**
+     * Read last directory accessed by legacy file dialog from preferences.
+     * @return read directory path
+     */
+    protected String readLegacyFileDialogLastDirectory() {
+        SharedPreferences prefs = getPreferences();
+        return prefs.getString(PREFS_KEY_LEGACY_FILE_DIALOG_LAST_DIR, null);
+    }
+
+    /**
+     * Store last directory accessed by legacy file dialog to preferences.
+     * @param dirPath directory path to store
+     */
+    protected void storeLegacyFileDialogLastDirectory(String dirPath) {
+        SharedPreferences prefs = getPreferences();
+        SharedPreferences.Editor prefsEditor = prefs.edit();
+        prefsEditor.putString(PREFS_KEY_LEGACY_FILE_DIALOG_LAST_DIR, dirPath);
+        prefsEditor.apply();
+    }
+
+    /**
      * Load program image in bin format (address/length/data) from given path.
      * @param binImageFileUri emulator image file URI
      * @return start address of loaded emulator image
@@ -2461,9 +2482,10 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
                         R.string.cancel, R.string.ok)
                 .withFileIconsRes(false, -1,
                         R.drawable.ic_folder_white_24)
-                .withStartFile(Environment.getExternalStoragePublicDirectory(
-                        Environment.DIRECTORY_DOWNLOADS).getPath())
+                .withStartFile(readLegacyFileDialogLastDirectory())
                 .withChosenListener((path, pathFile) -> {
+                    storeLegacyFileDialogLastDirectory(pathFile.isDirectory() ? pathFile.getPath()
+                            : pathFile.getParent());
                     if (pathFile.isDirectory() && pickFileName != null) {
                         pathFile = new File(pathFile, pickFileName);
                     }
