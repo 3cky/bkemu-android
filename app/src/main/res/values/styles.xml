@@ -3,7 +3,7 @@
 
     <style name="AppTheme" parent="BaseTheme" />
 
-    <style name="BaseTheme" parent="Theme.AppCompat.Leanback">
+    <style name="BaseTheme" parent="Theme.AppCompat">
         <item name="windowNoTitle">true</item>
         <item name="windowActionBar">false</item>
         <!-- customize the color palette -->
