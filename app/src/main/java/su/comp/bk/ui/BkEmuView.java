@@ -390,12 +390,11 @@ public class BkEmuView extends TextureView implements TextureView.SurfaceTexture
         videoBufferBitmapTransformMatrix = m;
     }
 
-    public float getUiUpdateThreadCpuUsagePercent() {
-        if (uiUpdateThread == null || uiUpdateThread.lastFrameRenderTimeNanos < 0) {
-            return 0;
-        }
-        return (100f * uiUpdateThread.lastFrameRenderTimeNanos
-                / (VideoController.FRAME_SYNC_PERIOD_HORIZONTAL * VideoController.FRAME_LINES_TOTAL));
+    public float getUiUpdateThreadCpuLoad() {
+        return (uiUpdateThread == null || uiUpdateThread.lastFrameRenderTimeNanos < 0) ? 0f
+                : (100f * uiUpdateThread.lastFrameRenderTimeNanos
+                    / (VideoController.FRAME_SYNC_PERIOD_HORIZONTAL
+                        * VideoController.FRAME_LINES_TOTAL * FRAMES_PER_UPDATE));
     }
 
     @Override

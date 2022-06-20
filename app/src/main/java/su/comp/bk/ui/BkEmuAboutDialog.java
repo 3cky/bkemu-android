@@ -147,8 +147,8 @@ public class BkEmuAboutDialog extends DialogFragment {
         if (bkEmuView == null) {
             return;
         }
-        float uiUpdateThreadCpuUsagePercent = bkEmuView.getUiUpdateThreadCpuUsagePercent();
+        float uiUpdateThreadCpuLoad = bkEmuView.getUiUpdateThreadCpuLoad();
         renderStatsTextView.setText(getResources().getString(R.string.about_render_stats,
-                uiUpdateThreadCpuUsagePercent));
+                uiUpdateThreadCpuLoad));
     }
 }
