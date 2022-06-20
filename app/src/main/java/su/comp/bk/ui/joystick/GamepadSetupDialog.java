@@ -190,6 +190,12 @@ public class GamepadSetupDialog extends DialogFragment implements DialogInterfac
     }
 
     @Override
+    public void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        getBkEmuActivity().pauseEmulation();
+    }
+
+    @Override
     public void onStart() {
         super.onStart();
 
@@ -223,12 +229,18 @@ public class GamepadSetupDialog extends DialogFragment implements DialogInterfac
         gamepadListUpdated();
     }
 
-   @Override
+    @Override
     public void onStop() {
         getActiveDialog().setOnKeyListener(null);
         joystickManager.removeHardwareJoystickEventListener(this);
 
         super.onStop();
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        getBkEmuActivity().resumeEmulation();
     }
 
     /**
