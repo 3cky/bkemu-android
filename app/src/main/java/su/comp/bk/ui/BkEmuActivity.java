@@ -132,9 +132,9 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
     // State save/restore: Emulation is paused flag
     private static final String STATE_EMULATION_PAUSED = STATE_PREFIX +
             "emulation_paused";
-    // State save/restore: ID of last selected item ov TV navigation menu
-    private static final String STATE_LAST_SELECTED_TV_NAV_ITEM_ID = STATE_PREFIX +
-            "last_selected_tv_nav_item_id";
+    // State save/restore: ID of last focused item ov TV navigation menu
+    private static final String STATE_LAST_FOCUSED_TV_NAV_ITEM_ID = STATE_PREFIX +
+            "last_focused_tv_nav_item_id";
 
     /**
      * Array of file extensions for binary images
@@ -260,6 +260,8 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
     private DrawerLayout tvNavigationDrawerLayout;
     private NavigationView tvNavigationView;
     private int lastSelectedTvNavigationMenuItemId = -1;
+    private int lastFocusedTvNavigationMenuItemId = -1;
+    private float currentTvNavigationDrawerSlideOffset = 0f;
 
     private boolean isLegacyExternalStorageAccessGranted;
 
@@ -629,8 +631,7 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
     private void checkIntentData() {
         Timber.d("checkIntentData()");
         Intent intent = getIntent();
-        lastSelectedTvNavigationMenuItemId = intent.getIntExtra(
-                STATE_LAST_SELECTED_TV_NAV_ITEM_ID, -1);
+        lastFocusedTvNavigationMenuItemId = intent.getIntExtra(STATE_LAST_FOCUSED_TV_NAV_ITEM_ID, -1);
         // Check for last accessed program/disk file paths
         lastBinImageFileUri = intent.getStringExtra(STATE_LAST_BIN_IMAGE_FILE_URI);
         // Check for program/disk image file to run
@@ -746,6 +747,10 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
         tvNavigationView.getBackground().setAlpha((int) (0.8 * 255));
         tvNavigationView.setNavigationItemSelectedListener(this);
         tvNavigationDrawerLayout.addDrawerListener(this);
+    }
+
+    public boolean isEmulationPaused() {
+        return isEmulationPaused;
     }
 
     public void pauseEmulation() {
@@ -907,7 +912,7 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
     protected void onResume() {
         Timber.d("onResume()");
         deleteSavedComputerState();
-        if (!isEmulationPaused) {
+        if (!isEmulationPaused()) {
             computer.resume();
         }
         super.onResume();
@@ -950,7 +955,7 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
     protected void onSaveInstanceState(@NonNull Bundle outState) {
         Timber.d("onSaveInstanceState()");
         outState.putBoolean(STATE_EMULATION_PAUSED, isEmulationPaused);
-        outState.putInt(STATE_LAST_SELECTED_TV_NAV_ITEM_ID, lastSelectedTvNavigationMenuItemId);
+        outState.putInt(STATE_LAST_FOCUSED_TV_NAV_ITEM_ID, lastFocusedTvNavigationMenuItemId);
         // Save last accessed emulator image file parameters
         outState.putString(STATE_LAST_BIN_IMAGE_FILE_URI, lastBinImageFileUri);
         outState.putInt(STATE_LAST_BIN_IMAGE_FILE_ADDRESS, lastBinImageAddress);
@@ -977,7 +982,7 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
     protected void onRestoreInstanceState(Bundle inState) {
         Timber.d("onRestoreInstanceState()");
         isEmulationPaused = inState.getBoolean(STATE_EMULATION_PAUSED);
-        lastSelectedTvNavigationMenuItemId = inState.getInt(STATE_LAST_SELECTED_TV_NAV_ITEM_ID, -1);
+        lastFocusedTvNavigationMenuItemId = inState.getInt(STATE_LAST_FOCUSED_TV_NAV_ITEM_ID, -1);
         // Restore last accessed emulator image file parameters
         lastBinImageFileUri = inState.getString(STATE_LAST_BIN_IMAGE_FILE_URI);
         lastBinImageAddress = inState.getInt(STATE_LAST_BIN_IMAGE_FILE_ADDRESS);
@@ -1115,17 +1120,25 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
 
     @Override
     public void onDrawerSlide(@NonNull View drawerView, float slideOffset) {
+        if (slideOffset > currentTvNavigationDrawerSlideOffset) {
+            // Pause emulation on drawer opening
+            if (!isEmulationPaused()) {
+                pauseEmulation();
+            }
+        }
+        currentTvNavigationDrawerSlideOffset = slideOffset;
     }
 
     @Override
     public void onDrawerOpened(@NonNull View drawerView) {
-        tryFocusOnLastSelectedTvNavigationMenuItem();
+        tryFocusOnLastFocusedTvNavigationMenuItem();
+        lastSelectedTvNavigationMenuItemId = -1;
     }
 
-    private void tryFocusOnLastSelectedTvNavigationMenuItem() {
+    private void tryFocusOnLastFocusedTvNavigationMenuItem() {
         View viewToFocus = null;
-        if (lastSelectedTvNavigationMenuItemId >= 0) {
-            int itemPosition = findTvNavigationMenuItemPosition(lastSelectedTvNavigationMenuItemId);
+        if (lastFocusedTvNavigationMenuItemId >= 0) {
+            int itemPosition = findTvNavigationMenuItemPosition(lastFocusedTvNavigationMenuItemId);
             if (itemPosition >= 0) {
                 viewToFocus = findTvNavigationMenuItemView(itemPosition + 1); // skip header at position 0
             }
@@ -1159,6 +1172,13 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
 
     @Override
     public void onDrawerClosed(@NonNull View drawerView) {
+        resumeEmulation();
+        if (lastSelectedTvNavigationMenuItemId >= 0) {
+            MenuItem item = tvNavigationView.getMenu().findItem(lastSelectedTvNavigationMenuItemId);
+            if (item != null) {
+                handleSelectedMenuItem(item);
+            }
+        }
     }
 
     @Override
@@ -1174,7 +1194,10 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
     public boolean onNavigationItemSelected(@NonNull MenuItem item) {
         toggleTvNavigationMenu();
         lastSelectedTvNavigationMenuItemId = item.getItemId();
-        return handleSelectedMenuItem(item);
+        // FIXME better to find current focused item in toggleTvNavigationMenu()
+        lastFocusedTvNavigationMenuItemId = lastSelectedTvNavigationMenuItemId;
+        // Selected item will be handled in onDrawerClosed() event handler
+        return true;
     }
 
     private boolean handleSelectedMenuItem(MenuItem item) {
@@ -2009,7 +2032,7 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
         // Pass last accessed program/disk image file paths to new activity
         Intent intent = getIntent();
         intent.putExtra(STATE_LAST_BIN_IMAGE_FILE_URI, lastBinImageFileUri);
-        intent.putExtra(STATE_LAST_SELECTED_TV_NAV_ITEM_ID, lastSelectedTvNavigationMenuItemId);
+        intent.putExtra(STATE_LAST_FOCUSED_TV_NAV_ITEM_ID, lastFocusedTvNavigationMenuItemId);
         finish();
         startActivity(intent);
         overridePendingTransition(0, 0);
@@ -2506,6 +2529,7 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
                     dialog.cancel();
                     resumeEmulation();
                 })
+                .withNegativeButtonListener((dialog, which) -> resumeEmulation())
                 .build()
                 .show();
     }
