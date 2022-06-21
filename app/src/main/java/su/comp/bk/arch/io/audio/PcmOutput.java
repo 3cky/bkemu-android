@@ -27,6 +27,12 @@ public abstract class PcmOutput extends AudioOutput<PcmOutput.PcmSample> {
     // Current PCM sample value
     private short pcmSampleValue;
 
+    // Output low pass IIR filter alpha coefficient
+    private float outputLowPassFilterAlpha;
+
+    // Last output value
+    private short lastOutputValue = 0;
+
     static class PcmSample extends AudioOutputUpdate {
         // PCM sample value
         private short value;
@@ -34,6 +40,20 @@ public abstract class PcmOutput extends AudioOutput<PcmOutput.PcmSample> {
 
     PcmOutput(Computer computer) {
         super(computer);
+        setupOutputLowPassFilter(getOutputLowPassFilterCutoffFrequency());
+    }
+
+    /**
+     * Get output low pass IIR filter cutoff frequency.
+     *
+     * @return cutoff frequency (in Hz)
+     */
+    protected abstract int getOutputLowPassFilterCutoffFrequency();
+
+    private void setupOutputLowPassFilter(int cutoffFrequency) {
+        // https://en.wikipedia.org/wiki/Low-pass_filter#Simple_infinite_impulse_response_filter
+        float T = 1f / getSampleRate();
+        outputLowPassFilterAlpha = T / (T + 1f / cutoffFrequency);
     }
 
     @Override
@@ -61,8 +81,16 @@ public abstract class PcmOutput extends AudioOutput<PcmOutput.PcmSample> {
     @Override
     protected int writeSamples(short[] samplesBuffer, int sampleIndex, int numSamples) {
         while (numSamples-- > 0) {
-            samplesBuffer[sampleIndex++] = pcmSampleValue;
+            samplesBuffer[sampleIndex++] = getFilteredOutputValue();
         }
         return sampleIndex;
+    }
+
+    private short getFilteredOutputValue() {
+        // Apply low pass first order IIR filter to the input PCM samples
+        short outputValue = (short) (lastOutputValue + outputLowPassFilterAlpha
+                * (pcmSampleValue - lastOutputValue));
+        lastOutputValue = outputValue;
+        return outputValue;
     }
 }

@@ -29,10 +29,17 @@ public class Covox extends PcmOutput {
 
     public static final String OUTPUT_NAME = "covox";
 
+    public static final int LOW_PASS_FILTER_CUTOFF_FREQUENCY_HZ = 12000;
+
     private int lastSampleValue;
 
     public Covox(Computer computer) {
         super(computer);
+    }
+
+    @Override
+    protected int getOutputLowPassFilterCutoffFrequency() {
+        return LOW_PASS_FILTER_CUTOFF_FREQUENCY_HZ;
     }
 
     @Override

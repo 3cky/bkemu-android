@@ -35,6 +35,8 @@ public class Speaker extends PcmOutput {
 
     public static final String OUTPUT_NAME = "speaker";
 
+    public static final int LOW_PASS_FILTER_CUTOFF_FREQUENCY_HZ = 8000;
+
     private final boolean isBk0011mMode;
 
     private int lastOutputState;
@@ -42,6 +44,11 @@ public class Speaker extends PcmOutput {
     public Speaker(Computer computer, boolean isBk0011m) {
         super(computer);
         this.isBk0011mMode = isBk0011m;
+    }
+
+    @Override
+    protected int getOutputLowPassFilterCutoffFrequency() {
+        return LOW_PASS_FILTER_CUTOFF_FREQUENCY_HZ;
     }
 
     @Override
