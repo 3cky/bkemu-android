@@ -137,11 +137,11 @@ public abstract class AudioOutput<U extends AudioOutputUpdate> implements Device
         return volume;
     }
 
+    // https://electronics.stackexchange.com/a/425776
     private static float convertVolumeToGain(int volume) {
-        float minGain = AudioTrack.getMinVolume();
-        float maxGain = AudioTrack.getMaxVolume();
-        float gain = (float) ((Math.exp(volume / 100.) - 1.) / (Math.E - 1.));
-        return minGain + gain * (maxGain - minGain);
+        float a = volume / 100f;
+        float K = 2.0f;
+        return a / (1f + (1f - a) * K);
     }
 
     public void start() {

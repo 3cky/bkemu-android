@@ -50,7 +50,7 @@ public class BkEmuVolumeDialog extends DialogFragment implements SeekBar.OnSeekB
         View.OnClickListener {
 
     private static final int VOLUME_MUTE = AudioOutput.MIN_VOLUME;
-    private static final int VOLUME_UNMUTE = AudioOutput.MAX_VOLUME / 5;
+    private static final int VOLUME_UNMUTE = AudioOutput.MAX_VOLUME / 2;
 
     private final Map<String, SeekBar> volumeSeekBars = new ArrayMap<>();
     private final Map<String, ImageView> muteImageViews = new ArrayMap<>();
