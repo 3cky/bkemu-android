@@ -289,6 +289,7 @@ public class KeyboardManager implements OnTouchListener, View.OnClickListener {
             boolean isPressed = event.getAction() == MotionEvent.ACTION_DOWN;
             Timber.d("handle button touch event: %s %s", bkButton,
                     isPressed ? "pressed" : "released");
+            v.setPressed(isPressed);
             return handleBkButton(bkButton, isPressed, true);
         }
         return false;
