@@ -1110,7 +1110,7 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
         boolean isHardwareJoystickPresent = joystickManager.isHardwareJoystickPresent();
         menu.findItem(R.id.menu_gamepad_setup).setEnabled(isHardwareJoystickPresent);
         menu.findItem(R.id.menu_gamepad_setup).setVisible(isHardwareJoystickPresent);
-        if (isLegacyExternalStorageAccessUsed()) {
+        if (isLegacyPickFileDialogUsed()) {
             menu.findItem(R.id.menu_load_bin_file).setEnabled(isLegacyExternalStorageAccessGranted);
             menu.findItem(R.id.menu_disk_manager).setEnabled(isLegacyExternalStorageAccessGranted);
             menu.findItem(R.id.menu_restore_state).setEnabled(isLegacyExternalStorageAccessGranted);
@@ -1326,15 +1326,14 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
     private DiskImage openDiskImage(String diskImageLocation) {
         DiskImage diskImage = null;
         Uri diskImageLocationUri = Uri.parse(diskImageLocation);
-        String diskImageLocationUriScheme = diskImageLocationUri.getScheme();
-        if ("content".equals(diskImageLocationUriScheme)) {
+        if (DataUtils.isContentProviderUri(diskImageLocationUri)) {
             // Open as SAF disk image
             try {
                 diskImage = new SafDiskImage(getApplicationContext(), diskImageLocationUri);
             } catch (IOException e) {
                 Timber.i(e, "Can't open location %s as SAF disk image", diskImageLocation);
             }
-        } else if (diskImageLocationUriScheme == null || "file".equals(diskImageLocationUriScheme)) {
+        } else if (DataUtils.isFileUri(diskImageLocationUri)) {
             // Open as file disk image
             String diskImageFilePath = diskImageLocationUri.getPath();
             if (diskImageFilePath != null) {
@@ -1562,9 +1561,9 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
      * @param tapeFileName file name to load (or <code>null</code> to load any file)
      */
     protected void showBinImageFileLoadDialog(int requestCode, String tapeFileName) {
-        if (isLegacyExternalStorageAccessUsed()) {
+        if (isLegacyPickFileDialogUsed()) {
             if (isLegacyExternalStorageAccessGranted) {
-                showPickFileLegacyDialog(requestCode, tapeFileName, FILE_EXT_BINARY_IMAGES, false);
+                showLegacyPickFileDialog(requestCode, tapeFileName, FILE_EXT_BINARY_IMAGES, false);
             } else {
                 showExternalStorageAccessRationaleToast();
                 resumeEmulation();
@@ -1583,9 +1582,9 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
      * @param tapeFileName file name to save
      */
     protected void showBinImageFileSaveDialog(int requestCode, String tapeFileName) {
-        if (isLegacyExternalStorageAccessUsed()) {
+        if (isLegacyPickFileDialogUsed()) {
             if (isLegacyExternalStorageAccessGranted) {
-                showPickFileLegacyDialog(requestCode, tapeFileName, null, true);
+                showLegacyPickFileDialog(requestCode, tapeFileName, null, true);
             } else {
                 showExternalStorageAccessRationaleToast();
                 resumeEmulation();
@@ -1605,8 +1604,8 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
      */
     protected void showMountFloppyDiskImageFileDialog(FloppyDriveIdentifier fddIdentifier) {
         lastFloppyDiskImageDrive = fddIdentifier;
-        if (isLegacyExternalStorageAccessUsed()) {
-            showPickFileLegacyDialog(REQUEST_MENU_FLOPPY_DISK_IMAGE_FILE_SELECT,
+        if (isLegacyPickFileDialogUsed()) {
+            showLegacyPickFileDialog(REQUEST_MENU_FLOPPY_DISK_IMAGE_FILE_SELECT,
                     null, null, false);
             return;
         }
@@ -1625,8 +1624,8 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
      */
     protected void showAttachIdeDriveImageFileDialog(int ideInterfaceId) {
         lastIdeDriveImageInterfaceId = ideInterfaceId;
-        if (isLegacyExternalStorageAccessUsed()) {
-            showPickFileLegacyDialog(REQUEST_MENU_IDE_DRIVE_IMAGE_FILE_SELECT,
+        if (isLegacyPickFileDialogUsed()) {
+            showLegacyPickFileDialog(REQUEST_MENU_IDE_DRIVE_IMAGE_FILE_SELECT,
                     null, null, false);
             return;
         }
@@ -1671,8 +1670,8 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
      */
     protected void showStateSaveDialog() {
         String stateFileName = "state" + StateManager.STATE_FILE_EXT;
-        if (isLegacyExternalStorageAccessUsed()) {
-            showPickFileLegacyDialog(REQUEST_MENU_STATE_SAVE, stateFileName, null, true);
+        if (isLegacyPickFileDialogUsed()) {
+            showLegacyPickFileDialog(REQUEST_MENU_STATE_SAVE, stateFileName, null, true);
             return;
         }
         Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
@@ -1686,8 +1685,8 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
      * Show emulator state restore dialog.
      */
     protected void showStateRestoreDialog() {
-        if (isLegacyExternalStorageAccessUsed()) {
-            showPickFileLegacyDialog(REQUEST_MENU_STATE_RESTORE, null,
+        if (isLegacyPickFileDialogUsed()) {
+            showLegacyPickFileDialog(REQUEST_MENU_STATE_RESTORE, null,
                     FILE_EXT_STATE_FILES, false);
             return;
         }
@@ -1718,7 +1717,7 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
                     if (binImageFileUri == null) {
                         return;
                     }
-                    if (!isLegacyExternalStorageAccessUsed()) {
+                    if (DataUtils.isContentProviderUri(binImageFileUri)) {
                         getContentResolver().takePersistableUriPermission(binImageFileUri,
                                 Intent.FLAG_GRANT_READ_URI_PERMISSION);
                     }
@@ -1737,7 +1736,7 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
                 if (resultCode == Activity.RESULT_OK) {
                     Uri binImageFileUri = data.getData();
                     if (binImageFileUri != null) {
-                        if (!isLegacyExternalStorageAccessUsed()) {
+                        if (DataUtils.isContentProviderUri(binImageFileUri)) {
                             getContentResolver().takePersistableUriPermission(binImageFileUri,
                                     Intent.FLAG_GRANT_READ_URI_PERMISSION);
                         }
@@ -1762,7 +1761,7 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
                         break;
                     }
                     boolean isFloppyDiskImageMounted = false;
-                    if (!isLegacyExternalStorageAccessUsed()) {
+                    if (DataUtils.isContentProviderUri(floppyDiskImageUri)) {
                         getContentResolver().takePersistableUriPermission(floppyDiskImageUri,
                                 Intent.FLAG_GRANT_READ_URI_PERMISSION
                                         | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
@@ -1787,7 +1786,7 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
                         break;
                     }
                     boolean isIdeDriveAttached = false;
-                    if (!isLegacyExternalStorageAccessUsed()) {
+                    if (DataUtils.isContentProviderUri(ideDriveImageUri)) {
                         getContentResolver().takePersistableUriPermission(ideDriveImageUri,
                                 Intent.FLAG_GRANT_READ_URI_PERMISSION
                                         | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
@@ -2442,7 +2441,7 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
     }
 
     private boolean isLegacyExternalStorageAccessUsed() {
-        return isTvUiMode() && (android.os.Build.VERSION.SDK_INT < Build.VERSION_CODES.R);
+        return (android.os.Build.VERSION.SDK_INT <= Build.VERSION_CODES.P);
     }
 
     private void setLegacyExternalStorageAccessGranted(boolean isGranted) {
@@ -2491,7 +2490,11 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
     }
 
-    private void showPickFileLegacyDialog(int requestCode, String pickFileName,
+    private boolean isLegacyPickFileDialogUsed() {
+        return isTvUiMode() && isLegacyExternalStorageAccessUsed();
+    }
+
+    private void showLegacyPickFileDialog(int requestCode, String pickFileName,
                                           String[] pickFileExtensions,
                                           boolean isPickingForSaving) {
         pauseEmulation();

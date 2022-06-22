@@ -138,6 +138,25 @@ public class DataUtils {
     }
 
     /**
+     * Check given URI is content provider resource.
+     * @param uri URI to check
+     * @return true if given URI has "content" scheme, false otherwise
+     */
+    public static boolean isContentProviderUri(Uri uri) {
+        return "content".equals(uri.getScheme());
+    }
+
+    /**
+     * Check given URI is file resource.
+     * @param uri URI to check
+     * @return true if given URI has "file" or null scheme, false otherwise
+     */
+    public static boolean isFileUri(Uri uri) {
+        String uriScheme = uri.getScheme();
+        return uriScheme == null || "file".equals(uriScheme);
+    }
+
+    /**
      * Write data fully from InputStream to OutputStream.
      *
      * @param is InputStream to read
