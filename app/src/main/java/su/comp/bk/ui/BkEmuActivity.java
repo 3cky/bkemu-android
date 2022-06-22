@@ -634,9 +634,10 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
         lastFocusedTvNavigationMenuItemId = intent.getIntExtra(STATE_LAST_FOCUSED_TV_NAV_ITEM_ID, -1);
         // Check for last accessed program/disk file paths
         lastBinImageFileUri = intent.getStringExtra(STATE_LAST_BIN_IMAGE_FILE_URI);
-        // Check for program/disk image file to run
-        String intentDataString = intent.getDataString();
-        if (intentDataString != null) {
+        // Check for program/disk image file to run if activity is not launched from history
+        if ((intent.getFlags() & Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY) == 0
+                && intent.getDataString() != null) {
+            String intentDataString = intent.getDataString();
             Uri intentDataUri = Uri.parse(intentDataString);
             String intentDataFileName;
             try {
@@ -2018,9 +2019,10 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
      * @param dataUri the data URI to set to restarted activity (<code>null</code> if no data set)
      */
     protected void restartActivity(String action, Uri dataUri) {
-        Intent intent = getIntent();
+        Intent intent = new Intent(this, this.getClass());
         intent.setAction(action);
         intent.setData(dataUri);
+        setIntent(intent);
         restartActivity();
     }
 
