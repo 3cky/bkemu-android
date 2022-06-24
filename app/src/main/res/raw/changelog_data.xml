@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <releases>
-    <release version="1.0.0-dev">
+    <release version="1.0.0" date="2022-06-24">
         <changes>
             <change>Implemented SMK512 controller emulation (extended memory and IDE controller).</change>
             <change>Added the ability to save and restore the emulator state.</change>
@@ -11,6 +11,7 @@
             <change>Added displaying of the selected configuration in the toolbar.</change>
             <change>Fixed screen scrolling in the extended memory mode.</change>
             <change>Improved emulation of the CRT raster effects.</change>
+            <change>Added low pass filters to Covox and speaker outputs.</change>
             <change>Fixed on-screen keyboard displaying for some devices with the dark theme enabled.</change>
             <change>Floppy disk image maximum number of tracks is increased to 82.</change>
         </changes>
