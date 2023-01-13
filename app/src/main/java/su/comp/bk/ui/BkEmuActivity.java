@@ -325,13 +325,15 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
                 int startAddress = loadBinImageFile(binImageFileUri);
                 intentDataProgramImageUri = null;
                 // Start loaded image
-                final Computer comp = computer;
+                Cpu cpu = computer.getCpu();
+                cpu.reset(); // clear all flags
                 if (startAddress < STACK_TOP_ADDRESS) {
                     // Loaded autostarting image
-                    comp.getCpu().returnFromTrap(false);
+                    cpu.returnFromTrap(false);
                 } else {
                     // Loaded manually starting image
-                    comp.getCpu().writeRegister(false, Cpu.PC, startAddress);
+                    cpu.writeRegister(false, Cpu.R5, startAddress); // as in `S` directive
+                    cpu.writeRegister(false, Cpu.PC, startAddress);
                 }
                 isBinImageFileLoaded = true;
             } catch (Exception e) {
