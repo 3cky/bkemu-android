@@ -274,7 +274,8 @@ public class JoystickManager implements OnTouchListener, InputManager.InputDevic
     @Override
     public boolean onTouch(View v, MotionEvent event) {
         if (event.getAction() == MotionEvent.ACTION_UP
-                || event.getAction() == MotionEvent.ACTION_DOWN) {
+                || event.getAction() == MotionEvent.ACTION_DOWN
+                || event.getAction() == MotionEvent.ACTION_CANCEL) {
             JoystickButton joystickButton = JoystickButton.valueOf(v.getTag().toString());
             boolean isPressed = event.getAction() == MotionEvent.ACTION_DOWN;
             handleJoystickButton(joystickButton, isPressed);
