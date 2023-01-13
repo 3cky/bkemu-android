@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <releases>
+    <release version="1.0.1-dev" />
     <release version="1.0.0" date="2022-06-24">
         <changes>
             <change>Implemented SMK512 controller emulation (extended memory and IDE controller).</change>

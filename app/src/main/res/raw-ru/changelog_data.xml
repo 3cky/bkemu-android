@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <releases>
+    <release version="1.0.0-dev" />
     <release version="1.0.0" date="24.06.2022">
         <changes>
             <change>Реализована эмуляция контроллера СМК512 (расширенная память и IDE-контроллер).</change>
