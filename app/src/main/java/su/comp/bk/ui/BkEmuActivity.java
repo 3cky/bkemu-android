@@ -1952,54 +1952,58 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
             // Restore BK0011 default memory map
             comp.writeMemory(false, Cpu.REG_SEL1, BK11_BANKS_DEFAULT_CONFIG);
         }
-        if (!isSuccess) {
-            // In case of error we just return to tape loader subroutine, because actually it's
-            // better to allow user to break the load operation manually by the STOP key
-            return;
-        }
         // Set result in parameters block
         int tapeParamsBlockAddrNameIdx;
         if (isBk10) { // BK0010
             tapeParamsBlockAddrNameIdx = 26;
-            // Set "OK" result code
-            comp.writeMemory(true, tapeParamsBlockAddr + 1, 0);
-            // Write loaded image start address
-            comp.writeMemory(false, tapeParamsBlockAddr + 22, lastBinImageAddress);
-            comp.writeMemory(false, BK10_SYSVAR_BUFSTA, lastBinImageAddress);
-            // Write loaded image length
-            comp.writeMemory(false, tapeParamsBlockAddr + 24, lastBinImageLength);
-            comp.writeMemory(false, BK10_SYSVAR_BUFDL, lastBinImageLength);
+            // Set result code
+            comp.writeMemory(true, tapeParamsBlockAddr + 1, isSuccess ? 0 : 4);
+            if (isSuccess) {
+                // Write loaded image start address
+                comp.writeMemory(false, tapeParamsBlockAddr + 22, lastBinImageAddress);
+                comp.writeMemory(false, BK10_SYSVAR_BUFSTA, lastBinImageAddress);
+                // Write loaded image length
+                comp.writeMemory(false, tapeParamsBlockAddr + 24, lastBinImageLength);
+                comp.writeMemory(false, BK10_SYSVAR_BUFDL, lastBinImageLength);
+            }
             // Return from EMT 36
             comp.getCpu().returnFromTrap(false);
         } else { // BK0011
             tapeParamsBlockAddrNameIdx = 28;
-            // Set "OK" result code
-            comp.getCpu().clearPswFlagC();
-            // Write loaded image start address
-            comp.writeMemory(false, tapeParamsBlockAddr + 24, lastBinImageAddress);
-            // Write loaded image length
-            comp.writeMemory(false, tapeParamsBlockAddr + 26, lastBinImageLength);
-            // Clear tape load routine error code
-            comp.getCpu().writeMemory(true, 052, 0);
+            // Set result code
+            comp.getCpu().writeMemory(true, 052, isSuccess ? 0 : 4);
+            if (isSuccess) {
+                // Set "OK" result flag
+                comp.getCpu().clearPswFlagC();
+                // Write loaded image start address
+                comp.writeMemory(false, tapeParamsBlockAddr + 24, lastBinImageAddress);
+                // Write loaded image length
+                comp.writeMemory(false, tapeParamsBlockAddr + 26, lastBinImageLength);
+            } else {
+                // Set "ERROR" result flag
+                comp.getCpu().setPswFlagC();
+            }
             // Exit from tape load routine
             comp.getCpu().writeRegister(false, Cpu.PC, BK11_BMB10_EXIT_ADDRESS);
         }
-        // Write loaded image name to tape parameters block
-        String tapeFileName = DataUtils.resolveUriFileName(this, Uri.parse(lastBinImageFileUri));
-        tapeFileName = StringUtils.substring(tapeFileName, 0, MAX_TAPE_FILE_NAME_LENGTH);
-        byte[] tapeFileNameBuffer;
-        try {
-            tapeFileNameBuffer = tapeFileName.getBytes("koi8-r");
-        } catch (UnsupportedEncodingException e) {
-            tapeFileNameBuffer = tapeFileName.getBytes();
-        }
-        byte[] tapeFileNameData = new byte[MAX_TAPE_FILE_NAME_LENGTH];
-        Arrays.fill(tapeFileNameData, (byte) ' ');
-        System.arraycopy(tapeFileNameBuffer, 0, tapeFileNameData, 0,
-                Math.min(tapeFileNameBuffer.length, MAX_TAPE_FILE_NAME_LENGTH));
-        for (int idx = 0; idx < tapeFileNameData.length; idx++) {
-            comp.getCpu().writeMemory(true, tapeParamsBlockAddr +
-                    tapeParamsBlockAddrNameIdx + idx, tapeFileNameData[idx]);
+        if (isSuccess) {
+            // Write loaded image name to tape parameters block
+            String tapeFileName = DataUtils.resolveUriFileName(this, Uri.parse(lastBinImageFileUri));
+            tapeFileName = StringUtils.substring(tapeFileName, 0, MAX_TAPE_FILE_NAME_LENGTH);
+            byte[] tapeFileNameBuffer;
+            try {
+                tapeFileNameBuffer = tapeFileName.getBytes("koi8-r");
+            } catch (UnsupportedEncodingException e) {
+                tapeFileNameBuffer = tapeFileName.getBytes();
+            }
+            byte[] tapeFileNameData = new byte[MAX_TAPE_FILE_NAME_LENGTH];
+            Arrays.fill(tapeFileNameData, (byte) ' ');
+            System.arraycopy(tapeFileNameBuffer, 0, tapeFileNameData, 0,
+                    Math.min(tapeFileNameBuffer.length, MAX_TAPE_FILE_NAME_LENGTH));
+            for (int idx = 0; idx < tapeFileNameData.length; idx++) {
+                comp.getCpu().writeMemory(true, tapeParamsBlockAddr +
+                        tapeParamsBlockAddrNameIdx + idx, tapeFileNameData[idx]);
+            }
         }
      }
 
