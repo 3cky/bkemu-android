@@ -327,16 +327,7 @@ public class Ay8910 extends AudioOutput<Ay8910.Ay8910Command> {
                 }
                 break;
             case AY_PORTA:
-                if ((this.regs[AY_ENABLE] & 0x40) == 0) {
-                    Timber.w("write to 8910 Port A set as input");
-                }
-                Timber.w("write %02x to Port A", v);
-                break;
             case AY_PORTB:
-                if ((this.regs[AY_ENABLE] & 0x80) == 0) {
-                    Timber.w("write to 8910 Port B set as input");
-                }
-                Timber.w("write %02x to Port B", v);
                 break;
         }
     }
