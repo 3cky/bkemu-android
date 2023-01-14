@@ -1725,10 +1725,15 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
                                 Intent.FLAG_GRANT_READ_URI_PERMISSION);
                     }
                     Configuration configuration = computer.getConfiguration();
-                    if (configuration.isMemoryManagerPresent() ||
-                            configuration.isFloppyControllerPresent()) {
+                    boolean isBk10 = !configuration.isMemoryManagerPresent();
+                    if (!isBk10 || configuration.isFloppyControllerPresent()) {
                         lastBinImageAddress = 0; // will get address from BIN image file header
-                        binImageFileLoad(binImageFileUri);
+                        if (binImageFileLoad(binImageFileUri) && isBk10) {
+                            // Write loaded image start address
+                            computer.writeMemory(false, BK10_SYSVAR_BUFSTA, lastBinImageAddress);
+                            // Write loaded image length
+                            computer.writeMemory(false, BK10_SYSVAR_BUFDL, lastBinImageLength);
+                        }
                     } else {
                         restartActivityWithBinImage(binImageFileUri);
                     }
