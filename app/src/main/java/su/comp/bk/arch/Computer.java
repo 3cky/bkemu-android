@@ -101,6 +101,9 @@ public class Computer implements Runnable, StatefulEntity {
     // Floppy controller reference (<code>null</code> if no floppy controller attached)
     private FloppyController floppyController;
 
+    /** BK0010 screen memory start address */
+    public static final int BK0010_SCREEN_MEMORY_START_ADDRESS = 040000;
+
     /** BK0011 first banked memory block address */
     public static final int BK0011_BANKED_MEMORY_0_ADDRESS = 040000;
     /** BK0011 second banked memory block address */
@@ -260,7 +263,7 @@ public class Computer implements Runnable, StatefulEntity {
             addMemory(0, workMemory);
             RandomAccessMemory videoMemory = createRandomAccessMemory("VideoMemory",
                     020000, Type.K565RU6);
-            addMemory(040000, videoMemory);
+            addMemory(BK0010_SCREEN_MEMORY_START_ADDRESS, videoMemory);
             // Add video controller
             videoController = new VideoController(videoMemory);
             addDevice(videoController);

@@ -330,7 +330,8 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
                 if (startAddress < STACK_TOP_ADDRESS) {
                     // Loaded autostarting image
                     cpu.returnFromTrap(false);
-                } else {
+                } else if (computer.getConfiguration().getModel() != Computer.Model.BK_0010
+                        || startAddress < Computer.BK0010_SCREEN_MEMORY_START_ADDRESS) {
                     // Loaded manually starting image
                     cpu.writeRegister(false, Cpu.R5, startAddress); // as in `S` directive
                     cpu.writeRegister(false, Cpu.PC, startAddress);
