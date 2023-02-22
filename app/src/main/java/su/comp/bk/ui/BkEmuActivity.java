@@ -798,7 +798,7 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
         }
 
         if (isComputerInitialized) {
-            if (!computer.getConfiguration().isMemoryManagerPresent()) {
+            if (computer.getConfiguration().getModel() == Computer.Model.BK_0010) {
                 computer.getCpu().setOnTrapListener(new TapeOperations10Handler());
             } else {
                 TapeOperations11Handler handler = new TapeOperations11Handler();
@@ -1725,7 +1725,7 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
                                 Intent.FLAG_GRANT_READ_URI_PERMISSION);
                     }
                     Configuration configuration = computer.getConfiguration();
-                    boolean isBk10 = !configuration.isMemoryManagerPresent();
+                    boolean isBk10 = (configuration.getModel() == Computer.Model.BK_0010);
                     if (!isBk10 || configuration.isFloppyControllerPresent()) {
                         lastBinImageAddress = 0; // will get address from BIN image file header
                         if (binImageFileLoad(binImageFileUri) && isBk10) {
@@ -1906,13 +1906,13 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
     protected void doFinishBinImageSave(boolean isSuccess) {
         // Set result in parameters block
         final Computer comp = computer;
-        if (!comp.getConfiguration().isMemoryManagerPresent()) { // BK0010
+        if (comp.getConfiguration().getModel() == Computer.Model.BK_0010) { // BK0010
             // Set result code
             int resultCode = isSuccess ? 0 : 3; // OK / STOP
             comp.writeMemory(true, tapeParamsBlockAddr + 1, resultCode);
             // Return from EMT 36
             comp.getCpu().returnFromTrap(false);
-        } else { // BK0011
+        } else { // BK0011M
             // Restore memory map
             comp.writeMemory(false, Cpu.REG_SEL1, BK11_BANKS_DEFAULT_CONFIG);
             // Set result code
@@ -1947,7 +1947,7 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
 
     protected void doFinishBinImageLoad(boolean isSuccess) {
         final Computer comp = computer;
-        boolean isBk10 = !comp.getConfiguration().isMemoryManagerPresent();
+        boolean isBk10 = (comp.getConfiguration().getModel() == Computer.Model.BK_0010);
         if (!isBk10) {
             // Restore BK0011 default memory map
             comp.writeMemory(false, Cpu.REG_SEL1, BK11_BANKS_DEFAULT_CONFIG);
@@ -1968,7 +1968,7 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
             }
             // Return from EMT 36
             comp.getCpu().returnFromTrap(false);
-        } else { // BK0011
+        } else { // BK0011M
             tapeParamsBlockAddrNameIdx = 28;
             // Set result code
             comp.getCpu().writeMemory(true, 052, isSuccess ? 0 : 4);

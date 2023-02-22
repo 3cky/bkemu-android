@@ -41,9 +41,9 @@ public class Speaker extends PcmOutput {
 
     private int lastOutputState;
 
-    public Speaker(Computer computer, boolean isBk0011m) {
+    public Speaker(Computer computer) {
         super(computer);
-        this.isBk0011mMode = isBk0011m;
+        this.isBk0011mMode = (computer.getConfiguration().getModel() == Computer.Model.BK_0011M);
     }
 
     @Override

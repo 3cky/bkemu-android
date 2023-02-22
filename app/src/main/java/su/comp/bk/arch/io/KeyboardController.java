@@ -85,7 +85,7 @@ public class KeyboardController implements Device {
 
     public KeyboardController(Computer computer) {
         this.computer = computer;
-        this.isComputerBk11m = computer.getConfiguration().isMemoryManagerPresent();
+        this.isComputerBk11m = (computer.getConfiguration().getModel() == Computer.Model.BK_0011M);
     }
 
     @Override

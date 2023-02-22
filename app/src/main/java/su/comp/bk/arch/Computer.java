@@ -157,38 +157,45 @@ public class Computer implements Runnable, StatefulEntity {
         void uptimeUpdated(long uptime);
     }
 
+    public enum Model {
+        // BK-0010(-01)
+        BK_0010,
+        // BK-0011M
+        BK_0011M
+    }
+
     public enum Configuration {
         /** BK0010 - monitor only */
-        BK_0010_MONITOR,
+        BK_0010_MONITOR(Model.BK_0010, false),
         /** BK0010 - monitor and Basic */
-        BK_0010_BASIC,
+        BK_0010_BASIC(Model.BK_0010, false),
         /** BK0010 - monitor, Focal and tests */
-        BK_0010_MSTD,
+        BK_0010_MSTD(Model.BK_0010, false),
         /** BK0010 with connected floppy drive controller (КНГМД) */
-        BK_0010_KNGMD(true),
+        BK_0010_KNGMD(Model.BK_0010, true),
         /** BK0010 with connected SMK512 controller */
-        BK_0010_SMK512(true),
+        BK_0010_SMK512(Model.BK_0010, true),
         /** BK0011M - MSTD block attached */
-        BK_0011M_MSTD(false, true),
+        BK_0011M_MSTD(Model.BK_0011M, false),
         /** BK0011M with connected floppy drive controller (КНГМД) */
-        BK_0011M_KNGMD(true, true),
+        BK_0011M_KNGMD(Model.BK_0011M, true),
         /** BK0011M with connected SMK512 controller */
-        BK_0011M_SMK512(true, true);
+        BK_0011M_SMK512(Model.BK_0011M, true);
 
+        private final Model model;
         private final boolean isFloppyControllerPresent;
-        private final boolean isMemoryManagerPresent;
 
-        Configuration() {
-            this(false, false);
-        }
-
-        Configuration(boolean isFloppyControllerPresent) {
-            this(isFloppyControllerPresent, false);
-        }
-
-        Configuration(boolean isFloppyControllerPresent, boolean isMemoryManagerPresent) {
+        Configuration(Model model, boolean isFloppyControllerPresent) {
+            this.model = model;
             this.isFloppyControllerPresent = isFloppyControllerPresent;
-            this.isMemoryManagerPresent = isMemoryManagerPresent;
+        }
+
+        /**
+         * Get this BK model as {@link Model} enum value.
+         * @return this BK model
+         */
+        public Model getModel() {
+            return model;
         }
 
         /**
@@ -197,14 +204,6 @@ public class Computer implements Runnable, StatefulEntity {
          */
         public boolean isFloppyControllerPresent() {
             return isFloppyControllerPresent;
-        }
-
-        /**
-         * Check is BK-0011 {@link Bk11MemoryManager} present in configuration.
-         * @return <code>true</code> if memory manager present, <code>false</code> otherwise
-         */
-        public boolean isMemoryManagerPresent() {
-            return isMemoryManagerPresent;
         }
     }
 
@@ -245,14 +244,14 @@ public class Computer implements Runnable, StatefulEntity {
     public void configure(Resources resources, Configuration config) throws Exception {
         setConfiguration(config);
         // Apply shared configuration
-        addDevice(new Sel1RegisterSystemBits(!config.isMemoryManagerPresent() ? 0100000 : 0140000));
+        addDevice(new Sel1RegisterSystemBits(config.getModel() == Model.BK_0010 ? 0100000 : 0140000));
         keyboardController = new KeyboardController(this);
         addDevice(keyboardController);
         peripheralPort = new PeripheralPort();
         addDevice(peripheralPort);
         addDevice(new Timer());
         // Apply computer specific configuration
-        if (!config.isMemoryManagerPresent()) {
+        if (config.getModel() == Model.BK_0010) {
             // BK-0010 configurations
             setClockFrequency(CLOCK_FREQUENCY_BK0010);
             // Set RAM configuration
@@ -301,7 +300,7 @@ public class Computer implements Runnable, StatefulEntity {
                     break;
             }
         } else {
-            // BK-0011 configurations
+            // BK-0011M configurations
             setClockFrequency(CLOCK_FREQUENCY_BK0011);
             // Set RAM configuration
             BankedMemory firstBankedMemory = new BankedMemory("BankedMemory0",
@@ -371,7 +370,7 @@ public class Computer implements Runnable, StatefulEntity {
         // Notify video controller about computer time updates
         addUptimeListener(videoController);
         // Add audio outputs
-        addAudioOutput(new Speaker(this, config.isMemoryManagerPresent()));
+        addAudioOutput(new Speaker(this));
         addAudioOutput(new Covox(this));
         addAudioOutput(new Ay8910(this));
     }
