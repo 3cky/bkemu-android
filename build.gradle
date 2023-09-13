@@ -23,13 +23,13 @@ allprojects {
 
 ext {
     versions = [
-            sdk: [min: 19, target: 30, compile: 31],
+            sdk: [min: 19, target: 33, compile: 33],
             project: [major: projectVersionMajor,
                       minor: projectVersionMinor,
                       patch: projectVersionPatch,
                       number: "${projectVersionMajor}.${projectVersionMinor}.${projectVersionPatch}"]]
 }
 
-task clean(type: Delete) {
+tasks.register('clean', Delete) {
     delete rootProject.buildDir
 }

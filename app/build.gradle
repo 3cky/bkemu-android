@@ -4,13 +4,14 @@ apply plugin: 'maven-publish'
 android {
     namespace 'su.comp.bk'
 
-    compileSdkVersion versions.sdk.compile
-
     defaultConfig {
         applicationId "su.comp.bk"
 
         minSdkVersion versions.sdk.min
         targetSdkVersion versions.sdk.target
+        compileSdk versions.sdk.compile
+
+        multiDexEnabled true
 
         versionCode versions.project.major * 1000000 + versions.project.minor * 1000 + versions.project.patch
         versionName versions.project.number
@@ -91,8 +92,8 @@ afterEvaluate {
 
 dependencies {
     api 'androidx.legacy:legacy-support-v4:1.0.0'
-    implementation 'androidx.appcompat:appcompat:1.4.2'
-    implementation 'com.google.android.material:material:1.6.1'
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+    implementation 'com.google.android.material:material:1.9.0'
 
     implementation 'commons-lang:commons-lang:2.6'
     implementation 'com.samskivert:jmustache:1.9'
@@ -103,6 +104,6 @@ dependencies {
 
     testImplementation 'junit:junit:4.13.1'
     testImplementation 'commons-io:commons-io:2.4'
-    testImplementation 'org.robolectric:robolectric:4.8.1'
+    testImplementation 'org.robolectric:robolectric:4.10.3'
     testImplementation 'net.lachlanmckee:timber-junit-rule:1.0.1'
 }
