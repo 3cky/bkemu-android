@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools">
+    xmlns:app="http://schemas.android.com/apk/res-auto">
     <item android:id="@+id/menu_switch_display_mode"
         android:icon="@drawable/ic_tv_white_24dp"
         android:title="@string/menu_switch_display_mode"
@@ -14,14 +13,6 @@
         android:icon="@drawable/ic_dpad_white_24"
         android:title="@string/menu_toggle_osd_joystick"
         app:showAsAction="ifRoom" />
-    <item android:id="@+id/menu_gamepad_setup"
-        android:icon="@drawable/ic_gamepad_white_24"
-        android:title="@string/gamepad_setup"
-        android:visible="false"
-        android:enabled="false"
-        tools:visible="true"
-        tools:enabled="true"
-        app:showAsAction="ifRoom" />
     <item android:id="@+id/menu_fullscreen_mode"
         android:icon="@drawable/ic_fullscreen_white_24"
         android:title="@string/menu_fullscreen_mode"
@@ -32,13 +23,13 @@
         android:visible="false"
         android:enabled="false"
         app:showAsAction="ifRoom" />
-    <item android:id="@+id/menu_volume"
-        android:icon="@drawable/ic_volume_white_24"
-        android:title="@string/volume"
-        app:showAsAction="ifRoom" />
     <item android:id="@+id/menu_screenshot"
         android:icon="@drawable/ic_photo_camera_white_24"
         android:title="@string/menu_screenshot"
+        app:showAsAction="ifRoom" />
+    <item android:id="@+id/menu_settings"
+        android:icon="@drawable/ic_settings_white"
+        android:title="@string/menu_settings"
         app:showAsAction="ifRoom" />
     <item android:id="@+id/menu_load_bin_file"
         android:title="@string/menu_load_bin_file" />
@@ -46,10 +37,6 @@
         android:title="@string/menu_save_state" />
     <item android:id="@+id/menu_restore_state"
         android:title="@string/menu_restore_state" />
-    <item android:id="@+id/menu_change_config"
-        android:title="@string/menu_change_config" />
     <item android:id="@+id/menu_reset"
         android:title="@string/menu_reset" />
-    <item android:id="@+id/menu_about"
-        android:title="@string/menu_about" />
 </menu>

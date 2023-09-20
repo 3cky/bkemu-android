@@ -74,9 +74,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 
 import su.comp.bk.BuildConfig;
 import su.comp.bk.R;
@@ -160,7 +158,6 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
     };
 
     // Dialog IDs
-    private static final int DIALOG_COMPUTER_CONFIG = 1;
     private static final int DIALOG_FLOPPY_DISK_MOUNT_ERROR = 3;
     private static final int DIALOG_IDE_DRIVE_ATTACH_ERROR = 4;
 
@@ -189,7 +186,7 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
 
     public static final int MAX_TAPE_FILE_NAME_LENGTH = 16;
 
-    private static final String PREFS_KEY_COMPUTER_CONFIGURATION = APP_PACKAGE_NAME + ".a.c";
+    public static final String PREFS_KEY_COMPUTER_CONFIGURATION = APP_PACKAGE_NAME + ".a.c";
     private static final String PREFS_KEY_FLOPPY_DRIVE_PREFIX =
             APP_PACKAGE_NAME + ".arch.io.FloppyController.FloppyDrive/";
     private static final String PREFS_KEY_FLOPPY_DRIVE_IMAGE =
@@ -812,22 +809,22 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
                         audioOutput.getDefaultVolume()));
             }
             bkEmuView.setComputer(computer);
-            updateDisplayedComputerConfigurationName();
+            updateDisplayedComputerConfigurationDescription();
         } else {
             throw new IllegalStateException("Can't initialize computer state");
         }
     }
 
-    private void updateDisplayedComputerConfigurationName() {
-        String configurationName = getComputerConfigurationName(computer.getConfiguration());
+    private void updateDisplayedComputerConfigurationDescription() {
+        String configurationDescription = getComputerConfigurationDescription(computer.getConfiguration());
         if (isTvUiMode()) {
             View headerView = tvNavigationView.getHeaderView(0);
             TextView textView = headerView.findViewById(R.id.tv_navigation_menu_header_text);
-            textView.setText(configurationName);
+            textView.setText(configurationDescription);
         } else {
             ActionBar actionBar = getSupportActionBar();
             if (actionBar != null) {
-                actionBar.setSubtitle(configurationName);
+                actionBar.setSubtitle(configurationDescription);
             }
         }
     }
@@ -1111,9 +1108,6 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
         boolean isFloppyControllerAttached = computer.getConfiguration().isFloppyControllerPresent();
         menu.findItem(R.id.menu_disk_manager).setEnabled(isFloppyControllerAttached);
         menu.findItem(R.id.menu_disk_manager).setVisible(isFloppyControllerAttached);
-        boolean isHardwareJoystickPresent = joystickManager.isHardwareJoystickPresent();
-        menu.findItem(R.id.menu_gamepad_setup).setEnabled(isHardwareJoystickPresent);
-        menu.findItem(R.id.menu_gamepad_setup).setVisible(isHardwareJoystickPresent);
         if (isLegacyPickFileDialogUsed()) {
             menu.findItem(R.id.menu_load_bin_file).setEnabled(isLegacyExternalStorageAccessGranted);
             menu.findItem(R.id.menu_disk_manager).setEnabled(isLegacyExternalStorageAccessGranted);
@@ -1218,20 +1212,11 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
         } else if (itemId == R.id.menu_reset) {
             resetComputer();
             return true;
-        } else if (itemId == R.id.menu_change_config) {
-            showDialog(DIALOG_COMPUTER_CONFIG);
-            return true;
         } else if (itemId == R.id.menu_load_bin_file) {
             showBinImageFileLoadDialog(REQUEST_MENU_BIN_IMAGE_FILE_LOAD, null);
             return true;
         } else if (itemId == R.id.menu_disk_manager) {
             showDiskManagerDialog();
-            return true;
-        } else if (itemId == R.id.menu_about) {
-            showAboutDialog();
-            return true;
-        } else if (itemId == R.id.menu_volume) {
-            showVolumeDialog();
             return true;
         } else if (itemId == R.id.menu_fullscreen_mode) {
             enterFullscreenMode();
@@ -1245,8 +1230,8 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
         } else if (itemId == R.id.menu_restore_state) {
             showStateRestoreDialog();
             return true;
-        } else if (itemId == R.id.menu_gamepad_setup) {
-            showGamepadLayoutSetupDialog();
+        } else if (itemId == R.id.menu_settings) {
+            showSettingsDialog();
             return true;
         } else if (itemId == R.id.menu_quit) {
             finish();
@@ -1258,8 +1243,6 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
     @Override
     protected Dialog onCreateDialog(int id) {
         switch (id) {
-            case DIALOG_COMPUTER_CONFIG:
-                return createComputerConfigurationDialog();
             case DIALOG_FLOPPY_DISK_MOUNT_ERROR:
                 return createFloppyDiskMountErrorDialog();
             case DIALOG_IDE_DRIVE_ATTACH_ERROR:
@@ -1286,38 +1269,12 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
             .create();
     }
 
-    private void showAboutDialog() {
+    protected void showAboutDialog() {
         BkEmuAboutDialog bkEmuAboutDialog = BkEmuAboutDialog.newInstance();
         bkEmuAboutDialog.show(getSupportFragmentManager(), "about");
     }
 
-    private Dialog createComputerConfigurationDialog() {
-        final CharSequence[] configNames;
-        List<String> configNameList = new ArrayList<>();
-        for (Configuration configuration: Configuration.values()) {
-            configNameList.add(getComputerConfigurationName(configuration));
-        }
-        configNames = configNameList.toArray(new String[0]);
-        return new AlertDialog.Builder(this)
-                .setTitle(R.string.menu_select_config)
-                .setSingleChoiceItems(configNames, computer.getConfiguration().ordinal(),
-                        (dialog, which) -> {
-                            if (which >= 0) {
-                                Configuration config = Configuration.values()[which];
-                                if (computer.getConfiguration() != config) {
-                                    // Set new computer configuration and restart activity
-                                    setComputerConfiguration(config);
-                                    restartActivity(null, null);
-                                }
-                            }
-                        })
-                .setNegativeButton(R.string.cancel, (dialog, whichButton) -> {
-                    // Do nothing on cancel
-                })
-                .create();
-    }
-
-    private String getComputerConfigurationName(Configuration configuration) {
+    protected String getComputerConfigurationDescription(Configuration configuration) {
         int configNameId = getResources().getIdentifier(configuration.name().toLowerCase(),
                 "string", getPackageName());
         return (configNameId != 0) ? getString(configNameId) : configuration.name();
@@ -1664,7 +1621,7 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
     /**
      * Show audio devices volume adjustment dialog.
      */
-    private void showVolumeDialog() {
+    protected void showVolumeDialog() {
         BkEmuVolumeDialog bkEmuVolumeDialogFragment = BkEmuVolumeDialog.newInstance();
         bkEmuVolumeDialogFragment.show(getSupportFragmentManager(), "volume");
     }
@@ -1704,9 +1661,17 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
     /**
      * Show hardware gamepad layout setup dialog.
      */
-    private void showGamepadLayoutSetupDialog() {
+    protected void showGamepadLayoutSetupDialog() {
         GamepadSetupDialog gamepadSetupDialog = GamepadSetupDialog.newInstance();
         gamepadSetupDialog.show(getSupportFragmentManager(), "gamepad_layout");
+    }
+
+    /**
+     * Show emulator settings dialog.
+     */
+    private void showSettingsDialog() {
+        BkEmuSettingsDialog bkEmuSettingsDialog = BkEmuSettingsDialog.newInstance();
+        bkEmuSettingsDialog.show(getSupportFragmentManager(), "settings");
     }
 
     @Override
@@ -2311,6 +2276,10 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
         appShareIntent.putExtra(Intent.EXTRA_TEXT, APPLICATION_SHARE_URL);
         startActivity(Intent.createChooser(appShareIntent, null));
     }
+
+    protected boolean isHardwareJoystickPresent() {
+        return joystickManager.isHardwareJoystickPresent();
+    };
 
     protected boolean isOnScreenJoystickVisible() {
         return joystickManager.isOnScreenJoystickVisible();

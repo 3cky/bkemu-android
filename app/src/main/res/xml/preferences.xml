@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ Copyright (C) 2023 Victor Antonovich (v.antonovich@gmail.com)
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  ~
+  -->
+
+<PreferenceScreen xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <ListPreference
+        android:key="su.comp.bk.a.c"
+        android:icon="@drawable/ic_computer_white"
+        android:title="@string/menu_change_config"
+        android:dialogTitle="@string/menu_select_config"
+        android:persistent="false"
+        app:useSimpleSummaryProvider="true" />
+
+    <Preference
+        app:key="volume"
+        app:title="@string/volume"
+        android:icon="@drawable/ic_volume_white_24" />
+
+    <Preference
+        app:key="gamepad"
+        app:title="@string/gamepad"
+        android:icon="@drawable/ic_gamepad_white_24"
+        android:visible="false"
+        android:enabled="false"
+        tools:visible="true"
+        tools:enabled="true" />
+
+    <Preference
+        app:key="about"
+        app:title="@string/menu_about"
+        android:icon="@drawable/ic_info_white" />
+
+</PreferenceScreen>

@@ -5,20 +5,12 @@
         android:title="@string/menu_toggle_osd_keyboard" />
     <item android:id="@+id/menu_switch_display_mode"
         android:title="@string/menu_switch_display_mode" />
-    <item android:id="@+id/menu_change_config"
-        android:title="@string/menu_change_config" />
+    <item android:id="@+id/menu_settings"
+        android:title="@string/menu_settings" />
     <item android:id="@+id/menu_disk_manager"
         android:title="@string/menu_disk_manager"
         android:visible="false"
         android:enabled="false" />
-    <item android:id="@+id/menu_volume"
-        android:title="@string/volume" />
-    <item android:id="@+id/menu_gamepad_setup"
-        android:title="@string/gamepad_setup"
-        android:visible="false"
-        android:enabled="false"
-        tools:visible="true"
-        tools:enabled="true" />
     <item android:id="@+id/menu_load_bin_file"
         android:title="@string/menu_load_bin_file" />
     <item android:id="@+id/menu_save_state"
@@ -27,8 +19,6 @@
         android:title="@string/menu_restore_state" />
     <item android:id="@+id/menu_reset"
         android:title="@string/menu_reset" />
-    <item android:id="@+id/menu_about"
-        android:title="@string/menu_about" />
     <item android:id="@+id/menu_quit"
         android:title="@string/menu_quit" />
 </menu>
