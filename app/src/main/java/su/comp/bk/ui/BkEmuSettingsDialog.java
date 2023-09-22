@@ -54,4 +54,15 @@ public class BkEmuSettingsDialog extends DialogFragment {
         builder.setView(R.layout.settings_dialog);
         return builder.create();
     }
+
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        BkEmuSettingsFragment settingsFragment = (BkEmuSettingsFragment) getParentFragmentManager()
+                .findFragmentById(R.id.settings_fragment);
+        if (settingsFragment != null) {
+            getParentFragmentManager().beginTransaction()
+                    .remove(settingsFragment).commitAllowingStateLoss();
+        }
+    }
 }
