@@ -1,6 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <releases>
-    <release version="1.0.1-dev" />
+    <release version="1.1.0-dev">
+        <changes>
+            <change>Moved settings-related and About menu items to the Settings dialog.</change>
+            <change>Added CPU speed configuration (Auto/3 MHz/4 MHz/6 MHz/Maximum).</change>
+            <change>Emulator will not attempt to autostart screen BIN images on BK-0010.</change>
+            <change>Set EMT 36 / .BMB10 "STOP pressed" error code on BIN image loading error.</change>
+            <change>Fixed menu loaded BIN image starting by `S` directive for BK0010/KNGMD config.</change>
+            <change>Fixed on-screen joystick buttons stuck.</change>
+            <change>Fixed screenshot share preview.</change>
+        </changes>
+    </release>
     <release version="1.0.0" date="2022-06-24">
         <changes>
             <change>Implemented SMK512 controller emulation (extended memory and IDE controller).</change>
