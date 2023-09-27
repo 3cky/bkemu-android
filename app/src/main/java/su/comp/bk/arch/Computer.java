@@ -137,7 +137,7 @@ public class Computer implements Runnable, StatefulEntity {
     public final static int CLOCK_FREQUENCY_MAXIMUM = 0;
 
     // Computer clock frequency (in kHz)
-    private int clockFrequency;
+    private int clockFrequency = CLOCK_FREQUENCY_BK0010;
 
     /** Uptime sync threshold (in nanoseconds) */
     private static final long UPTIME_SYNC_THRESHOLD = (10L * NANOSECS_IN_MSEC);
