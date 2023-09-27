@@ -875,7 +875,7 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
                         ? intentDataStateUri : "saved state");
             }
         } catch (Exception e) {
-            Timber.d("Can't restore computer state: %s", e.getMessage());
+            Timber.d(e, "Can't restore computer state");
         }
 
         deleteSavedComputerState();
@@ -2104,7 +2104,7 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
         storeCpuClockSettings(clockSpeed);
         int clockFrequency = getCpuClockFrequency();
         if (computer.getClockFrequency() != clockFrequency) {
-            recreate();
+            recreate(); // FIXME find better way to apply CPU clock frequency change
         }
     }
 
