@@ -199,7 +199,9 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
     private static final String PREFS_KEY_AUDIO_VOLUME =
             APP_PACKAGE_NAME + ".arch.io.audio.AudioOutput/volume";
     private static final String PREFS_KEY_LEGACY_FILE_DIALOG_LAST_DIR = APP_PACKAGE_NAME +
-            "legacy_file_dialog_last_dir";
+            ".legacy_file_dialog_last_dir";
+    private static final String PREFS_KEY_CPU_CLOCK_SPEED = APP_PACKAGE_NAME +
+            ".arch.cpu.clock_speed";
 
     // Last loaded emulator binary image address
     protected int lastBinImageAddress;
@@ -772,7 +774,7 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
         if (!isComputerInitialized) {
             // Computer state can't be restored, do startup initialization
             try {
-                Configuration currentConfiguration = getComputerConfiguration();
+                Configuration currentConfiguration = getStoredComputerConfiguration();
                 Configuration startupConfiguration;
                 if (intentDataProgramImageUri != null) {
                     startupConfiguration = Configuration.BK_0010_MONITOR;
@@ -783,9 +785,9 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
                 } else {
                     startupConfiguration = currentConfiguration;
                 }
-                computer.configure(getResources(), startupConfiguration);
+                computer.configure(getResources(), startupConfiguration, getCpuClockFrequency());
                 if (startupConfiguration != currentConfiguration) {
-                    setComputerConfiguration(startupConfiguration);
+                    storeComputerConfiguration(startupConfiguration);
                 }
                 initializeComputerDisks();
                 computer.reset();
@@ -863,11 +865,11 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
                     : StateManager.readStateInternalFile(this);
             Configuration storedConfiguration = Computer.getStoredConfiguration(restoredState);
             if (storedConfiguration != null) {
-                computer.configure(getResources(), storedConfiguration);
+                computer.configure(getResources(), storedConfiguration, getCpuClockFrequency());
                 initializeComputerDisks();
                 StateManager.restoreEntityState(computer, restoredState);
                 isStateRestored = true;
-                setComputerConfiguration(storedConfiguration);
+                storeComputerConfiguration(storedConfiguration);
                 Timber.d("Computer state restored from %s", (intentDataStateUri != null)
                         ? intentDataStateUri : "saved state");
             }
@@ -2022,24 +2024,87 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
     }
 
     /**
-     * Get current computer configuration as {@link Configuration} enum value.
+     * Get stored computer configuration as {@link Configuration} enum value.
      * @return configuration enum value
      */
-    protected Configuration getComputerConfiguration() {
+    protected Configuration getStoredComputerConfiguration() {
         SharedPreferences prefs = getPreferences();
         String configName = prefs.getString(PREFS_KEY_COMPUTER_CONFIGURATION, null);
         return (configName == null) ? Configuration.BK_0010_BASIC : Configuration.valueOf(configName);
     }
 
     /**
-     * Set current computer configuration set as {@link Configuration} enum value.
+     * Store current computer configuration set as {@link Configuration} enum value.
      * @param configuration configuration enum value to set
      */
-    protected void setComputerConfiguration(Configuration configuration) {
+    protected void storeComputerConfiguration(Configuration configuration) {
         SharedPreferences prefs = getPreferences();
         SharedPreferences.Editor prefsEditor = prefs.edit();
         prefsEditor.putString(PREFS_KEY_COMPUTER_CONFIGURATION, configuration.name());
         prefsEditor.apply();
+    }
+
+    /**
+     * Set current computer configuration.
+     * @param configuration configuration enum value to set
+     */
+    protected void setComputerConfiguration(Configuration configuration) {
+        if (computer.getConfiguration() != configuration) {
+            storeComputerConfiguration(configuration);
+            restartActivity(null, null);
+        }
+    }
+
+    /**
+     * Get CPU clock frequency from preferences.
+     * @return CPU clock frequency (in kHz), or 0 if CPU clock mode is set to unlimited frequency
+     */
+    protected int getCpuClockFrequency() {
+        String clockSpeed = getStoredCpuClockSpeed();
+        if (clockSpeed.equals(getString(R.string.clock_speed_3mhz))) {
+            return Computer.CLOCK_FREQUENCY_BK0010;
+        } else if (clockSpeed.equals(getString(R.string.clock_speed_4mhz))) {
+            return Computer.CLOCK_FREQUENCY_BK0011;
+        } else if (clockSpeed.equals(getString(R.string.clock_speed_6mhz))) {
+            return Computer.CLOCK_FREQUENCY_TURBO;
+        } else if (clockSpeed.equals(getString(R.string.clock_speed_maximum))) {
+            return Computer.CLOCK_FREQUENCY_MAXIMUM;
+        }
+        // Default is get CPU frequency according to computer model (BK0010/BK0011)
+        return getStoredComputerConfiguration().getModel() == Computer.Model.BK_0010
+                ? Computer.CLOCK_FREQUENCY_BK0010 : Computer.CLOCK_FREQUENCY_BK0011;
+    }
+
+    /**
+     * Get stored CPU clock speed.
+     * @return stored CPU clock speed as string (defaults to auto clock speed)
+     */
+    protected String getStoredCpuClockSpeed() {
+        SharedPreferences prefs = getPreferences();
+        return prefs.getString(PREFS_KEY_CPU_CLOCK_SPEED, getString(R.string.clock_speed_auto));
+    }
+
+    /**
+     * Store CPU clock settings.
+     * @param clockMode CPU clock mode string
+     */
+    protected void storeCpuClockSettings(String clockMode) {
+        SharedPreferences prefs = getPreferences();
+        SharedPreferences.Editor prefsEditor = prefs.edit();
+        prefsEditor.putString(PREFS_KEY_CPU_CLOCK_SPEED, clockMode);
+        prefsEditor.apply();
+    }
+
+    /**
+     * Set CPU clock settings.
+     * @param clockSpeed CPU clock speed string
+     */
+    protected void setCpuClockSettings(String clockSpeed) {
+        storeCpuClockSettings(clockSpeed);
+        int clockFrequency = getCpuClockFrequency();
+        if (computer.getClockFrequency() != clockFrequency) {
+            recreate();
+        }
     }
 
     private String getLastAttachedIdeDriveImageLocationPrefsKey(int ideInterfaceId) {
@@ -2376,10 +2441,10 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
 
     private void resetComputer() {
         Timber.d("resetting computer");
-        Configuration config = getComputerConfiguration();
+        Configuration config = getStoredComputerConfiguration();
         if (computer.getConfiguration() != config) {
             // Set new computer configuration and restart activity
-            setComputerConfiguration(config);
+            storeComputerConfiguration(config);
             restartActivity(null, null);
         } else {
             computer.reset();

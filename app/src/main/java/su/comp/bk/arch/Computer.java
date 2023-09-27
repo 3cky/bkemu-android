@@ -131,6 +131,10 @@ public class Computer implements Runnable, StatefulEntity {
     public final static int CLOCK_FREQUENCY_BK0010 = 3000;
     /** BK0011 clock frequency (in kHz) */
     public final static int CLOCK_FREQUENCY_BK0011 = 4000;
+    /** Turbo clock frequency (in kHz) */
+    public final static int CLOCK_FREQUENCY_TURBO = 6000;
+    /** Maximum reachable clock frequency */
+    public final static int CLOCK_FREQUENCY_MAXIMUM = 0;
 
     // Computer clock frequency (in kHz)
     private int clockFrequency;
@@ -147,6 +151,11 @@ public class Computer implements Runnable, StatefulEntity {
     private long systemUptimeSyncCheckIntervalTicks;
     // Last computer system uptime sync check timestamp (in CPU ticks)
     private long systemUptimeSyncCheckTimestampTicks;
+
+    // Last effective clock frequency calculation CPU time
+    private long lastEffectiveClockFrequencyCpuUptime;
+    // Last effective clock frequency calculation system uptime
+    private long lastEffectiveClockFrequencySystemUptime;
 
     private final List<UptimeListener> uptimeListeners = new ArrayList<>();
 
@@ -242,9 +251,11 @@ public class Computer implements Runnable, StatefulEntity {
      * Configure this computer.
      * @param resources Android resources object reference
      * @param config computer configuration as {@link Configuration} value
+     * @param cpuClockFrequency CPU clock frequency
      * @throws Exception in case of error while configuring
      */
-    public void configure(Resources resources, Configuration config) throws Exception {
+    public void configure(Resources resources, Configuration config, int cpuClockFrequency)
+            throws Exception {
         setConfiguration(config);
         // Apply shared configuration
         addDevice(new Sel1RegisterSystemBits(config.getModel() == Model.BK_0010 ? 0100000 : 0140000));
@@ -256,7 +267,7 @@ public class Computer implements Runnable, StatefulEntity {
         // Apply computer specific configuration
         if (config.getModel() == Model.BK_0010) {
             // BK-0010 configurations
-            setClockFrequency(CLOCK_FREQUENCY_BK0010);
+            setClockFrequency(cpuClockFrequency);
             // Set RAM configuration
             RandomAccessMemory workMemory = createRandomAccessMemory("WorkMemory",
                     020000, Type.K565RU6);
@@ -304,7 +315,7 @@ public class Computer implements Runnable, StatefulEntity {
             }
         } else {
             // BK-0011M configurations
-            setClockFrequency(CLOCK_FREQUENCY_BK0011);
+            setClockFrequency(cpuClockFrequency);
             // Set RAM configuration
             BankedMemory firstBankedMemory = new BankedMemory("BankedMemory0",
                     020000, Bk11MemoryManager.NUM_RAM_BANKS);
@@ -446,8 +457,6 @@ public class Computer implements Runnable, StatefulEntity {
     public void saveState(State outState) {
         // Save computer configuration
         outState.putString(STATE_CONFIGURATION, getConfiguration().name());
-        // Save computer system uptime
-        outState.putLong(STATE_SYSTEM_UPTIME, getSystemUptime());
         // Save RAM data
         saveRandomAccessMemoryData(outState);
         // Save CPU state
@@ -463,8 +472,6 @@ public class Computer implements Runnable, StatefulEntity {
      * @param inState {@link State} to restore state
      */
     public void restoreState(State inState) {
-        // Restore computer system uptime
-        setSystemUptime(inState.getLong(STATE_SYSTEM_UPTIME));
         // Initialize CPU and devices
         cpu.initDevices(true);
         // Restore RAM data
@@ -515,8 +522,21 @@ public class Computer implements Runnable, StatefulEntity {
      * @param clockFrequency clock frequency to set
      */
     public void setClockFrequency(int clockFrequency) {
+        if (clockFrequency < 0) { // Zero value is valid value CLOCK_FREQUENCY_MAXIMUM
+            throw new IllegalArgumentException("Invalid clock frequency to set: " + clockFrequency);
+        }
         this.clockFrequency = clockFrequency;
         systemUptimeSyncCheckIntervalTicks = nanosToCpuTime(UPTIME_SYNC_CHECK_INTERVAL);
+    }
+
+    /**
+     * Get native clock frequency (in kHz)
+     * @return native clock frequency
+     */
+    public int getNativeClockFrequency() {
+        return (clockFrequency != CLOCK_FREQUENCY_MAXIMUM)
+                    ? clockFrequency : (configuration.model == Model.BK_0010
+                        ? CLOCK_FREQUENCY_BK0010 : CLOCK_FREQUENCY_BK0011);
     }
 
     private void addReadOnlyMemory(Resources resources, int address, int romDataResId, String romId)
@@ -661,7 +681,7 @@ public class Computer implements Runnable, StatefulEntity {
     }
 
     private void notifyUptimeListeners() {
-        long uptime = getUptime();
+        long uptime = (clockFrequency != CLOCK_FREQUENCY_MAXIMUM) ? getUptime() : getSystemUptime();
         for (int i = 0; i < uptimeListeners.size(); i++) {
             UptimeListener uptimeListener = uptimeListeners.get(i);
             uptimeListener.uptimeUpdated(uptime);
@@ -948,8 +968,12 @@ public class Computer implements Runnable, StatefulEntity {
     public void resume() {
         if (isPaused) {
             Timber.d("resuming computer");
+            // Sync system uptime to CPU uptime
+            setSystemUptime(getUptime());
             systemUptimeUpdateTimestamp = System.nanoTime();
             systemUptimeSyncCheckTimestampTicks = getUptimeTicks();
+            lastEffectiveClockFrequencyCpuUptime = getUptimeTicks();
+            lastEffectiveClockFrequencySystemUptime = getSystemUptime();
             isPaused = false;
             synchronized (this) {
                 this.notifyAll();
@@ -981,7 +1005,14 @@ public class Computer implements Runnable, StatefulEntity {
      * @return effective emulation clock frequency (in kHz)
      */
     public float getEffectiveClockFrequency() {
-        return (float) getCpu().getTime() * NANOSECS_IN_MSEC / getSystemUptime();
+        long cpuUptime = getUptimeTicks();
+        long systemUptime = getSystemUptime();
+        long cpuTimeElapsed = cpuUptime - lastEffectiveClockFrequencyCpuUptime;
+        long systemUptimeElapsed = systemUptime - lastEffectiveClockFrequencySystemUptime;
+        lastEffectiveClockFrequencyCpuUptime = cpuUptime;
+        lastEffectiveClockFrequencySystemUptime = systemUptime;
+        return (cpuTimeElapsed > 0 && systemUptimeElapsed > 0)
+                ? (float) cpuTimeElapsed * NANOSECS_IN_MSEC / systemUptimeElapsed : 0;
     }
 
     /**
@@ -990,7 +1021,7 @@ public class Computer implements Runnable, StatefulEntity {
      * @return CPU time in nanoseconds
      */
     public long cpuTimeToNanos(long cpuTime) {
-        return cpuTime * NANOSECS_IN_MSEC / clockFrequency;
+        return cpuTime * NANOSECS_IN_MSEC / getNativeClockFrequency();
     }
 
     /**
@@ -999,7 +1030,7 @@ public class Computer implements Runnable, StatefulEntity {
      * @return CPU ticks for given time
      */
     public long nanosToCpuTime(long nanosecs) {
-        return nanosecs * clockFrequency / NANOSECS_IN_MSEC;
+        return nanosecs * getNativeClockFrequency() / NANOSECS_IN_MSEC;
     }
 
     /**
@@ -1014,6 +1045,10 @@ public class Computer implements Runnable, StatefulEntity {
         systemUptime += systemTime - systemUptimeUpdateTimestamp;
         systemUptimeUpdateTimestamp = systemTime;
         systemUptimeSyncCheckTimestampTicks = uptimeTicks;
+        if (clockFrequency == CLOCK_FREQUENCY_MAXIMUM) {
+            // Do not throttle emulation if it's maximum speed mode
+            return;
+        }
         long uptimesDifference = getUptime() - systemUptime;
         if (uptimesDifference >= UPTIME_SYNC_THRESHOLD) {
             long uptimesDifferenceMillis = uptimesDifference / NANOSECS_IN_MSEC;

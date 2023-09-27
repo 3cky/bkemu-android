@@ -139,7 +139,7 @@ public class BkEmuAboutDialog extends DialogFragment {
         float effectiveClockFrequency = computer.getEffectiveClockFrequency();
         cpuStatsTextView.setText(getResources().getString(R.string.about_cpu_stats,
                 effectiveClockFrequency / 1000f, effectiveClockFrequency
-                        / computer.getClockFrequency() * 100f));
+                        / computer.getNativeClockFrequency() * 100f));
     }
 
     private void updateRenderStats() {

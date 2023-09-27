@@ -87,4 +87,15 @@
     <string name="fc_title_choose_file">Choose file to load</string>
     <string name="fc_option_create_folder">New folder</string>
     <string name="fc_options_delete">Delete</string>
+    <string name="clock_frequency">CPU speed</string>
+    <string name="clock_speed_auto" translatable="false">clk_auto</string>
+    <string name="clock_speed_3mhz" translatable="false">clk_3mhz</string>
+    <string name="clock_speed_4mhz" translatable="false">clk_4mhz</string>
+    <string name="clock_speed_6mhz" translatable="false">clk_6mhz</string>
+    <string name="clock_speed_maximum" translatable="false">clk_maximum</string>
+    <string name="clock_speed_desc_auto">Automatic</string>
+    <string name="clock_speed_desc_3mhz">3 MHz (BK0010)</string>
+    <string name="clock_speed_desc_4mhz">4 MHz (BK0011M)</string>
+    <string name="clock_speed_desc_6mhz">6 MHz (turbo mode)</string>
+    <string name="clock_speed_desc_maximum">Maximum (unlimited)</string>
 </resources>

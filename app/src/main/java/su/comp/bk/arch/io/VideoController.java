@@ -403,7 +403,11 @@ public class VideoController implements Device, Computer.UptimeListener {
     public void uptimeUpdated(long uptime) {
         // Get current displayed screen line number since emulator start (numbered from 0)
         long line = uptime / FRAME_SYNC_PERIOD_HORIZONTAL;
-        if (line > currentLine) {
+        if (line < currentLine) {
+            // Resync current line and frame
+            currentLine = line;
+            currentFrame = line / FRAME_LINES_TOTAL;
+        } else if (line > currentLine) {
             // New screen line started
             currentLine = line;
             // Get screen line number inside displayed frame (numbered from 0)

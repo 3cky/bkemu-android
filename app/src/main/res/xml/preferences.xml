@@ -22,10 +22,21 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <ListPreference
-        android:key="su.comp.bk.a.c"
+        android:key="configuration"
         android:icon="@drawable/ic_computer_white"
         android:title="@string/menu_change_config"
         android:dialogTitle="@string/menu_select_config"
+        android:persistent="false"
+        app:useSimpleSummaryProvider="true" />
+
+    <ListPreference
+        android:key="clock_speed"
+        android:icon="@drawable/ic_speed_white"
+        android:title="@string/clock_frequency"
+        android:dialogTitle="@string/clock_frequency"
+        android:entries="@array/clock_speed_entries"
+        android:entryValues="@array/clock_speed_values"
+        android:defaultValue="@string/clock_speed_auto"
         android:persistent="false"
         app:useSimpleSummaryProvider="true" />
 

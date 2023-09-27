@@ -83,7 +83,7 @@ public abstract class AudioOutput<U extends AudioOutputUpdate> implements Device
                 AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT,
                 minBufferSize, AudioTrack.MODE_STREAM);
         samplesBuffer = new short[minBufferSize / 2]; // two bytes per sample
-        int audioOutputUpdatesSize = (int) (2 * getSamplesBufferSize() * computer.getClockFrequency()
+        int audioOutputUpdatesSize = (int) (2 * getSamplesBufferSize() * computer.getNativeClockFrequency()
                 * 1000L / (getSampleRate() * BaseOpcode.getBaseExecutionTime()));
         audioOutputUpdates = createAudioOutputUpdates(audioOutputUpdatesSize);
         Timber.d("%s: created audio output, sample rate: %d, samples buffer size: %d, updates buffer size: %d",
@@ -212,7 +212,10 @@ public abstract class AudioOutput<U extends AudioOutputUpdate> implements Device
 
     synchronized U putAudioOutputUpdate() {
         if (audioOutputUpdatesCapacity == 0) {
-            Timber.w("%s: PCM samples buffer overflow!", getName());
+            // Warn about buffer overflows only if we are not in the free running CPU mode
+            if (computer.getClockFrequency() > 0) {
+                Timber.w("%s: PCM samples buffer overflow!", getName());
+            }
             // Discard least recent element from the circular buffer
             getAudioOutputUpdateIndex = ++getAudioOutputUpdateIndex % audioOutputUpdates.length;
             audioOutputUpdatesCapacity++;
