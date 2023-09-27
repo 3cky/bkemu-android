@@ -27,6 +27,7 @@ import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
+import android.content.ClipData;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
@@ -2485,6 +2486,8 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
         Intent intent = new Intent(Intent.ACTION_SEND);
         intent.setType("image/png");
         intent.putExtra(Intent.EXTRA_STREAM, screenshotBitmapUri);
+        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        intent.setClipData(ClipData.newRawUri("", screenshotBitmapUri));
         startActivity(Intent.createChooser(intent, "Share"));
     }
 
