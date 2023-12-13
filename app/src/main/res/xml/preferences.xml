@@ -41,9 +41,9 @@
         app:useSimpleSummaryProvider="true" />
 
     <Preference
-        app:key="volume"
-        app:title="@string/volume"
-        android:icon="@drawable/ic_volume_white_24" />
+        app:key="keyboard"
+        app:title="@string/keyboard"
+        android:icon="@drawable/ic_keyboard_white_24dp" />
 
     <Preference
         app:key="gamepad"
@@ -53,6 +53,11 @@
         android:enabled="false"
         tools:visible="true"
         tools:enabled="true" />
+
+    <Preference
+        app:key="volume"
+        app:title="@string/volume"
+        android:icon="@drawable/ic_volume_white_24" />
 
     <Preference
         app:key="about"

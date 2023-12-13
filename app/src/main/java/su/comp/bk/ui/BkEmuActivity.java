@@ -98,6 +98,7 @@ import su.comp.bk.state.StateManager;
 import su.comp.bk.ui.joystick.GamepadSetupDialog;
 import su.comp.bk.ui.joystick.JoystickManager;
 import su.comp.bk.ui.keyboard.KeyboardManager;
+import su.comp.bk.ui.keyboard.KeyboardSettingsDialog;
 import su.comp.bk.util.DataUtils;
 import su.comp.bk.util.StringUtils;
 import timber.log.Timber;
@@ -1677,6 +1678,14 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
         bkEmuSettingsDialog.show(getSupportFragmentManager(), "settings");
     }
 
+    /**
+     * Show keyboard settings dialog.
+     */
+    protected void showKeyboardSettingsDialog() {
+        KeyboardSettingsDialog keyboardSetupDialog = KeyboardSettingsDialog.newInstance();
+        keyboardSetupDialog.show(getSupportFragmentManager(), "keyboard_settings");
+    }
+
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
@@ -2434,6 +2443,10 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
 
     public BkEmuView getBkEmuView() {
         return bkEmuView;
+    }
+
+    public KeyboardManager getKeyboardManager() {
+        return keyboardManager;
     }
 
     public JoystickManager getJoystickManager() {

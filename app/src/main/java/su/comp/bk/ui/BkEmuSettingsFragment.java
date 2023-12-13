@@ -63,8 +63,12 @@ public class BkEmuSettingsFragment extends PreferenceFragmentCompat {
         final BkEmuActivity bkEmuActivity = getBkEmuActivity();
         setupComputerConfigurationPreference(bkEmuActivity);
         setupCpuClockConfigurationPreference(bkEmuActivity);
+        setupPreference("keyboard", true, preference -> {
+            bkEmuActivity.showKeyboardSettingsDialog();
+            return true;
+        }, null);
         setupPreference("gamepad", bkEmuActivity.isHardwareJoystickPresent(), preference -> {
-            bkEmuActivity.showGamepadLayoutSetupDialog();;
+            bkEmuActivity.showGamepadLayoutSetupDialog();
             return true;
         }, null);
         setupPreference("volume", true, preference -> {

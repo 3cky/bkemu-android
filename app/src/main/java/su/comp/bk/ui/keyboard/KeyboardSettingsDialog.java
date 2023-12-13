@@ -16,11 +16,12 @@
  *
  */
 
-package su.comp.bk.ui;
+package su.comp.bk.ui.keyboard;
 
 import android.app.Activity;
 import android.app.Dialog;
 import android.os.Bundle;
+import android.view.LayoutInflater;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -30,35 +31,32 @@ import androidx.fragment.app.DialogFragment;
 import su.comp.bk.R;
 
 /**
- * Emulator settings dialog.
+ * Keyboard settings dialog.
  */
-public class BkEmuSettingsDialog extends DialogFragment {
+public class KeyboardSettingsDialog extends DialogFragment {
 
-    public static BkEmuSettingsDialog newInstance() {
-        return new BkEmuSettingsDialog();
+    public static KeyboardSettingsDialog newInstance() {
+        return new KeyboardSettingsDialog();
     }
 
-    public BkEmuSettingsDialog() {
-    }
-
-    private BkEmuActivity getBkEmuActivity() {
-        return (BkEmuActivity) requireActivity();
+    public KeyboardSettingsDialog() {
     }
 
     @NonNull
     @Override
     public Dialog onCreateDialog(@Nullable Bundle savedInstanceState) {
-        Activity activity = getBkEmuActivity();
+        Activity activity = requireActivity();
         AlertDialog.Builder builder = new AlertDialog.Builder(activity);
-        builder.setTitle(R.string.menu_settings);
-        builder.setView(R.layout.settings_dialog);
+        builder.setTitle(R.string.keyboard_settings);
+        LayoutInflater inflater = activity.getLayoutInflater();
+        builder.setView(inflater.inflate(R.layout.keyboard_settings_dialog, null));
         return builder.create();
     }
 
     @Override
     public void onDestroyView() {
-        BkEmuSettingsFragment settingsFragment = (BkEmuSettingsFragment) getParentFragmentManager()
-                .findFragmentById(R.id.settings_fragment);
+        KeyboardSettingsFragment settingsFragment = (KeyboardSettingsFragment) getParentFragmentManager()
+                .findFragmentById(R.id.keyboard_settings_fragment);
         if (settingsFragment != null) {
             getParentFragmentManager().beginTransaction()
                     .remove(settingsFragment).commitAllowingStateLoss();

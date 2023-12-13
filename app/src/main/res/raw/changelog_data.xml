@@ -4,6 +4,7 @@
         <changes>
             <change>Moved settings-related and About menu items to the Settings dialog.</change>
             <change>Added CPU speed configuration (Auto/3 MHz/4 MHz/6 MHz/Maximum).</change>
+            <change>Added on-screen keyboard display mode configuration (normal/overlay)</change>
             <change>Emulator will not attempt to autostart screen BIN images on BK-0010.</change>
             <change>Set EMT 36 / .BMB10 "STOP pressed" error code on BIN image loading error.</change>
             <change>Fixed menu loaded BIN image starting by `S` directive for BK0010/KNGMD config.</change>

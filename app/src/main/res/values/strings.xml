@@ -2,8 +2,8 @@
 <resources>
     <string name="app_name">BkEmu</string>
     <string name="fps_string">%d fps</string>
-    <string name="menu_toggle_osd_keyboard">On-screen keyboard</string>
-    <string name="menu_toggle_osd_joystick">On-screen joystick</string>
+    <string name="osd_keyboard">On-screen keyboard</string>
+    <string name="osd_joystick">On-screen joystick</string>
     <string name="menu_switch_display_mode">Display mode</string>
     <string name="menu_reset">Reset computer</string>
     <string name="menu_change_config">Configuration</string>
@@ -71,6 +71,12 @@
     <string name="ay8910" translatable="false">AY8910</string>
     <string name="write_protect">Write Protect</string>
     <string name="hdd_detached">(Not attached)</string>
+    <string name="keyboard">Keyboard</string>
+    <string name="keyboard_settings">Keyboard settings</string>
+    <string name="osd_keyboard_mode">Display mode</string>
+    <string name="osd_keyboard_mode_normal">Normal</string>
+    <string name="osd_keyboard_mode_overlay">Overlay</string>
+    <string name="osd_keyboard_overlay_alpha">Opacity in overlay mode</string>
     <string name="gamepad">Gamepad</string>
     <string name="gamepad_setup">Gamepad setup</string>
     <string name="gamepad_button_left">Left</string>

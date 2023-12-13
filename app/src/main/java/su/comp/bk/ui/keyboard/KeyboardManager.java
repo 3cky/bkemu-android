@@ -19,11 +19,15 @@
 package su.comp.bk.ui.keyboard;
 
 import android.annotation.SuppressLint;
+import android.app.Activity;
+import android.content.Context;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.View.OnTouchListener;
+import android.widget.RelativeLayout;
 
 import su.comp.bk.R;
 import su.comp.bk.arch.io.KeyboardController;
@@ -34,6 +38,15 @@ import timber.log.Timber;
  * On-screen and hardware keyboards manager.
  */
 public class KeyboardManager implements OnTouchListener, View.OnClickListener {
+    // Settings save/restore: on-screen keyboard display mode
+    private static final String PREFS_KEY_ON_SCREEN_KEYBOARD_DISPLAY_MODE =
+            BkEmuActivity.APP_PACKAGE_NAME + ".ui.keyboard.KeyboardManager" +
+                    "/onScreenKeyboardDisplayMode";
+    // Settings save/restore: on-screen keyboard overlay alpha
+    private static final String PREFS_KEY_ON_SCREEN_KEYBOARD_OVERLAY_ALPHA =
+            BkEmuActivity.APP_PACKAGE_NAME + ".ui.keyboard.KeyboardManager" +
+                    "/onScreenKeyboardOverlayAlpha";
+
     // State save/restore key prefix
     private static final String STATE_PREFIX = KeyboardManager.class.getName();
     // State save/restore: On-screen keyboard is visible flag state
@@ -58,6 +71,21 @@ public class KeyboardManager implements OnTouchListener, View.OnClickListener {
     private boolean isOnScreenKeyboardVisible = false;
 
     private View onScreenKeyboardView;
+    private View onScreenKeyboardOverlayFrame;
+
+    public enum OnScreenKeyboardDisplayMode {
+        NORMAL,
+        OVERLAY
+    }
+
+    private final static OnScreenKeyboardDisplayMode DEFAULT_ON_SCREEN_KEYBOARD_DISPLAY_MODE =
+            OnScreenKeyboardDisplayMode.NORMAL;
+    private OnScreenKeyboardDisplayMode onScreenKeyboardDisplayMode;
+
+    public final static float MIN_ON_SCREEN_KEYBOARD_OVERLAY_ALPHA = 0.1f;
+    public final static float MAX_ON_SCREEN_KEYBOARD_OVERLAY_ALPHA = 0.9f;
+    private final static float DEFAULT_ON_SCREEN_KEYBOARD_OVERLAY_ALPHA = 0.5f;
+    private float onScreenKeyboardOverlayAlpha;
 
     // Low register BK key codes lookup table
     private static final byte[] lowRegisterBkKeyCodeTable = new byte[256];
@@ -91,6 +119,8 @@ public class KeyboardManager implements OnTouchListener, View.OnClickListener {
     private ModifierButton lowRegisterButton;
 
     private KeyboardController keyboardController;
+
+    private Activity activity;
 
     static {
         initializeLookupTables();
@@ -241,15 +271,27 @@ public class KeyboardManager implements OnTouchListener, View.OnClickListener {
     public KeyboardManager() {
     }
 
+    public Activity getActivity() {
+        return activity;
+    }
+
+    public void setActivity(Activity activity) {
+        this.activity = activity;
+    }
+
     public void init(BkEmuActivity activity, KeyboardController keyboardController) {
+        setActivity(activity);
+        initOnScreenKeyboard(activity);
+        restoreOnScreenKeyboardDisplayMode();
+        restoreOnScreenKeyboardOverlayAlpha();
         setKeyboardController(keyboardController);
         setUppercaseMode(true);
         setLatinMode(true);
-        initOnScreenKeyboard(activity);
         setOnScreenKeyboardVisibility(false);
     }
 
     private void initOnScreenKeyboard(BkEmuActivity bkEmuActivity) {
+        onScreenKeyboardOverlayFrame = bkEmuActivity.findViewById(R.id.overlay_frame);
         onScreenKeyboardView = bkEmuActivity.findViewById(R.id.keyboard);
         for (BkButton bkButton : BkButton.values()) {
             View buttonView = onScreenKeyboardView.findViewWithTag(bkButton.name());
@@ -266,8 +308,84 @@ public class KeyboardManager implements OnTouchListener, View.OnClickListener {
         releaseStickyButtons();
     }
 
+    private void prepareOnScreenKeyboard() {
+        if (!(onScreenKeyboardOverlayFrame instanceof RelativeLayout)) {
+            return;
+        }
+        updateOnScreenKeyboardOverlayAlpha();
+        RelativeLayout.LayoutParams overlayFrameLayoutParams =
+                (RelativeLayout.LayoutParams) onScreenKeyboardOverlayFrame.getLayoutParams();
+        if (onScreenKeyboardDisplayMode == OnScreenKeyboardDisplayMode.OVERLAY) {
+            overlayFrameLayoutParams.removeRule(RelativeLayout.ABOVE);
+        } else {
+            overlayFrameLayoutParams.addRule(RelativeLayout.ABOVE, R.id.keyboard);
+        }
+        onScreenKeyboardOverlayFrame.requestLayout();
+    }
+
+    private SharedPreferences getPreferences() {
+        return getActivity().getPreferences(Context.MODE_PRIVATE);
+    }
+
+    private void saveOnScreenKeyboardOverlayAlpha() {
+        SharedPreferences prefs = getPreferences();
+        SharedPreferences.Editor prefsEditor = prefs.edit();
+        prefsEditor.putFloat(PREFS_KEY_ON_SCREEN_KEYBOARD_OVERLAY_ALPHA,
+                getOnScreenKeyboardOverlayAlpha());
+        prefsEditor.apply();
+    }
+
+    private void restoreOnScreenKeyboardOverlayAlpha() {
+        SharedPreferences prefs = getPreferences();
+        onScreenKeyboardOverlayAlpha = prefs.getFloat(PREFS_KEY_ON_SCREEN_KEYBOARD_OVERLAY_ALPHA,
+                DEFAULT_ON_SCREEN_KEYBOARD_OVERLAY_ALPHA);
+    }
+
+    private void updateOnScreenKeyboardOverlayAlpha() {
+        onScreenKeyboardView.setAlpha(onScreenKeyboardDisplayMode
+                == OnScreenKeyboardDisplayMode.OVERLAY ? onScreenKeyboardOverlayAlpha : 1.0f);
+    }
+
+    public void setOnScreenKeyboardOverlayAlpha(float alpha) {
+        this.onScreenKeyboardOverlayAlpha = alpha;
+        updateOnScreenKeyboardOverlayAlpha();
+        saveOnScreenKeyboardOverlayAlpha();
+    }
+
+    public float getOnScreenKeyboardOverlayAlpha() {
+        return onScreenKeyboardOverlayAlpha;
+    }
+
+    private void saveOnScreenKeyboardDisplayMode() {
+        SharedPreferences prefs = getPreferences();
+        SharedPreferences.Editor prefsEditor = prefs.edit();
+        prefsEditor.putString(PREFS_KEY_ON_SCREEN_KEYBOARD_DISPLAY_MODE,
+                getOnScreenKeyboardDisplayMode().name());
+        prefsEditor.apply();
+    }
+
+    private void restoreOnScreenKeyboardDisplayMode() {
+        SharedPreferences prefs = getPreferences();
+        String modeName = prefs.getString(PREFS_KEY_ON_SCREEN_KEYBOARD_DISPLAY_MODE,
+                DEFAULT_ON_SCREEN_KEYBOARD_DISPLAY_MODE.name());
+        onScreenKeyboardDisplayMode = OnScreenKeyboardDisplayMode.valueOf(modeName);
+    }
+
+    public void setOnScreenKeyboardDisplayMode(OnScreenKeyboardDisplayMode mode) {
+        this.onScreenKeyboardDisplayMode = mode;
+        prepareOnScreenKeyboard();
+        saveOnScreenKeyboardDisplayMode();
+    }
+
+    public OnScreenKeyboardDisplayMode getOnScreenKeyboardDisplayMode() {
+        return onScreenKeyboardDisplayMode;
+    }
+
     public void setOnScreenKeyboardVisibility(boolean isVisible) {
         isOnScreenKeyboardVisible = isVisible;
+        if (isVisible) {
+            prepareOnScreenKeyboard();
+        }
         onScreenKeyboardView.setVisibility(isVisible ? View.VISIBLE : View.GONE);
     }
 

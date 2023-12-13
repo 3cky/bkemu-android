@@ -7,11 +7,11 @@
         app:showAsAction="ifRoom" />
     <item android:id="@+id/menu_toggle_keyboard"
         android:icon="@drawable/ic_keyboard_white_24dp"
-        android:title="@string/menu_toggle_osd_keyboard"
+        android:title="@string/osd_keyboard"
         app:showAsAction="ifRoom" />
     <item android:id="@+id/menu_toggle_joystick"
         android:icon="@drawable/ic_dpad_white_24"
-        android:title="@string/menu_toggle_osd_joystick"
+        android:title="@string/osd_joystick"
         app:showAsAction="ifRoom" />
     <item android:id="@+id/menu_fullscreen_mode"
         android:icon="@drawable/ic_fullscreen_white_24"

@@ -1,21 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/main_view"
-    android:layout_width="fill_parent"
-    android:layout_height="fill_parent"
-    android:orientation="vertical" >
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:ignore="RtlHardcoded">
 
     <include
         android:id="@+id/toolbar"
         layout="@layout/toolbar" />
 
     <RelativeLayout
-        android:layout_width="fill_parent"
-        android:orientation="horizontal"
-        android:baselineAligned="false"
-        android:layout_height="0dp"
-        android:layout_weight="1">
+        android:id="@+id/overlay_frame"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@id/toolbar"
+        android:layout_above="@id/keyboard">
 
         <include
             android:id="@+id/joystick_dpad"
@@ -45,6 +45,9 @@
 
     <include
         android:id="@+id/keyboard"
-        layout="@layout/keyboard" />
+        layout="@layout/keyboard"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true" />
 
-</LinearLayout>
+</RelativeLayout>
