@@ -74,7 +74,7 @@
     <string name="osd_keyboard_mode">Режим отображения</string>
     <string name="osd_keyboard_mode_normal">Обычный</string>
     <string name="osd_keyboard_mode_overlay">Наложение</string>
-    <string name="osd_keyboard_overlay_alpha">Непрозрачность в режиме наложения</string>
+    <string name="osd_keyboard_overlay_alpha">Прозрачность в режиме наложения</string>
     <string name="gamepad">Геймпад</string>
     <string name="gamepad_setup">Настройка геймпада</string>
     <string name="gamepad_button_left">Влево</string>
