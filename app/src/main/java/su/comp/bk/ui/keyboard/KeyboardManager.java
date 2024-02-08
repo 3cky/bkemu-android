@@ -260,7 +260,7 @@ public class KeyboardManager implements OnTouchListener, View.OnClickListener {
         lowRegisterBkKeyCodeTable['7'] = '\'';
         lowRegisterBkKeyCodeTable['8'] = '(';
         lowRegisterBkKeyCodeTable['9'] = ')';
-        lowRegisterBkKeyCodeTable['0'] = '{';
+        lowRegisterBkKeyCodeTable['0'] = ' ';
         lowRegisterBkKeyCodeTable['-'] = '=';
         lowRegisterBkKeyCodeTable['/'] = '?';
         lowRegisterBkKeyCodeTable[':'] = '*';
