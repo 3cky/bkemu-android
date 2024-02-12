@@ -171,7 +171,7 @@ public class KeyboardManager implements OnTouchListener, View.OnClickListener {
         H(0110, KeyEvent.KEYCODE_H),  // Х H
         COLON(0072, KeyEvent.KEYCODE_APOSTROPHE),  // : *
         RIGHT_CURLY_BRACKET(0137, KeyEvent.KEYCODE_GRAVE),  // Ъ }
-        LINE_RETURN(0023, KeyEvent.KEYCODE_PAGE_DOWN), // ВС
+        LINE_RETURN(0023, KeyEvent.KEYCODE_PAGE_UP), // ВС
 
         // Buttons - fourth row
         CTRL_SYMBOL(BK_KEY_CODE_NONE, KeyEvent.KEYCODE_CTRL_LEFT),  // Control symbol (СУ)
@@ -200,7 +200,7 @@ public class KeyboardManager implements OnTouchListener, View.OnClickListener {
         T(0124, KeyEvent.KEYCODE_T),  // Т T
         X(0130, KeyEvent.KEYCODE_X),  // Ь X
         B(0102, KeyEvent.KEYCODE_B),  // Б B
-        COMMERCIAL_AT(0100, KeyEvent.KEYCODE_DPAD_CENTER),  // Ю @
+        COMMERCIAL_AT(0100, KeyEvent.KEYCODE_PAGE_DOWN),  // Ю @
         COMMA(0054, KeyEvent.KEYCODE_COMMA),  // , <
 
         // Buttons - sixth row and arrows block
