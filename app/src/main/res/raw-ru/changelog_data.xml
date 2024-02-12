@@ -1,5 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <releases>
+    <release version="1.1.1-dev">
+        <changes>
+            <change>На аппаратной клавиатуре кнопке "Page Up" теперь соответствует клавиша БК "ВС", кнопке "Page Down" - клавиша БК "Ю @".</change>
+            <change>Исправлен код клавиши БК "0" в нижнем регистре.</change>
+        </changes>
+    </release>
     <release version="1.1.0" date="26.01.2024">
         <changes>
             <change>Относящиеся к настройкам эмуляции диалоги и пункт "Об эмуляторе" перемещены в диалог "Настройки".</change>
