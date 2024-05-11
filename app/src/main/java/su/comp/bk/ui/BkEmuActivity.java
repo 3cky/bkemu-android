@@ -325,15 +325,16 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
                 binImageFileUri = Uri.parse(intentDataProgramImageUri);
                 int startAddress = loadBinImageFile(binImageFileUri);
                 intentDataProgramImageUri = null;
-                // Start loaded image
+                // Start loaded image, if needed
                 Cpu cpu = computer.getCpu();
-                cpu.reset(); // clear all flags
                 if (startAddress < STACK_TOP_ADDRESS) {
                     // Loaded autostarting image
+                    cpu.reset();
                     cpu.returnFromTrap(false);
                 } else if (computer.getConfiguration().getModel() != Computer.Model.BK_0010
                         || startAddress < Computer.BK0010_SCREEN_MEMORY_START_ADDRESS) {
                     // Loaded manually starting image
+                    cpu.reset();
                     cpu.writeRegister(false, Cpu.R5, startAddress); // as in `S` directive
                     cpu.writeRegister(false, Cpu.PC, startAddress);
                 }
@@ -341,6 +342,7 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
             } catch (Exception e) {
                 Timber.e(e, "Can't load bootstrap emulator program image");
             }
+            resumeEmulation();
             String binFileName = (binImageFileUri != null)
                     ? DataUtils.resolveUriFileName(BkEmuActivity.this, binImageFileUri)
                     : null;
@@ -400,6 +402,7 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
                 case 6: // EMT 6 - read char from keyboard
                     if (intentDataProgramImageUri != null) {
                         // Monitor command prompt, load program from path from intent data
+                        pauseEmulation();
                         activityHandler.post(new IntentDataProgramImageLoader());
                     } else if (intentDataFloppyDiskImageUri != null) {
                         // Monitor command prompt, trying to boot from mounted floppy disk image
