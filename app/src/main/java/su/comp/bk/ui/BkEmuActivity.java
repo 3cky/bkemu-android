@@ -19,11 +19,14 @@
 
 package su.comp.bk.ui;
 
+import static su.comp.bk.arch.io.VideoControllerFrameRenderer.FRAME_BUFFER_HEIGHT;
+import static su.comp.bk.arch.io.VideoControllerFrameRenderer.FRAME_BUFFER_WIDTH;
 import static su.comp.bk.arch.io.disk.IdeController.IF_0;
 import static su.comp.bk.arch.io.disk.IdeController.IF_1;
 import static su.comp.bk.util.StringUtils.isFileNameExtensionMatched;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
@@ -86,13 +89,16 @@ import su.comp.bk.arch.cpu.addressing.IndexDeferredAddressingMode;
 import su.comp.bk.arch.cpu.opcode.EmtOpcode;
 import su.comp.bk.arch.cpu.opcode.JmpOpcode;
 import su.comp.bk.arch.io.VideoController;
+import su.comp.bk.arch.io.VideoControllerFrameRenderer;
 import su.comp.bk.arch.io.audio.AudioOutput;
+import su.comp.bk.arch.io.audio.AudioTrackManager;
 import su.comp.bk.arch.io.disk.DiskImage;
 import su.comp.bk.arch.io.disk.FileDiskImage;
 import su.comp.bk.arch.io.disk.FloppyController;
 import su.comp.bk.arch.io.disk.FloppyController.FloppyDriveIdentifier;
 import su.comp.bk.arch.io.disk.IdeController;
 import su.comp.bk.arch.io.disk.SafDiskImage;
+import su.comp.bk.resource.AppResourceManager;
 import su.comp.bk.state.State;
 import su.comp.bk.state.StateManager;
 import su.comp.bk.ui.joystick.GamepadSetupDialog;
@@ -255,6 +261,12 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
     protected Uri intentDataStateUri;
 
     protected Handler activityHandler;
+
+    private AudioTrackManager audioManager;
+
+    private AppResourceManager resourceManager;
+
+    private VideoControllerFrameRenderer frameRenderer;
 
     private Toolbar toolbar;
 
@@ -569,9 +581,14 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
 
         this.activityHandler = new Handler();
 
+        this.audioManager = new AudioTrackManager();
+        this.resourceManager = new AppResourceManager(getResources());
+        this.frameRenderer = new VideoControllerFrameRenderer();
+
         mainView = findViewById(R.id.main_view);
         bkEmuView = findViewById(R.id.emu_view);
         bkEmuView.setGestureListener(new GestureListener());
+        bkEmuView.setFrameRenderer(frameRenderer);
 
         View decorView = getWindow().getDecorView();
         decorView.setOnSystemUiVisibilityChangeListener(this);
@@ -790,7 +807,8 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
                 } else {
                     startupConfiguration = currentConfiguration;
                 }
-                computer.configure(getResources(), startupConfiguration, getCpuClockFrequency());
+                computer.configure(audioManager, resourceManager, frameRenderer,
+                        startupConfiguration, getCpuClockFrequency());
                 if (startupConfiguration != currentConfiguration) {
                     storeComputerConfiguration(startupConfiguration);
                 }
@@ -870,7 +888,8 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
                     : StateManager.readStateInternalFile(this);
             Configuration storedConfiguration = Computer.getStoredConfiguration(restoredState);
             if (storedConfiguration != null) {
-                computer.configure(getResources(), storedConfiguration, getCpuClockFrequency());
+                computer.configure(audioManager, resourceManager, frameRenderer,
+                        storedConfiguration, getCpuClockFrequency());
                 initializeComputerDisks();
                 StateManager.restoreEntityState(computer, restoredState);
                 isStateRestored = true;
@@ -1030,6 +1049,7 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
                 (isKeyPress ? super.onKeyDown(keyCode, event) : super.onKeyUp(keyCode, event));
     }
 
+    @SuppressLint("MissingSuperCall")
     @Override
     public void onBackPressed() {
         if (keyboardManager.isOnScreenKeyboardVisible()) {
@@ -1368,7 +1388,7 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
                                            boolean isFddWriteProtectMode) {
         FloppyController fddController = computer.getFloppyController();
         if (doMountFloppyDiskImage(fddController, fddIdentifier, fddImage, isFddWriteProtectMode)) {
-            setLastMountedFloppyDiskImageLocation(fddIdentifier, fddImage.getLocation().toString());
+            setLastMountedFloppyDiskImageLocation(fddIdentifier, fddImage.getLocation());
             setLastFloppyDriveWriteProtectMode(fddIdentifier,
                     fddImage.isReadOnly() || isFddWriteProtectMode);
             return true;
@@ -1435,7 +1455,7 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
     protected boolean attachIdeDrive(int ideInterfaceId, DiskImage image) {
         IdeController ideController = computer.getIdeController();
         if (doAttachIdeDrive(ideController, ideInterfaceId, image)) {
-            setLastAttachedIdeDriveImageLocation(ideInterfaceId, image.getLocation().toString());
+            setLastAttachedIdeDriveImageLocation(ideInterfaceId, image.getLocation());
             return true;
         }
         return false;
@@ -2472,9 +2492,10 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
         Timber.d("taking screenshot");
 
         // Take screenshot to bitmap
-        Bitmap screenshotBitmap = Bitmap.createBitmap(VideoController.VIDEO_BUFFER_WIDTH * 2,
-                VideoController.VIDEO_BUFFER_HEIGHT * 3, Bitmap.Config.ARGB_8888);
-        getComputer().getVideoController().drawLastRenderedVideoBuffer(screenshotBitmap);
+        Bitmap screenshotBitmap = Bitmap.createBitmap(FRAME_BUFFER_WIDTH * 2,
+                FRAME_BUFFER_HEIGHT * 3, Bitmap.Config.ARGB_8888);
+
+        frameRenderer.drawFrameBuffer(screenshotBitmap);
 
         // Store screenshot bitmap to png file
         Uri screenshotBitmapUri = null;
