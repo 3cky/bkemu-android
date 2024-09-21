@@ -27,6 +27,7 @@ import su.comp.bk.arch.Computer;
 import su.comp.bk.arch.cpu.Cpu;
 import su.comp.bk.arch.io.Device;
 import su.comp.bk.arch.io.Sel1RegisterSystemBits;
+import su.comp.bk.arch.memory.RandomAccessMemory;
 import su.comp.bk.arch.memory.ReadOnlyMemory;
 import su.comp.bk.state.State;
 
@@ -75,11 +76,17 @@ public class ControlOpcodesTest {
     public void testHaltInstructionExecute() {
         computer.addMemory(0100000, new ReadOnlyMemory("TestRom", new short[] {
                 HaltOpcode.OPCODE,                   // 0100000: HALT
-                (short) 0100010,                     // 0100002: <vector - PC>
-                0377,                                // 0100004: <vector - PSW>
+                ConditionCodeOpcodes.OPCODE_NOP,     // 0100002: NOP
+                ConditionCodeOpcodes.OPCODE_NOP,     // 0100004: NOP
                 ConditionCodeOpcodes.OPCODE_NOP,     // 0100006: NOP
                 ConditionCodeOpcodes.OPCODE_NOP      // 0100010: NOP
         }));
+        computer.addMemory(Cpu.TRAP_VECTOR_HALT, new RandomAccessMemory("TestRam",
+                2, RandomAccessMemory.Type.K565RU6));
+        // Halt trap vector - PC
+        computer.getCpu().writeMemory(false, Cpu.TRAP_VECTOR_HALT, 0100010);
+        // Halt trap vector - PSW
+        computer.getCpu().writeMemory(false, Cpu.TRAP_VECTOR_HALT + 2, 0377);
 
         // Halt PC/PSW store registers mock device
         Device haltStateRegisters = new Device() {

@@ -85,7 +85,9 @@ public class Cpu implements StatefulEntity {
     /** TRAP instruction trap vector address */
     public static final int TRAP_VECTOR_TRAP = 034;
     /** IRQ2 vector address */
-    public static final int TRAP_IRQ2 = 0100;
+    public static final int TRAP_VECTOR_IRQ2 = 0100;
+    /** IRQ1/HALT instruction vector address */
+    public static final int TRAP_VECTOR_HALT = 0160002;
 
     private static final String STATE_PREFIX = "Cpu";
     // State save/restore: CPU time (in clock ticks)
@@ -805,18 +807,29 @@ public class Cpu implements StatefulEntity {
      */
     public void enterHaltMode() {
 //        Timber.d("entering HALT mode, PC: 0%s", Integer.toOctalString(readRegister(false, PC)));
-        // Set bit 3 in SEL1 register
+        if (isIrq1Requested()) {
+            // IRQ1 interrupt is handled after instruction is fetched but not yet executed,
+            // so PC here should point to the word following the fetched instruction
+            incrementRegister(false, PC);
+        }
         int sel1 = readMemory(false, REG_SEL1);
         if (sel1 != Computer.BUS_ERROR) {
+            // Set bit 3 in SEL1 register
             sel1 |= 010;
             if (writeMemory(false, REG_SEL1, sel1) &&
                     // Store PSW to 0177676
-                    writeMemory(false, REG_HALT_PSW, getPswState()) &&
-                    // Store PC to 0177674
+                    writeMemory(false, REG_HALT_PSW, getPswState())) {
+                if (isIrq1Requested()) {
+                    // Fix PC so it will point to the instruction that was not executed yet
+                    // (see IRQ1 related remark above)
+                    decrementRegister(false, PC);
+                }
+                if (// Store PC to 0177674
                     writeMemory(false, REG_HALT_PC, readRegister(false, PC)) &&
-                    // Trap to HALT handler
-                    processTrap((sel1 & 0177400) + 2, false)) {
-                setHaltMode();
+                            // Trap to HALT handler
+                            processTrap(TRAP_VECTOR_HALT, false)) {
+                    setHaltMode();
+                }
             }
         }
     }
@@ -1092,7 +1105,7 @@ public class Cpu implements StatefulEntity {
                     isInterruptHandled = true;
                 } else if (!isPswFlagSet(PSW_FLAG_P)) {
                     if (isIrq2Requested()) { // Check for pending radial interrupt request IRQ2
-                        processTrap(TRAP_IRQ2, true);
+                        processTrap(TRAP_VECTOR_IRQ2, true);
                         clearIrq2Request();
                         isInterruptHandled = true;
                     } else if (isVirqRequested()) {  // Check for pending vector interrupt request
