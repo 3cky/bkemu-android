@@ -347,6 +347,7 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
                         || startAddress < Computer.BK0010_SCREEN_MEMORY_START_ADDRESS) {
                     // Loaded manually starting image
                     cpu.reset();
+                    cpu.setPswState(0); // enable interrupts
                     cpu.writeRegister(false, Cpu.R5, startAddress); // as in `S` directive
                     cpu.writeRegister(false, Cpu.PC, startAddress);
                 }
