@@ -1303,8 +1303,33 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
     }
 
     protected String getComputerConfigurationDescription(Configuration configuration) {
-        int configNameId = getResources().getIdentifier(configuration.name().toLowerCase(),
-                "string", getPackageName());
+        int configNameId = 0;
+        switch (configuration) {
+            case BK_0010_MONITOR:
+                configNameId = R.string.bk_0010_monitor;
+                break;
+            case BK_0010_BASIC:
+                configNameId = R.string.bk_0010_basic;
+                break;
+            case BK_0010_MSTD:
+                configNameId = R.string.bk_0010_mstd;
+                break;
+            case BK_0010_KNGMD:
+                configNameId = R.string.bk_0010_kngmd;
+                break;
+            case BK_0010_SMK512:
+                configNameId = R.string.bk_0010_smk512;
+                break;
+            case BK_0011M_MSTD:
+                configNameId = R.string.bk_0011m_mstd;
+                break;
+            case BK_0011M_KNGMD:
+                configNameId = R.string.bk_0011m_kngmd;
+                break;
+            case BK_0011M_SMK512:
+                configNameId = R.string.bk_0011m_smk512;
+                break;
+        }
         return (configNameId != 0) ? getString(configNameId) : configuration.name();
     }
 
