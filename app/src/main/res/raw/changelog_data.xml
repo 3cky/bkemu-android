@@ -5,6 +5,7 @@
             <change>Remapped "ВС" BK button to "Page Up" hardware key and "Ю @" BK button to "Page Down" hardware key.</change>
             <change>Fixed low register keycode for "0" BK button.</change>
             <change>Fixed starting of autoloaded BIN images.</change>
+            <change>Improved compatibility with some games.</change>
         </changes>
     </release>
     <release version="1.1.0" date="2024-01-26">
