@@ -108,8 +108,8 @@ public class SafDiskImage implements DiskImage {
     }
 
     @Override
-    public Uri getLocation() {
-        return location;
+    public String getLocation() {
+        return location.toString();
     }
 
     @Override

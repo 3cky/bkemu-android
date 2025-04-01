@@ -37,6 +37,7 @@ import androidx.core.content.ContextCompat;
 
 import su.comp.bk.R;
 import su.comp.bk.arch.Computer;
+import su.comp.bk.arch.io.VideoControllerFrameRenderer;
 import su.comp.bk.arch.io.disk.FloppyController;
 import su.comp.bk.arch.io.VideoController;
 import su.comp.bk.arch.io.VideoController.DisplayMode;
@@ -128,6 +129,8 @@ public class BkEmuView extends TextureView implements TextureView.SurfaceTexture
 
     protected Computer computer;
 
+    protected VideoControllerFrameRenderer frameRenderer;
+
     private int lastViewHeight;
     private int lastViewWidth;
 
@@ -177,7 +180,8 @@ public class BkEmuView extends TextureView implements TextureView.SurfaceTexture
                         try {
                             synchronized (bkEmuView) {
                                 canvas.drawColor(bgColor);
-                                canvas.drawBitmap(videoController.renderVideoBuffer(),
+                                videoController.renderFrame();
+                                canvas.drawBitmap(frameRenderer.getFrameBuffer(),
                                         videoBufferBitmapTransformMatrix, null);
                                 drawIndicators(canvas);
                             }
@@ -230,6 +234,10 @@ public class BkEmuView extends TextureView implements TextureView.SurfaceTexture
         this.floppyActivityIndicatorTimeoutCpuTicks = computer.nanosToCpuTime(
                 FLOPPY_ACTIVITY_INDICATOR_TIMEOUT * Computer.NANOSECS_IN_MSEC);
         computer.getVideoController().addFrameSyncListener(this);
+    }
+
+    public void setFrameRenderer(VideoControllerFrameRenderer frameRenderer) {
+        this.frameRenderer = frameRenderer;
     }
 
     public synchronized void setFpsDrawingEnabled(boolean isEnabled) {
@@ -366,8 +374,8 @@ public class BkEmuView extends TextureView implements TextureView.SurfaceTexture
     public void updateVideoBufferBitmapTransformMatrix(int viewWidth, int viewHeight) {
         lastViewWidth = viewWidth;
         lastViewHeight = viewHeight;
-        int bitmapWidth = VideoController.VIDEO_BUFFER_WIDTH;
-        int bitmapHeight = VideoController.VIDEO_BUFFER_HEIGHT;
+        int bitmapWidth = VideoControllerFrameRenderer.FRAME_BUFFER_WIDTH;
+        int bitmapHeight = VideoControllerFrameRenderer.FRAME_BUFFER_HEIGHT;
         float bitmapAspectRatio = (float) bitmapWidth / bitmapHeight;
         float bitmapTranslateX;
         float bitmapTranslateY;

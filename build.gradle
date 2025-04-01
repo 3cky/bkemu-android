@@ -9,7 +9,7 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:8.2.0'
+        classpath 'com.android.tools.build:gradle:8.9.1'
     }
 }
 
@@ -23,7 +23,7 @@ allprojects {
 
 ext {
     versions = [
-            sdk: [min: 19, target: 33, compile: 33],
+            sdk: [min: 21, target: 34, compile: 34],
             project: [major: projectVersionMajor,
                       minor: projectVersionMinor,
                       patch: projectVersionPatch,
