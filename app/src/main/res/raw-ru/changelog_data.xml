@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <releases>
-    <release version="1.1.1-dev">
+    <release version="1.1.1" date="01.04.2025">
         <changes>
             <change>На аппаратной клавиатуре кнопке "Page Up" теперь соответствует клавиша БК "ВС", кнопке "Page Down" - клавиша БК "Ю @".</change>
             <change>Исправлен код клавиши БК "0" в нижнем регистре.</change>

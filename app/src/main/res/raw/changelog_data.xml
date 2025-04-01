@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <releases>
-    <release version="1.1.1-dev">
+    <release version="1.1.1" date="2025-04-01">
         <changes>
             <change>Remapped "ВС" BK button to "Page Up" hardware key and "Ю @" BK button to "Page Down" hardware key.</change>
             <change>Fixed low register keycode for "0" BK button.</change>
