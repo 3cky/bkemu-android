@@ -575,7 +575,9 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
     public void onCreate(Bundle savedInstanceState) {
         if (BuildConfig.DEBUG) {
             Timber.uprootAll();
-            Timber.plant(new Timber.DebugTree());
+            // https://github.com/JakeWharton/timber/issues/484
+            // noinspection DataFlowIssue
+            Timber.plant((Timber.Tree) (Object) new Timber.DebugTree());
         }
         Timber.d("onCreate(), Intent: %s", getIntent());
         super.onCreate(savedInstanceState);
