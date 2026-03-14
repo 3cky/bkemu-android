@@ -4,12 +4,17 @@ apply plugin: 'maven-publish'
 android {
     namespace 'su.comp.bk'
 
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
+    }
+
     defaultConfig {
         applicationId "su.comp.bk"
 
         minSdkVersion versions.sdk.min
         targetSdkVersion versions.sdk.target
-        compileSdk versions.sdk.compile
+        compileSdkVersion versions.sdk.compile
 
         multiDexEnabled true
 
@@ -54,7 +59,7 @@ android {
         release {
             minifyEnabled true
             shrinkResources true
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard.cfg'
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard.cfg'
             signingConfig signingConfigs.release
         }
     }
@@ -98,15 +103,15 @@ dependencies {
     implementation project(':lib')
 
     api 'androidx.legacy:legacy-support-v4:1.0.0'
-    implementation 'androidx.appcompat:appcompat:1.7.0'
+    implementation 'androidx.appcompat:appcompat:1.7.1'
     implementation 'androidx.preference:preference:1.2.1'
-    implementation 'com.google.android.material:material:1.12.0'
+    implementation 'com.google.android.material:material:1.13.0'
 
-    implementation 'com.samskivert:jmustache:1.9'
-    implementation 'org.msgpack:jackson-dataformat-msgpack:0.9.1'
+    implementation 'com.samskivert:jmustache:1.16'
+    implementation 'org.msgpack:jackson-dataformat-msgpack:0.9.11'
     implementation 'com.github.hedzr:android-file-chooser:v1.2.0-final'
 
-    implementation("org.slf4j:slf4j-api:2.0.13")
+    implementation("org.slf4j:slf4j-api:2.0.17")
     implementation("com.jakewharton.timber:timber:5.0.1")
     implementation("io.github.unveloper:slf4j-timber:0.0.8")
 }
