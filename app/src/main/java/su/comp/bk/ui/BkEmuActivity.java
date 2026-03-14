@@ -58,7 +58,10 @@ import androidx.appcompat.widget.Toolbar;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
+import androidx.core.graphics.Insets;
 import androidx.core.view.GravityCompat;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -604,6 +607,8 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
 
         setupTransitions();
 
+        applySystemInsets();
+
         keyboardManager.init(this, computer.getKeyboardController());
 
         joystickManager.init(this, computer.getPeripheralPort());
@@ -615,6 +620,18 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
         if (isLegacyExternalStorageAccessUsed()) {
             externalStorageAccessPermissionCheck();
         }
+    }
+
+    private void applySystemInsets() {
+        ViewCompat.setOnApplyWindowInsetsListener(mainView, (v, insets) -> {
+            Insets systemInsets = insets.getInsets(
+                    WindowInsetsCompat.Type.systemBars()
+                            | WindowInsetsCompat.Type.displayCutout()
+                            | WindowInsetsCompat.Type.ime());
+            v.setPadding(systemInsets.left, systemInsets.top,
+                    systemInsets.right, systemInsets.bottom);
+            return WindowInsetsCompat.CONSUMED;
+        });
     }
 
     private void checkShowChangelog() {
