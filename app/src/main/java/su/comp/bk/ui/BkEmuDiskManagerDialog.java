@@ -150,9 +150,9 @@ public class BkEmuDiskManagerDialog extends DialogFragment {
             for (int ideInterfaceId = IF_0; ideInterfaceId <= IF_1; ideInterfaceId++) {
                 View ideDriveView = getIdeDriveView(ideInterfaceId);
                 if (isIdeDriveActive(ideController, ideInterfaceId)) {
-                    ideDriveView.setSelected(!ideDriveView.isSelected());
+                    ideDriveView.setActivated(!ideDriveView.isActivated());
                 } else {
-                    ideDriveView.setSelected(false);
+                    ideDriveView.setActivated(false);
                 }
             }
         }
@@ -170,7 +170,7 @@ public class BkEmuDiskManagerDialog extends DialogFragment {
             selectedFloppyDrive = floppyController.getSelectedFloppyDriveIdentifier();
             for (FloppyDriveIdentifier floppyDrive : FloppyDriveIdentifier.values()) {
                 View floppyDriveView = getFloppyDriveView(floppyDrive);
-                floppyDriveView.setSelected(floppyDrive == selectedFloppyDrive);
+                floppyDriveView.setActivated(floppyDrive == selectedFloppyDrive);
             }
         }
     }
