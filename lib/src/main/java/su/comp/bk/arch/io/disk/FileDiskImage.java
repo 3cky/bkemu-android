@@ -21,6 +21,7 @@ package su.comp.bk.arch.io.disk;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.util.Arrays;
 
 /**
  * File-backed {@link DiskImage}.
@@ -68,8 +69,18 @@ public class FileDiskImage implements DiskImage {
 
     @Override
     public void readBytes(byte[] buffer, long position, int length) throws IOException {
+        Arrays.fill(buffer, 0, length, (byte) 0);
         diskImageRandomAccessFile.seek(position);
-        diskImageRandomAccessFile.read(buffer, 0, length);
+        int totalBytesRead = 0;
+        do {
+            int bytesRead = diskImageRandomAccessFile.read(buffer,
+                    totalBytesRead, length - totalBytesRead);
+            if (bytesRead < 0) {
+                // EOF reached
+                break;
+            }
+            totalBytesRead += bytesRead;
+        } while (totalBytesRead < length);
     }
 
     @Override

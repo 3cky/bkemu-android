@@ -141,7 +141,11 @@ public class SafDiskImage implements DiskImage {
         do {
             int res = diskImageFileChannel.read(buf);
             if (res < 0) {
-                throw new IOException("readBuffer(" + pos + ", " + len + "): " + res);
+                // EOF reached, fill buffer data extent with zeros
+                while (buf.position() < len) {
+                    buf.put((byte) 0);
+                }
+                break;
             }
         } while (buf.position() < len);
     }

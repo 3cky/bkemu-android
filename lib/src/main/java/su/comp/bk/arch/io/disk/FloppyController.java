@@ -39,6 +39,8 @@ import su.comp.bk.util.SparseBooleanArray;
 public class FloppyController implements Device {
     private final Logger logger = LoggerFactory.getLogger(getClass().getSimpleName());
 
+    // Also execute "adb shell setprop log.tag.FloppyController DEBUG"
+    // to enable DEBUG level in Android logcat
     protected boolean isDebugEnabled = false;
 
     /** Control register address */
@@ -241,8 +243,6 @@ public class FloppyController implements Device {
 
         private boolean isWriteProtectMode;
 
-        private int lastTrackNumber = MAX_TRACKS_PER_DISK;
-
         private int currentTrackNumber;
 
         private FloppyDriveSide currentTrackSide;
@@ -370,7 +370,7 @@ public class FloppyController implements Device {
                 }
                 data = readCurrentTrackData(position++);
                 int sectorNumber = (data >> 8) & 0377;
-                if (sectorNumber < 1 || trackNumber > SECTORS_PER_TRACK) {
+                if (sectorNumber < 1 || sectorNumber > SECTORS_PER_TRACK) {
                     logger.warn("Unexpected sector number: {}", sectorNumber);
                     continue;
                 }
@@ -433,8 +433,8 @@ public class FloppyController implements Device {
                 try {
                     saveCurrentTrackData();
                 } catch (IOException e) {
-                    logger.error(String.format("Can't flush track data: drive %s, track %d, side %s",
-                            driveIdentifier, getCurrentTrackNumber(), getCurrentTrackSide()), e);
+                    logger.error("Can't flush track data: drive {}, track {}, side {}",
+                            driveIdentifier, getCurrentTrackNumber(), getCurrentTrackSide(), e);
                 }
             }
         }
@@ -561,8 +561,8 @@ public class FloppyController implements Device {
                 try {
                     loadCurrentTrackData();
                 } catch (IOException e) {
-                    logger.error(String.format("Can't load track data: drive %s, track %d, side %s",
-                            driveIdentifier, getCurrentTrackNumber(), getCurrentTrackSide()), e);
+                    logger.error("Can't load track data: drive {}, track {}, side {}",
+                            driveIdentifier, getCurrentTrackNumber(), getCurrentTrackSide(), e);
                 }
             }
         }
@@ -583,19 +583,7 @@ public class FloppyController implements Device {
          * @return last track number in range [0, MAX_TRACKS_PER_DISK - 1]
          */
         int getLastTrackNumber() {
-            return lastTrackNumber;
-        }
-
-        /**
-         * Set disk image last track number.
-         * @param lastTrackNumber last track number in range [0, MAX_TRACKS_PER_DISK - 1]
-         */
-        void setLastTrackNumber(int lastTrackNumber) {
-            if (lastTrackNumber < 0 || lastTrackNumber >= MAX_TRACKS_PER_DISK) {
-                throw new IllegalArgumentException("Invalid lastTrackNumber value: "
-                        + lastTrackNumber);
-            }
-            this.lastTrackNumber = lastTrackNumber;
+            return MAX_TRACKS_PER_DISK;
         }
 
         boolean isDiskIndexHoleActive(long cpuTime) {
@@ -651,9 +639,6 @@ public class FloppyController implements Device {
                 unmountDiskImage();
             }
             setWriteProtectMode(isWriteProtectMode);
-            int lastDiskImageTrackNumber = (int) (diskImage.length()
-                    / (SECTORS_PER_TRACK * BYTES_PER_SECTOR * 2) - 1);
-            setLastTrackNumber(lastDiskImageTrackNumber);
             this.mountedDiskImage = diskImage;
             // Reload track data
             setCurrentTrack(getCurrentTrackNumber(), getCurrentTrackSide());
@@ -1192,7 +1177,7 @@ public class FloppyController implements Device {
                     unmountDiskImage(drive);
                 }
             } catch (Exception e) {
-                logger.error("Error while unmounting disk image from drive " + drive, e);
+                logger.error("Error while unmounting disk image from drive {}", drive, e);
             }
         }
     }

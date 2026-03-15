@@ -3,6 +3,7 @@
     <release version="1.1.2-dev">
         <changes>
             <change>В диспетчере дисков исправлено отмонтирование образов активных HDD/FDD по долгому нажатию.</change>
+            <change>Исправлена работа с образами флоппи-дисков размером меньше 800КБ.</change>
         </changes>
     </release>
     <release version="1.1.1" date="01.04.2025">
