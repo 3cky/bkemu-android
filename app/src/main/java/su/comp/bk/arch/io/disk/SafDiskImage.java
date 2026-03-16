@@ -89,7 +89,7 @@ public class SafDiskImage implements DiskImage {
             throw new IOException("Write attempt to read-only disk image");
         }
 
-        close();
+        closeChannel();
 
         if (isInputMode) {
             FileInputStream fis = new FileInputStream(diskImageFileDescriptor.getFileDescriptor());
@@ -126,11 +126,16 @@ public class SafDiskImage implements DiskImage {
         return 0L;
     }
 
-    @Override
-    public void close() throws IOException {
+    private void closeChannel() throws IOException {
         if (diskImageFileChannel != null) {
             diskImageFileChannel.close();
         }
+    }
+
+    @Override
+    public void close() throws IOException {
+        closeChannel();
+        diskImageFileDescriptor.close();
     }
 
     private void readBuffer(ByteBuffer buf, long pos, int len) throws IOException {
