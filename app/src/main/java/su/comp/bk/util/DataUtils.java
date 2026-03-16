@@ -182,8 +182,7 @@ public class DataUtils {
         int bytesRead;
         long bytesWritten = 0;
         byte[] buf = new byte[bufferSize];
-        while (is.available() > 0) {
-            bytesRead = is.read(buf, 0, buf.length);
+        while ((bytesRead = is.read(buf, 0, buf.length)) != -1) {
             if (bytesRead > 0) {
                 os.write(buf, 0, bytesRead);
                 bytesWritten += bytesRead;
