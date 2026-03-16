@@ -15,12 +15,11 @@
         android:required="false" />
 
     <application
-        android:icon="@drawable/icon"
+        android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:theme="@style/AppTheme"
         android:requestLegacyExternalStorage="true"
-        android:banner="@drawable/ic_banner"
-        tools:targetApi="lollipop">
+        android:banner="@drawable/banner">
 
         <provider
             android:name="androidx.core.content.FileProvider"
