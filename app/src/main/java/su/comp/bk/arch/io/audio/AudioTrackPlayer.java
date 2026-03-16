@@ -42,6 +42,10 @@ public class AudioTrackPlayer implements AudioPlayer {
         player = new AudioTrack(AudioManager.STREAM_MUSIC, sampleRate,
                 AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT,
                 minBufferSize, AudioTrack.MODE_STREAM);
+        if (player.getState() != AudioTrack.STATE_INITIALIZED) {
+            player.release();
+            throw new IllegalStateException("AudioTrack initialization failed");
+        }
     }
 
     @Override
