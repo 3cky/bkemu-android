@@ -510,6 +510,9 @@ public class Computer implements Runnable, StatefulEntity {
     private void restoreRandomAccessMemoryData(State inState) {
         for (RandomAccessMemory memory: randomAccessMemoryList) {
             byte[] memoryDataBytes = inState.getByteArray(STATE_RAM_DATA + ":" + memory.getId());
+            if (memoryDataBytes == null) {
+                throw new IllegalStateException("No state data for RAM: " + memory.getId());
+            }
             ByteBuffer memoryDataBuf = ByteBuffer.wrap(memoryDataBytes);
             short[] memoryData = new short[memory.getSize()];
             memoryDataBuf.asShortBuffer().get(memoryData);
