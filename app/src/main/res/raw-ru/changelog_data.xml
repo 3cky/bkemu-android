@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <releases>
-    <release version="1.1.2-dev">
+    <release version="1.1.2" date="17.03.2025">
         <changes>
             <change>В диспетчере дисков исправлено отмонтирование образов активных HDD/FDD по долгому нажатию.</change>
             <change>Исправлена работа с образами флоппи-дисков размером меньше 800КБ.</change>
+            <change>Устранена ошибка сохранения измененных данных образов флоппи-дисков.</change>
         </changes>
     </release>
     <release version="1.1.1" date="01.04.2025">
