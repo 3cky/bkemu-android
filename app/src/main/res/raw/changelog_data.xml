@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <releases>
+    <release version="1.2.0-dev" />
     <release version="1.1.2" date="2026-03-17">
         <changes>
             <change>Fixed active HDD/FDD images unmounting by long click in disk manager.</change>
