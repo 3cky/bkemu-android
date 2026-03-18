@@ -1,6 +1,6 @@
 # BkEmu-Android
 
-![Bk0010-01-sideview](https://upload.wikimedia.org/wikipedia/commons/thumb/8/89/Bk0010-01-sideview.jpg/320px-Bk0010-01-sideview.jpg)
+![Bk0010-01 sideview by Viacheslav Slavinsky](images/Bk0010-01-sideview.jpg)
 
 [Версия на русском](README.md)
 
