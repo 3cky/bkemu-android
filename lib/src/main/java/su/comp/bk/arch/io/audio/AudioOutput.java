@@ -92,7 +92,7 @@ public abstract class AudioOutput<U extends AudioOutputUpdate> implements Device
     }
 
     public int getSamplesBufferSize() {
-        return samplesBuffer.length;
+        return player.isStereo() ? samplesBuffer.length / 2 : samplesBuffer.length;
     }
 
     Computer getComputer() {

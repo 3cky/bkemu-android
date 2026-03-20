@@ -397,9 +397,9 @@ public class Computer implements Runnable, StatefulEntity {
         // Notify video controller about computer time updates
         addUptimeListener(videoController);
         // Add audio outputs
-        addAudioOutput(new Speaker(audioManager.createAudioPlayer(), this));
-        addAudioOutput(new Covox(audioManager.createAudioPlayer(), this));
-        addAudioOutput(new Ay8910(audioManager.createAudioPlayer(), this));
+        addAudioOutput(new Speaker(audioManager.createAudioPlayer(false), this));
+        addAudioOutput(new Covox(audioManager.createAudioPlayer(false), this));
+        addAudioOutput(new Ay8910(audioManager.createAudioPlayer(true), this));
     }
 
     private SmkMemoryManager getSmkMemoryManager(ResourceManager resourceManager)

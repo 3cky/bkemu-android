@@ -24,7 +24,7 @@ import su.comp.bk.state.State;
 
 /**
  * AY-3-8910 / YM2149 sound chip attached to the peripheral port.
- * Based on https://github.com/georgemoralis/arcadeflex036/blob/master/emulator/src/sound/ay8910.java
+ * Based on <a href="https://github.com/georgemoralis/arcadeflex/blob/master/emulator/src/main/java/arcadeflex/v036/sound/ay8910.java"/>ay8910.java</a>
  */
 public class Ay8910 extends AudioOutput<Ay8910.Ay8910Command> {
     private static final String STATE_PREFIX = "Ay8910";
@@ -579,11 +579,13 @@ public class Ay8910 extends AudioOutput<Ay8910.Ay8910Command> {
                 }
             }
 
-            short buf1 = (short) ((vola * this.volA) / STEP);
-            short buf2 = (short) ((volb * this.volB) / STEP);
-            short buf3 = (short) ((volc * this.volC) / STEP);
+            int bufA = (vola * this.volA) / STEP;
+            int bufB = (volb * this.volB) / STEP;
+            int bufC = (volc * this.volC) / STEP;
 
-            samplesBuffer[sampleIndex++] = (short) ((buf1 + buf2 + buf3) / 3);
+            samplesBuffer[sampleIndex * 2]     = (short) ((2 * bufA + bufB) / 3);
+            samplesBuffer[sampleIndex * 2 + 1] = (short) ((2 * bufC + bufB) / 3);
+            sampleIndex++;
 
             length--;
         }

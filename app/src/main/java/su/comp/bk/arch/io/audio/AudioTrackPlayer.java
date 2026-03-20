@@ -32,20 +32,30 @@ public class AudioTrackPlayer implements AudioPlayer {
 
     private final AudioTrack player;
 
-    public AudioTrackPlayer() {
+    private final boolean isStereo;
+
+    public AudioTrackPlayer(boolean isStereo) {
+        this.isStereo = isStereo;
         sampleRate = AudioTrack.getNativeOutputSampleRate(AudioManager.STREAM_MUSIC);
+        int channelConfig = this.isStereo ? AudioFormat.CHANNEL_OUT_STEREO
+                : AudioFormat.CHANNEL_OUT_MONO;
         minBufferSize = AudioTrack.getMinBufferSize(sampleRate,
-                AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT);
+                channelConfig, AudioFormat.ENCODING_PCM_16BIT);
         if (minBufferSize <= 0) {
             throw new IllegalStateException("Invalid minimum audio buffer size: " + minBufferSize);
         }
         player = new AudioTrack(AudioManager.STREAM_MUSIC, sampleRate,
-                AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT,
+                channelConfig, AudioFormat.ENCODING_PCM_16BIT,
                 minBufferSize, AudioTrack.MODE_STREAM);
         if (player.getState() != AudioTrack.STATE_INITIALIZED) {
             player.release();
             throw new IllegalStateException("AudioTrack initialization failed");
         }
+    }
+
+    @Override
+    public boolean isStereo() {
+        return isStereo;
     }
 
     @Override

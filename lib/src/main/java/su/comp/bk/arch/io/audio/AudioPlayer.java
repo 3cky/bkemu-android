@@ -29,6 +29,12 @@ public interface AudioPlayer {
     int getSampleRate();
 
     /**
+     * Check if this audio player outputs stereo audio.
+     * @return true if stereo, false if mono
+     */
+    boolean isStereo();
+
+    /**
      * Get the estimated audio player buffer size.
      * @return buffer size expressed in bytes
      */

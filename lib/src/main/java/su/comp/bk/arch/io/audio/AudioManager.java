@@ -24,7 +24,8 @@ package su.comp.bk.arch.io.audio;
 public interface AudioManager {
     /**
      * Create new {@link AudioPlayer} instance.
+     * @param isStereo true to create stereo audio player, false to mono
      * @return created {@link AudioPlayer} instance
      */
-    AudioPlayer createAudioPlayer();
+    AudioPlayer createAudioPlayer(boolean isStereo);
 }

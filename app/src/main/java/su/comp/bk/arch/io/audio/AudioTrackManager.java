@@ -23,7 +23,7 @@ package su.comp.bk.arch.io.audio;
  */
 public class AudioTrackManager implements AudioManager {
     @Override
-    public AudioPlayer createAudioPlayer() {
-        return new AudioTrackPlayer();
+    public AudioPlayer createAudioPlayer(boolean isStereo) {
+        return new AudioTrackPlayer(isStereo);
     }
 }
