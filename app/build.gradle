@@ -108,7 +108,7 @@ dependencies {
     implementation 'com.google.android.material:material:1.13.0'
 
     implementation 'com.samskivert:jmustache:1.16'
-    implementation 'org.msgpack:jackson-dataformat-msgpack:0.9.11'
+    implementation 'org.msgpack:jackson-dataformat-msgpack:0.9.3'
     implementation 'com.github.hedzr:android-file-chooser:v1.2.0-final'
 
     implementation("org.slf4j:slf4j-api:2.0.17")
