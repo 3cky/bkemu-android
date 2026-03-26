@@ -33,6 +33,7 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.collection.ArrayMap;
 import androidx.fragment.app.DialogFragment;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -41,6 +42,7 @@ import su.comp.bk.R;
 import su.comp.bk.arch.io.audio.AudioOutput;
 import su.comp.bk.arch.io.audio.Ay8910;
 import su.comp.bk.arch.io.audio.Covox;
+import su.comp.bk.arch.io.audio.Menestrel;
 import su.comp.bk.arch.io.audio.Speaker;
 
 /**
@@ -54,6 +56,9 @@ public class BkEmuVolumeDialog extends DialogFragment implements SeekBar.OnSeekB
 
     private final Map<String, SeekBar> volumeSeekBars = new ArrayMap<>();
     private final Map<String, ImageView> muteImageViews = new ArrayMap<>();
+
+    private static final List<String> MUTUALLY_EXCLUSIVE_OUTPUT_NAMES =
+            Arrays.asList(Ay8910.OUTPUT_NAME, Menestrel.OUTPUT_NAME, Covox.OUTPUT_NAME);
 
     public static BkEmuVolumeDialog newInstance() {
         return new BkEmuVolumeDialog();
@@ -83,6 +88,7 @@ public class BkEmuVolumeDialog extends DialogFragment implements SeekBar.OnSeekB
         Dialog dialog = Objects.requireNonNull(getDialog());
         setupOutputVolumeControls(dialog.findViewById(R.id.controls_speaker), Speaker.OUTPUT_NAME);
         setupOutputVolumeControls(dialog.findViewById(R.id.controls_ay8910), Ay8910.OUTPUT_NAME);
+        setupOutputVolumeControls(dialog.findViewById(R.id.controls_menestrel), Menestrel.OUTPUT_NAME);
         setupOutputVolumeControls(dialog.findViewById(R.id.controls_covox), Covox.OUTPUT_NAME);
     }
 
@@ -187,15 +193,14 @@ public class BkEmuVolumeDialog extends DialogFragment implements SeekBar.OnSeekB
     }
 
     private void checkOutputStates(String updatedOutputName) {
-        String checkMuteOutputName = null;
-        if (Ay8910.OUTPUT_NAME.equals(updatedOutputName)) {
-            checkMuteOutputName = Covox.OUTPUT_NAME;
-        } else if (Covox.OUTPUT_NAME.equals(updatedOutputName)) {
-            checkMuteOutputName = Ay8910.OUTPUT_NAME;
+        if (!MUTUALLY_EXCLUSIVE_OUTPUT_NAMES.contains(updatedOutputName) ||
+                isMuted(updatedOutputName)) {
+            return;
         }
-        if (checkMuteOutputName != null && !isMuted(updatedOutputName)
-                && !isMuted(checkMuteOutputName)) {
-            setMuted(checkMuteOutputName, true);
+        for (String checkMuteOutputName : MUTUALLY_EXCLUSIVE_OUTPUT_NAMES) {
+            if (!checkMuteOutputName.equals(updatedOutputName) && !isMuted(checkMuteOutputName)) {
+                setMuted(checkMuteOutputName, true);
+            }
         }
     }
 }

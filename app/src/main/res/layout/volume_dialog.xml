@@ -62,7 +62,7 @@
             android:src="@drawable/ic_volume"
             android:layout_gravity="center"
             android:nextFocusUp="@id/mute_speaker"
-            android:nextFocusDown="@id/mute_covox"
+            android:nextFocusDown="@id/mute_menestrel"
             android:nextFocusLeft="@id/volume_speaker"
             android:nextFocusRight="@id/volume_ay8910"
             android:tag="ay8910" />
@@ -73,10 +73,47 @@
             android:layout_height="wrap_content"
             android:layout_gravity="center_vertical"
             android:nextFocusUp="@id/volume_speaker"
-            android:nextFocusDown="@id/volume_covox"
+            android:nextFocusDown="@id/volume_menestrel"
             android:nextFocusLeft="@id/mute_ay8910"
-            android:nextFocusRight="@id/mute_covox"
+            android:nextFocusRight="@id/mute_menestrel"
             android:tag="ay8910" />
+    </LinearLayout>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/volume_output_controls_padding"
+        android:layout_marginBottom="@dimen/volume_output_name_padding"
+        android:focusable="false"
+        android:text="@string/menestrel" />
+
+    <LinearLayout
+        android:id="@+id/controls_menestrel"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <ImageView
+            android:id="@+id/mute_menestrel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@drawable/ic_volume"
+            android:layout_gravity="center"
+            android:nextFocusUp="@id/mute_ay8910"
+            android:nextFocusDown="@id/mute_covox"
+            android:nextFocusLeft="@id/volume_ay8910"
+            android:nextFocusRight="@id/volume_menestrel"
+            android:tag="menestrel" />
+
+        <SeekBar
+            android:id="@+id/volume_menestrel"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_vertical"
+            android:nextFocusUp="@id/volume_ay8910"
+            android:nextFocusDown="@id/volume_covox"
+            android:nextFocusLeft="@id/mute_menestrel"
+            android:nextFocusRight="@id/mute_covox"
+            android:tag="menestrel" />
     </LinearLayout>
 
     <TextView

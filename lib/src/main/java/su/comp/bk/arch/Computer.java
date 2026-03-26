@@ -39,6 +39,7 @@ import su.comp.bk.arch.io.audio.AudioManager;
 import su.comp.bk.arch.io.audio.AudioOutput;
 import su.comp.bk.arch.io.audio.Ay8910;
 import su.comp.bk.arch.io.audio.Covox;
+import su.comp.bk.arch.io.audio.Menestrel;
 import su.comp.bk.arch.io.audio.Speaker;
 import su.comp.bk.arch.io.disk.FloppyController;
 import su.comp.bk.arch.io.disk.IdeController;
@@ -400,6 +401,7 @@ public class Computer implements Runnable, StatefulEntity {
         addAudioOutput(new Speaker(audioManager.createAudioPlayer(false), this));
         addAudioOutput(new Covox(audioManager.createAudioPlayer(false), this));
         addAudioOutput(new Ay8910(audioManager.createAudioPlayer(true), this));
+        addAudioOutput(new Menestrel(audioManager.createAudioPlayer(true), this));
     }
 
     private SmkMemoryManager getSmkMemoryManager(ResourceManager resourceManager)

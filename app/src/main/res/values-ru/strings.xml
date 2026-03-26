@@ -92,4 +92,5 @@
     <string name="clock_speed_desc_4mhz">4 МГЦ (БК0011М)</string>
     <string name="clock_speed_desc_6mhz">6 МГц (турборежим)</string>
     <string name="clock_speed_desc_maximum">Максимальная (без ограничения)</string>
+    <string name="menestrel">Менестрель</string>
 </resources>

@@ -104,4 +104,5 @@
     <string name="clock_speed_desc_4mhz">4 MHz (BK0011M)</string>
     <string name="clock_speed_desc_6mhz">6 MHz (turbo mode)</string>
     <string name="clock_speed_desc_maximum">Maximum (unlimited)</string>
+    <string name="menestrel">Menestrel</string>
 </resources>
