@@ -94,7 +94,7 @@ import su.comp.bk.arch.cpu.opcode.JmpOpcode;
 import su.comp.bk.arch.io.VideoController;
 import su.comp.bk.arch.io.VideoControllerFrameRenderer;
 import su.comp.bk.arch.io.audio.AudioOutput;
-import su.comp.bk.arch.io.audio.AudioTrackManager;
+import su.comp.bk.arch.io.audio.AudioTrackPlayerFactory;
 import su.comp.bk.arch.io.disk.DiskImage;
 import su.comp.bk.arch.io.disk.FileDiskImage;
 import su.comp.bk.arch.io.disk.FloppyController;
@@ -265,7 +265,7 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
 
     protected Handler activityHandler;
 
-    private AudioTrackManager audioManager;
+    private AudioTrackPlayerFactory audioPlayerFactory;
 
     private AppResourceManager resourceManager;
 
@@ -587,7 +587,7 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
 
         this.activityHandler = new Handler();
 
-        this.audioManager = new AudioTrackManager();
+        this.audioPlayerFactory = new AudioTrackPlayerFactory();
         this.resourceManager = new AppResourceManager(getResources());
         this.frameRenderer = new VideoControllerFrameRenderer();
 
@@ -827,7 +827,7 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
                 } else {
                     startupConfiguration = currentConfiguration;
                 }
-                computer.configure(audioManager, resourceManager, frameRenderer,
+                computer.configure(audioPlayerFactory, resourceManager, frameRenderer,
                         startupConfiguration, getCpuClockFrequency());
                 if (startupConfiguration != currentConfiguration) {
                     storeComputerConfiguration(startupConfiguration);
@@ -908,7 +908,7 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
                     : StateManager.readStateInternalFile(this);
             Configuration storedConfiguration = Computer.getStoredConfiguration(restoredState);
             if (storedConfiguration != null) {
-                computer.configure(audioManager, resourceManager, frameRenderer,
+                computer.configure(audioPlayerFactory, resourceManager, frameRenderer,
                         storedConfiguration, getCpuClockFrequency());
                 initializeComputerDisks();
                 StateManager.restoreEntityState(computer, restoredState);

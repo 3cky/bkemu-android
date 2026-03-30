@@ -19,13 +19,11 @@
 package su.comp.bk.arch.io.audio;
 
 /**
- * {@link AudioPlayer}s manager interface.
+ * {@link AudioPlayerFactory} implementation for creation {@link AudioPlayer}s backed by {@link android.media.AudioTrack}.
  */
-public interface AudioManager {
-    /**
-     * Create new {@link AudioPlayer} instance.
-     * @param isStereo true to create stereo audio player, false to mono
-     * @return created {@link AudioPlayer} instance
-     */
-    AudioPlayer createAudioPlayer(boolean isStereo);
+public class AudioTrackPlayerFactory implements AudioPlayerFactory {
+    @Override
+    public AudioPlayer createAudioPlayer(boolean isStereo) {
+        return new AudioTrackPlayer(isStereo);
+    }
 }

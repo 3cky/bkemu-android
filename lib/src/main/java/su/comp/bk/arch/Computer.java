@@ -35,7 +35,7 @@ import su.comp.bk.arch.io.SystemTimer;
 import su.comp.bk.arch.io.Timer;
 import su.comp.bk.arch.io.VideoController;
 import su.comp.bk.arch.io.VideoControllerManager;
-import su.comp.bk.arch.io.audio.AudioManager;
+import su.comp.bk.arch.io.audio.AudioPlayerFactory;
 import su.comp.bk.arch.io.audio.AudioOutput;
 import su.comp.bk.arch.io.audio.Ay8910;
 import su.comp.bk.arch.io.audio.Covox;
@@ -249,14 +249,14 @@ public class Computer implements Runnable, StatefulEntity {
 
     /**
      * Configure this computer.
-     * @param audioManager {@link AudioManager} reference
+     * @param audioPlayerFactory {@link AudioPlayerFactory} reference
      * @param resourceManager {@link ResourceManager} reference
      * @param frameRenderer {@link su.comp.bk.arch.io.VideoController.FrameRenderer} reference
      * @param config computer configuration as {@link Configuration} value
      * @param cpuClockFrequency CPU clock frequency
      * @throws Exception in case of error while configuring
      */
-    public void configure(AudioManager audioManager, ResourceManager resourceManager,
+    public void configure(AudioPlayerFactory audioPlayerFactory, ResourceManager resourceManager,
                           VideoController.FrameRenderer frameRenderer,
                           Configuration config, int cpuClockFrequency) throws Exception {
         setConfiguration(config);
@@ -398,10 +398,10 @@ public class Computer implements Runnable, StatefulEntity {
         // Notify video controller about computer time updates
         addUptimeListener(videoController);
         // Add audio outputs
-        addAudioOutput(new Speaker(audioManager.createAudioPlayer(false), this));
-        addAudioOutput(new Covox(audioManager.createAudioPlayer(false), this));
-        addAudioOutput(new Ay8910(audioManager.createAudioPlayer(true), this));
-        addAudioOutput(new Menestrel(audioManager.createAudioPlayer(true), this));
+        addAudioOutput(new Speaker(audioPlayerFactory.createAudioPlayer(false), this));
+        addAudioOutput(new Covox(audioPlayerFactory.createAudioPlayer(false), this));
+        addAudioOutput(new Ay8910(audioPlayerFactory.createAudioPlayer(true), this));
+        addAudioOutput(new Menestrel(audioPlayerFactory.createAudioPlayer(true), this));
     }
 
     private SmkMemoryManager getSmkMemoryManager(ResourceManager resourceManager)
