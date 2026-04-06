@@ -79,21 +79,21 @@ public class Ay8910 extends AudioOutput<Ay8910.Ay8910Command> {
 
     private int currentRegister;
 
-    static class Ay8910Command extends AudioOutputUpdate {
+    public static class Ay8910Command extends AudioOutputUpdate {
         // Command register
         private int register;
         // Command value
         private int value;
     }
 
-    public Ay8910(AudioPlayer player, Computer computer, int clockFrequency) {
-        super(player, computer);
+    public Ay8910(int sampleRate, int samplesBufferSize, Computer computer, int clockFrequency) {
+        super(sampleRate, samplesBufferSize, computer);
         buildMixerTable();
         setClockFrequency(clockFrequency);
     }
 
-    public Ay8910(AudioPlayer audioPlayer, Computer computer) {
-        this(audioPlayer, computer, DEFAULT_CLOCK_FREQUENCY);
+    public Ay8910(int sampleRate, int samplesBufferSize, Computer computer) {
+        this(sampleRate, samplesBufferSize, computer, DEFAULT_CLOCK_FREQUENCY);
     }
 
     private void buildMixerTable() {
@@ -337,7 +337,7 @@ public class Ay8910 extends AudioOutput<Ay8910.Ay8910Command> {
     }
 
     @Override
-    protected synchronized int writeSamples(short[] samplesBuffer, int sampleIndex, int length) {
+    protected synchronized void writeSample(short[] sample) {
         /* The 8910 has three outputs, each output is the mix of one of the three */
         /* tone generators and of the (single) noise generator. The two are mixed */
         /* BEFORE going into the DAC. The formula to mix each channel is: */
@@ -350,247 +350,237 @@ public class Ay8910 extends AudioOutput<Ay8910.Ay8910Command> {
         /* into the ON state (see above); and it has no effect if the volume is 0. */
         /* If the volume is 0, increase the counter, but don't touch the output. */
         if ((this.regs[AY_ENABLE] & 0x01) != 0) {
-            if (this.countA <= length * STEP) {
-                this.countA += length * STEP;
+            if (this.countA <= STEP) {
+                this.countA += STEP;
             }
             this.outputA = 1;
         } else if (this.regs[AY_AVOL] == 0) {
-            /* note that I do count += length, NOT count = length + 1. You might think */
+            /* note that I do count += 1, NOT count = 1 + 1. You might think */
             /* it's the same since the volume is 0, but doing the latter could cause */
             /* interferencies when the program is rapidly modulating the volume. */
-            if (this.countA <= length * STEP) {
-                this.countA += length * STEP;
+            if (this.countA <= STEP) {
+                this.countA += STEP;
             }
         }
         if ((this.regs[AY_ENABLE] & 0x02) != 0) {
-            if (this.countB <= length * STEP) {
-                this.countB += length * STEP;
+            if (this.countB <= STEP) {
+                this.countB += STEP;
             }
             this.outputB = 1;
         } else if (this.regs[AY_BVOL] == 0) {
-            if (this.countB <= length * STEP) {
-                this.countB += length * STEP;
+            if (this.countB <= STEP) {
+                this.countB += STEP;
             }
         }
         if ((this.regs[AY_ENABLE] & 0x04) != 0) {
-            if (this.countC <= length * STEP) {
-                this.countC += length * STEP;
+            if (this.countC <= STEP) {
+                this.countC += STEP;
             }
             this.outputC = 1;
         } else if (this.regs[AY_CVOL] == 0) {
-            if (this.countC <= length * STEP) {
-                this.countC += length * STEP;
+            if (this.countC <= STEP) {
+                this.countC += STEP;
             }
         }
 
         /* for the noise channel we must not touch OutputN - it's also not necessary */
         /* since we use outn. */
         if ((this.regs[AY_ENABLE] & 0x38) == 0x38) /* all off */ {
-            if (this.countN <= length * STEP) {
-                this.countN += length * STEP;
+            if (this.countN <= STEP) {
+                this.countN += STEP;
             }
         }
 
         int outn = (this.outputN | this.regs[AY_ENABLE]);
-        /* buffering loop */
-        while (length != 0) {
-            int vola, volb, volc;
-            int left;
 
+        /* vola, volb and volc keep track of how long each square wave stays */
+        /* in the 1 position during the sample period. */
+        int vola = 0, volb = 0, volc = 0;
 
-            /* vola, volb and volc keep track of how long each square wave stays */
-            /* in the 1 position during the sample period. */
-            vola = volb = volc = 0;
+        int left = STEP;
+        do {
+            int nextevent;
 
-            left = STEP;
-            do {
-                int nextevent;
-
-                if (this.countN < left) {
-                    nextevent = this.countN;
-                } else {
-                    nextevent = left;
+            if (this.countN < left) {
+                nextevent = this.countN;
+            } else {
+                nextevent = left;
+            }
+            if ((outn & 0x08) != 0) {
+                if (this.outputA != 0) {
+                    vola += this.countA;
                 }
-                if ((outn & 0x08) != 0) {
-                    if (this.outputA != 0) {
-                        vola += this.countA;
-                    }
-                    this.countA -= nextevent;
-                    /* PeriodA is the half period of the square wave. Here, in each */
-                    /* loop I add PeriodA twice, so that at the end of the loop the */
-                    /* square wave is in the same status (0 or 1) it was at the start. */
-                    /* vola is also incremented by PeriodA, since the wave has been 1 */
-                    /* exactly half of the time, regardless of the initial position. */
-                    /* If we exit the loop in the middle, OutputA has to be inverted */
-                    /* and vola incremented only if the exit status of the square */
-                    /* wave is 1. */
-                    while (this.countA <= 0) {
-                        this.countA += this.periodA;
-                        if (this.countA > 0) {
-                            this.outputA ^= 1;
-                            if (this.outputA != 0) {
-                                vola += this.periodA;
-                            }
-                            break;
+                this.countA -= nextevent;
+                /* PeriodA is the half period of the square wave. Here, in each */
+                /* loop I add PeriodA twice, so that at the end of the loop the */
+                /* square wave is in the same status (0 or 1) it was at the start. */
+                /* vola is also incremented by PeriodA, since the wave has been 1 */
+                /* exactly half of the time, regardless of the initial position. */
+                /* If we exit the loop in the middle, OutputA has to be inverted */
+                /* and vola incremented only if the exit status of the square */
+                /* wave is 1. */
+                while (this.countA <= 0) {
+                    this.countA += this.periodA;
+                    if (this.countA > 0) {
+                        this.outputA ^= 1;
+                        if (this.outputA != 0) {
+                            vola += this.periodA;
                         }
-                        this.countA += this.periodA;
-                        vola += this.periodA;
+                        break;
                     }
-                    if (this.outputA != 0) {
-                        vola -= this.countA;
-                    }
-                } else {
-                    this.countA -= nextevent;
-                    while (this.countA <= 0) {
-                        this.countA += this.periodA;
-                        if (this.countA > 0) {
-                            this.outputA ^= 1;
-                            break;
-                        }
-                        this.countA += this.periodA;
-                    }
+                    this.countA += this.periodA;
+                    vola += this.periodA;
                 }
-                if ((outn & 0x10) != 0) {
-                    if (this.outputB != 0) {
-                        volb += this.countB;
-                    }
-                    this.countB -= nextevent;
-                    while (this.countB <= 0) {
-                        this.countB += this.periodB;
-                        if (this.countB > 0) {
-                            this.outputB ^= 1;
-                            if (this.outputB != 0) {
-                                volb += this.periodB;
-                            }
-                            break;
-                        }
-                        this.countB += this.periodB;
-                        volb += this.periodB;
-                    }
-                    if (this.outputB != 0) {
-                        volb -= this.countB;
-                    }
-                } else {
-                    this.countB -= nextevent;
-                    while (this.countB <= 0) {
-                        this.countB += this.periodB;
-                        if (this.countB > 0) {
-                            this.outputB ^= 1;
-                            break;
-                        }
-                        this.countB += this.periodB;
-                    }
+                if (this.outputA != 0) {
+                    vola -= this.countA;
                 }
-                if ((outn & 0x20) != 0) {
-                    if (this.outputC != 0) {
-                        volc += this.countC;
+            } else {
+                this.countA -= nextevent;
+                while (this.countA <= 0) {
+                    this.countA += this.periodA;
+                    if (this.countA > 0) {
+                        this.outputA ^= 1;
+                        break;
                     }
-                    this.countC -= nextevent;
-                    while (this.countC <= 0) {
-                        this.countC += this.periodC;
-                        if (this.countC > 0) {
-                            this.outputC ^= 1;
-                            if (this.outputC != 0) {
-                                volc += this.periodC;
-                            }
-                            break;
-                        }
-                        this.countC += this.periodC;
-                        volc += this.periodC;
-                    }
-                    if (this.outputC != 0) {
-                        volc -= this.countC;
-                    }
-                } else {
-                    this.countC -= nextevent;
-                    while (this.countC <= 0) {
-                        this.countC += this.periodC;
-                        if (this.countC > 0) {
-                            this.outputC ^= 1;
-                            break;
-                        }
-                        this.countC += this.periodC;
-                    }
-                }
-                this.countN -= nextevent;
-                if (this.countN <= 0) {
-                    /* Is noise output going to change? */
-                    if (((this.rng + 1) & 2) != 0) /* (bit0^bit1)? */ {
-                        this.outputN = (char) (~this.outputN);
-                        outn = (this.outputN | this.regs[AY_ENABLE]);
-                    }
-
-                    /* The Random Number Generator of the 8910 is a 17-bit shift */
-                    /* register. The input to the shift register is bit0 XOR bit2 */
-                    /* (bit0 is the output). */
-
-                    /* The following is a fast way to compute bit 17 = bit0^bit2. */
-                    /* Instead of doing all the logic operations, we only check */
-                    /* bit 0, relying on the fact that after two shifts of the */
-                    /* register, what now is bit 2 will become bit 0, and will */
-                    /* invert, if necessary, bit 16, which previously was bit 18. */
-                    if ((this.rng & 1) != 0) {
-                        this.rng ^= 0x28000;
-                    }
-                    this.rng >>= 1;
-                    this.countN += this.periodN;
-                }
-
-                left -= nextevent;
-            } while (left > 0);
-            /* update envelope */
-            if (this.holding == 0) {
-                this.countE -= STEP;
-                if (this.countE <= 0) {
-                    do {
-                        this.countEnv--;
-                        this.countE += this.periodE;
-                    } while (this.countE <= 0);
-
-                    /* check envelope current position */
-                    if (this.countEnv < 0) {
-                        if (this.hold != 0) {
-                            if (this.alternate != 0) {
-                                this.attack ^= 0x1f;
-                            }
-                            this.holding = 1;
-                            this.countEnv = 0;
-                        } else {
-                            /* if CountEnv has looped an odd number of times (usually 1), */
-                            /* invert the output. */
-                            if (this.alternate != 0 && (this.countEnv & 0x20) != 0) {
-                                this.attack ^= 0x1f;
-                            }
-
-                            this.countEnv &= 0x1f;
-                        }
-                    }
-                    this.volE = this.volTable[this.countEnv ^ this.attack];
-                    /* reload volume */
-                    if (this.envelopeA != 0) {
-                        this.volA = this.volE;
-                    }
-                    if (this.envelopeB != 0) {
-                        this.volB = this.volE;
-                    }
-                    if (this.envelopeC != 0) {
-                        this.volC = this.volE;
-                    }
+                    this.countA += this.periodA;
                 }
             }
+            if ((outn & 0x10) != 0) {
+                if (this.outputB != 0) {
+                    volb += this.countB;
+                }
+                this.countB -= nextevent;
+                while (this.countB <= 0) {
+                    this.countB += this.periodB;
+                    if (this.countB > 0) {
+                        this.outputB ^= 1;
+                        if (this.outputB != 0) {
+                            volb += this.periodB;
+                        }
+                        break;
+                    }
+                    this.countB += this.periodB;
+                    volb += this.periodB;
+                }
+                if (this.outputB != 0) {
+                    volb -= this.countB;
+                }
+            } else {
+                this.countB -= nextevent;
+                while (this.countB <= 0) {
+                    this.countB += this.periodB;
+                    if (this.countB > 0) {
+                        this.outputB ^= 1;
+                        break;
+                    }
+                    this.countB += this.periodB;
+                }
+            }
+            if ((outn & 0x20) != 0) {
+                if (this.outputC != 0) {
+                    volc += this.countC;
+                }
+                this.countC -= nextevent;
+                while (this.countC <= 0) {
+                    this.countC += this.periodC;
+                    if (this.countC > 0) {
+                        this.outputC ^= 1;
+                        if (this.outputC != 0) {
+                            volc += this.periodC;
+                        }
+                        break;
+                    }
+                    this.countC += this.periodC;
+                    volc += this.periodC;
+                }
+                if (this.outputC != 0) {
+                    volc -= this.countC;
+                }
+            } else {
+                this.countC -= nextevent;
+                while (this.countC <= 0) {
+                    this.countC += this.periodC;
+                    if (this.countC > 0) {
+                        this.outputC ^= 1;
+                        break;
+                    }
+                    this.countC += this.periodC;
+                }
+            }
+            this.countN -= nextevent;
+            if (this.countN <= 0) {
+                /* Is noise output going to change? */
+                if (((this.rng + 1) & 2) != 0) /* (bit0^bit1)? */ {
+                    this.outputN = (char) (~this.outputN);
+                    outn = (this.outputN | this.regs[AY_ENABLE]);
+                }
 
-            int bufA = (vola * this.volA) / STEP;
-            int bufB = (volb * this.volB) / STEP;
-            int bufC = (volc * this.volC) / STEP;
+                /* The Random Number Generator of the 8910 is a 17-bit shift */
+                /* register. The input to the shift register is bit0 XOR bit2 */
+                /* (bit0 is the output). */
 
-            samplesBuffer[sampleIndex * 2]     = (short) ((2 * bufA + bufB) / 3);
-            samplesBuffer[sampleIndex * 2 + 1] = (short) ((2 * bufC + bufB) / 3);
-            sampleIndex++;
+                /* The following is a fast way to compute bit 17 = bit0^bit2. */
+                /* Instead of doing all the logic operations, we only check */
+                /* bit 0, relying on the fact that after two shifts of the */
+                /* register, what now is bit 2 will become bit 0, and will */
+                /* invert, if necessary, bit 16, which previously was bit 18. */
+                if ((this.rng & 1) != 0) {
+                    this.rng ^= 0x28000;
+                }
+                this.rng >>= 1;
+                this.countN += this.periodN;
+            }
 
-            length--;
+            left -= nextevent;
+        } while (left > 0);
+
+        /* update envelope */
+        if (this.holding == 0) {
+            this.countE -= STEP;
+            if (this.countE <= 0) {
+                do {
+                    this.countEnv--;
+                    this.countE += this.periodE;
+                } while (this.countE <= 0);
+
+                /* check envelope current position */
+                if (this.countEnv < 0) {
+                    if (this.hold != 0) {
+                        if (this.alternate != 0) {
+                            this.attack ^= 0x1f;
+                        }
+                        this.holding = 1;
+                        this.countEnv = 0;
+                    } else {
+                        /* if CountEnv has looped an odd number of times (usually 1), */
+                        /* invert the output. */
+                        if (this.alternate != 0 && (this.countEnv & 0x20) != 0) {
+                            this.attack ^= 0x1f;
+                        }
+
+                        this.countEnv &= 0x1f;
+                    }
+                }
+                this.volE = this.volTable[this.countEnv ^ this.attack];
+                /* reload volume */
+                if (this.envelopeA != 0) {
+                    this.volA = this.volE;
+                }
+                if (this.envelopeB != 0) {
+                    this.volB = this.volE;
+                }
+                if (this.envelopeC != 0) {
+                    this.volC = this.volE;
+                }
+            }
         }
 
-        return sampleIndex;
+        int bufA = (vola * this.volA) / STEP;
+        int bufB = (volb * this.volB) / STEP;
+        int bufC = (volc * this.volC) / STEP;
+
+        sample[0] = (short) ((2 * bufA + bufB) / 3);
+        sample[1] = (short) ((2 * bufC + bufB) / 3);
     }
 
     @Override

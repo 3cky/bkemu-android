@@ -20,8 +20,6 @@ package su.comp.bk.arch.io.audio;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Arrays;
-
 import su.comp.bk.arch.Computer;
 import su.comp.bk.arch.cpu.opcode.BaseOpcode;
 import su.comp.bk.arch.io.Device;
@@ -30,7 +28,7 @@ import su.comp.bk.state.State;
 /**
  * Base sampled audio output device.
  */
-public abstract class AudioOutput<U extends AudioOutputUpdate> implements Device, Runnable {
+public abstract class AudioOutput<U extends AudioOutputUpdate> implements Device {
     private final Logger logger = LoggerFactory.getLogger(getClass().getSimpleName());
 
     private static final long NANOSECS_IN_SECOND = 1000000000L;
@@ -44,8 +42,8 @@ public abstract class AudioOutput<U extends AudioOutputUpdate> implements Device
     // Audio sample rate
     private final int sampleRate;
 
-    // Audio samples buffer
-    private final short[] samplesBuffer;
+    // Number of stereo sample frames in one mixer buffer
+    private final int samplesBufferSize;
 
     // Audio output updates circular buffer, one per output state change
     private final U[] audioOutputUpdates;
@@ -56,35 +54,26 @@ public abstract class AudioOutput<U extends AudioOutputUpdate> implements Device
     // Audio output updates circular buffer current capacity
     private int audioOutputUpdatesCapacity;
 
-    private long lastAudioOutputUpdateTimestamp;
+    private long lastUpdateTimestamp;
     private int numSamples;
 
     private final Computer computer;
 
-    private final AudioPlayer player;
-
-    private Thread audioOutputThread;
-
-    private boolean isRunning;
-    private boolean isPaused = true;
-
     private int volume = MAX_VOLUME;
 
-    AudioOutput(AudioPlayer player, Computer computer) {
+    AudioOutput(int sampleRate, int samplesBufferSize, Computer computer) {
         this.computer = computer;
-        this.player = player;
-        sampleRate = player.getSampleRate();
-        logger.debug("audio player sample rate: {}", sampleRate);
-        int minBufferSize = player.getBufferSize();
-        if (minBufferSize <= 0) {
-            throw new IllegalStateException("Invalid minimum audio buffer size: " + minBufferSize);
+        this.sampleRate = sampleRate;
+        logger.debug("audio sample rate: {}", sampleRate);
+        if (samplesBufferSize <= 0) {
+            throw new IllegalStateException("Invalid audio buffer size: " + samplesBufferSize);
         }
-        samplesBuffer = new short[minBufferSize / 2]; // two bytes per sample
+        this.samplesBufferSize = samplesBufferSize;
         int audioOutputUpdatesSize = (int) (2 * getSamplesBufferSize() * computer.getNativeClockFrequency()
                 * 1000L / (getSampleRate() * BaseOpcode.getBaseExecutionTime()));
         audioOutputUpdates = createAudioOutputUpdates(audioOutputUpdatesSize);
-        logger.debug("created audio output, samples buffer size: {}, updates buffer size: {}",
-                samplesBuffer.length, audioOutputUpdatesSize);
+        logger.debug("created audio output, buffer frames: {}, updates buffer size: {}",
+                this.samplesBufferSize, audioOutputUpdatesSize);
     }
 
     public int getSampleRate() {
@@ -92,7 +81,7 @@ public abstract class AudioOutput<U extends AudioOutputUpdate> implements Device
     }
 
     public int getSamplesBufferSize() {
-        return player.isStereo() ? samplesBuffer.length / 2 : samplesBuffer.length;
+        return samplesBufferSize;
     }
 
     Computer getComputer() {
@@ -118,7 +107,6 @@ public abstract class AudioOutput<U extends AudioOutputUpdate> implements Device
      */
     public void setVolume(int volume) {
         this.volume = Math.max(MIN_VOLUME, Math.min(MAX_VOLUME, volume));
-        player.setGain(convertVolumeToGain(this.volume));
     }
 
     /**
@@ -127,57 +115,6 @@ public abstract class AudioOutput<U extends AudioOutputUpdate> implements Device
      */
     public int getVolume() {
         return volume;
-    }
-
-    // https://electronics.stackexchange.com/a/425776
-    private static float convertVolumeToGain(int volume) {
-        float a = volume / 100f;
-        float K = 2.0f;
-        return a / (1f + (1f - a) * K);
-    }
-
-    public void start() {
-        logger.debug("starting audio output");
-        isRunning = true;
-        audioOutputThread = new Thread(this, "AudioOutputThread-" + getName());
-        audioOutputThread.start();
-    }
-
-    public void stop() {
-        logger.debug("stopping audio output");
-        isRunning = false;
-        player.stop();
-        synchronized (this) {
-            this.notify();
-        }
-        while (audioOutputThread.isAlive()) {
-            try {
-                audioOutputThread.join();
-            } catch (InterruptedException e) {
-                // Do nothing
-            }
-        }
-        flushAudioOutputUpdates();
-    }
-
-    public void pause() {
-        logger.debug("pausing audio output");
-        isPaused = true;
-        player.pause();
-    }
-
-    public void resume() {
-        logger.debug("resuming audio output");
-        player.resume();
-        isPaused = false;
-        synchronized (this) {
-            this.notify();
-        }
-    }
-
-    public void release() {
-        logger.debug("releasing audio output");
-        player.release();
     }
 
     @Override
@@ -227,10 +164,7 @@ public abstract class AudioOutput<U extends AudioOutputUpdate> implements Device
         return audioOutputUpdate;
     }
 
-    protected void flushAudioOutputUpdates() {
-        if (isRunning) {
-            throw new IllegalStateException("Can't flush audio output while it's running");
-        }
+    void flushAudioOutputUpdates() {
         while (true) {
             U audioOutputUpdate = getAudioOutputUpdate();
             if (audioOutputUpdate == null) {
@@ -248,72 +182,37 @@ public abstract class AudioOutput<U extends AudioOutputUpdate> implements Device
         return computer.cpuTimeToNanos(cpuTime) * getSampleRate() / NANOSECS_IN_SECOND;
     }
 
-    private void syncLastAudioOutputUpdateTimestamp() {
-        lastAudioOutputUpdateTimestamp = getComputer().getUptimeTicks() -
+    void syncLastUpdateTimestamp() {
+        lastUpdateTimestamp = getComputer().getUptimeTicks() -
                 samplesToCpuTime(getSamplesBufferSize());
     }
 
-    private int writeSamples(short[] samplesBuffer, int sampleIndex) {
+    /**
+     * Advance timing by one frame, consuming update events as needed, then fill
+     * {@code sample[0]} (left) and {@code sample[1]} (right) with the current output value.
+     * Called once per frame by {@link AudioMixer}.
+     *
+     * @param sample two-element array to receive the stereo sample [left, right]
+     */
+    void getSample(short[] sample) {
         while (numSamples <= 0) {
             U audioOutputUpdate = getAudioOutputUpdate();
             if (audioOutputUpdate != null) {
                 handleAudioOutputUpdate(audioOutputUpdate);
-                if (audioOutputUpdate.timestamp < lastAudioOutputUpdateTimestamp) {
+                if (audioOutputUpdate.timestamp < lastUpdateTimestamp) {
                     continue;
                 }
-                numSamples = (int) (cpuTimeToSamples(audioOutputUpdate.timestamp
-                        - lastAudioOutputUpdateTimestamp));
-                lastAudioOutputUpdateTimestamp += samplesToCpuTime(numSamples);
+                numSamples = (int) cpuTimeToSamples(audioOutputUpdate.timestamp
+                        - lastUpdateTimestamp);
+                lastUpdateTimestamp += samplesToCpuTime(numSamples);
             } else {
-                numSamples = getSamplesBufferSize() - sampleIndex;
-                if (sampleIndex > 0) {
-                    lastAudioOutputUpdateTimestamp += samplesToCpuTime(numSamples);
-                } else {
-                    syncLastAudioOutputUpdateTimestamp();
-                }
+                // No pending updates — hold current state for one more frame
+                numSamples = 1;
+                lastUpdateTimestamp += samplesToCpuTime(1);
             }
         }
-
-        int numSamplesToWrite = Math.min(numSamples, getSamplesBufferSize() - sampleIndex);
-        numSamples -= numSamplesToWrite;
-
-        return writeSamples(samplesBuffer, sampleIndex, numSamplesToWrite);
-    }
-
-    @Override
-    public void run() {
-        logger.debug("audio output started");
-        syncLastAudioOutputUpdateTimestamp();
-        Arrays.fill(samplesBuffer, (short) 0);
-        AudioLoop:
-        while (true) {
-            if (isPaused) {
-                if (!isRunning) {
-                    break; // AudioLoop
-                }
-                synchronized (this) {
-                    try {
-                        this.wait(100L);
-                    } catch (InterruptedException ignored) {
-                    }
-                }
-                syncLastAudioOutputUpdateTimestamp();
-                Arrays.fill(samplesBuffer, (short) 0);
-            } else {
-                player.play(samplesBuffer, 0, samplesBuffer.length);
-                int sampleIndex = 0;
-                while (sampleIndex < getSamplesBufferSize()) {
-                    if (!isRunning) {
-                        break AudioLoop;
-                    }
-                    if (isPaused) {
-                        continue AudioLoop;
-                    }
-                    sampleIndex = writeSamples(samplesBuffer, sampleIndex);
-                }
-            }
-        }
-        logger.debug("audio output stopped");
+        numSamples--;
+        writeSample(sample);
     }
 
     /**
@@ -336,11 +235,8 @@ public abstract class AudioOutput<U extends AudioOutputUpdate> implements Device
     protected abstract void handleAudioOutputUpdate(U audioOutputUpdate);
 
     /**
-     * Write audio samples to samples buffer.
-     * @param samplesBuffer buffer to write samples
-     * @param sampleIndex buffer index to write samples
-     * @param numSamples number of samples to write
-     * @return updated samples buffer index
+     * Write one stereo sample frame into {@code sample}.
+     * @param sample two-element array: {@code sample[0]} = left, {@code sample[1]} = right
      */
-    protected abstract int writeSamples(short[] samplesBuffer, int sampleIndex, int numSamples);
+    protected abstract void writeSample(short[] sample);
 }

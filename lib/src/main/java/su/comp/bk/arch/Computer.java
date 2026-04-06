@@ -35,6 +35,7 @@ import su.comp.bk.arch.io.SystemTimer;
 import su.comp.bk.arch.io.Timer;
 import su.comp.bk.arch.io.VideoController;
 import su.comp.bk.arch.io.VideoControllerManager;
+import su.comp.bk.arch.io.audio.AudioMixer;
 import su.comp.bk.arch.io.audio.AudioPlayerFactory;
 import su.comp.bk.arch.io.audio.AudioOutput;
 import su.comp.bk.arch.io.audio.Ay8910;
@@ -95,8 +96,8 @@ public class Computer implements Runnable, StatefulEntity {
     // Peripheral port reference
     private PeripheralPort peripheralPort;
 
-    // Audio outputs list
-    private final List<AudioOutput<?>> audioOutputs = new ArrayList<>();
+    // Audio mixer
+    private AudioMixer audioMixer;
 
     // Floppy controller reference (<code>null</code> if no floppy controller attached)
     private FloppyController floppyController;
@@ -398,10 +399,13 @@ public class Computer implements Runnable, StatefulEntity {
         // Notify video controller about computer time updates
         addUptimeListener(videoController);
         // Add audio outputs
-        addAudioOutput(new Speaker(audioPlayerFactory.createAudioPlayer(false), this));
-        addAudioOutput(new Covox(audioPlayerFactory.createAudioPlayer(false), this));
-        addAudioOutput(new Ay8910(audioPlayerFactory.createAudioPlayer(true), this));
-        addAudioOutput(new Menestrel(audioPlayerFactory.createAudioPlayer(true), this));
+        audioMixer = new AudioMixer(audioPlayerFactory.createAudioPlayer());
+        int sampleRate = audioMixer.getSampleRate();
+        int samplesBufferSize = audioMixer.getSamplesBufferSize();
+        addAudioOutput(new Speaker(sampleRate, samplesBufferSize, this));
+        addAudioOutput(new Covox(sampleRate, samplesBufferSize, this));
+        addAudioOutput(new Ay8910(sampleRate, samplesBufferSize, this));
+        addAudioOutput(new Menestrel(sampleRate, samplesBufferSize, this));
     }
 
     private SmkMemoryManager getSmkMemoryManager(ResourceManager resourceManager)
@@ -633,7 +637,7 @@ public class Computer implements Runnable, StatefulEntity {
      * @return audio outputs list
      */
     public List<AudioOutput<?>> getAudioOutputs() {
-        return audioOutputs;
+        return (audioMixer != null) ? audioMixer.getAudioOutputs() : null;
     }
 
     /**
@@ -641,7 +645,7 @@ public class Computer implements Runnable, StatefulEntity {
      * @param audioOutput audio output device to add
      */
     public void addAudioOutput(AudioOutput<?> audioOutput) {
-        audioOutputs.add(audioOutput);
+        audioMixer.addOutput(audioOutput);
         addDevice(audioOutput);
     }
 
@@ -913,8 +917,8 @@ public class Computer implements Runnable, StatefulEntity {
             } catch (InterruptedException e) {
                 // Do nothing
             }
-            for (AudioOutput<?> audioOutput : audioOutputs) {
-                audioOutput.start();
+            if (audioMixer != null) {
+                audioMixer.start();
             }
         } else {
             throw new IllegalStateException("Computer is already running!");
@@ -928,8 +932,8 @@ public class Computer implements Runnable, StatefulEntity {
         if (isRunning) {
             logger.debug("stopping computer");
             isRunning = false;
-            for (AudioOutput<?> audioOutput : audioOutputs) {
-                audioOutput.stop();
+            if (audioMixer != null) {
+                audioMixer.stop();
             }
             synchronized (this) {
                 this.notifyAll();
@@ -957,8 +961,8 @@ public class Computer implements Runnable, StatefulEntity {
         if (!isPaused) {
             logger.debug("pausing computer");
             isPaused = true;
-            for (AudioOutput<?> audioOutput : audioOutputs) {
-                audioOutput.pause();
+            if (audioMixer != null) {
+                audioMixer.pause();
             }
             // Wait for the running thread actual pausing
             synchronized (this) {
@@ -983,8 +987,8 @@ public class Computer implements Runnable, StatefulEntity {
             synchronized (this) {
                 this.notifyAll();
             }
-            for (AudioOutput<?> audioOutput : audioOutputs) {
-                audioOutput.resume();
+            if (audioMixer != null) {
+                audioMixer.resume();
             }
         }
     }
@@ -994,8 +998,8 @@ public class Computer implements Runnable, StatefulEntity {
      */
     public void release() {
         logger.debug("releasing computer");
-        for (AudioOutput<?> audioOutput : audioOutputs) {
-            audioOutput.release();
+        if (audioMixer != null) {
+            audioMixer.release();
         }
         if (floppyController != null) {
             floppyController.unmountDiskImages();

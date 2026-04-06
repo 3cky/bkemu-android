@@ -41,8 +41,8 @@ public class Speaker extends PcmOutput {
 
     private int lastOutputState;
 
-    public Speaker(AudioPlayer audioPlayer, Computer computer) {
-        super(audioPlayer, computer);
+    public Speaker(int sampleRate, int samplesBufferSize, Computer computer) {
+        super(sampleRate, samplesBufferSize, computer);
         this.isBk0011mMode = (computer.getConfiguration().getModel() == Computer.Model.BK_0011M);
     }
 
@@ -59,11 +59,6 @@ public class Speaker extends PcmOutput {
     @Override
     public int[] getAddresses() {
         return ADDRESSES;
-    }
-
-    @Override
-    public int read(long cpuTime, int address) {
-        return 0;
     }
 
     @Override

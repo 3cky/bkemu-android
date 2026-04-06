@@ -29,19 +29,13 @@ public interface AudioPlayer {
     int getSampleRate();
 
     /**
-     * Check if this audio player outputs stereo audio.
-     * @return true if stereo, false if mono
-     */
-    boolean isStereo();
-
-    /**
      * Get the estimated audio player buffer size.
      * @return buffer size expressed in bytes
      */
     int getBufferSize();
 
     /**
-     * Sets the specified output gain value on all channels of this audio player..
+     * Sets the specified output gain value on all channels of this audio player.
      * @param gain output gain for all channels to set, in range [0, 1.0]
      */
     void setGain(float gain);

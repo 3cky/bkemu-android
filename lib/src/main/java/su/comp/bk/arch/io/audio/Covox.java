@@ -33,8 +33,8 @@ public class Covox extends PcmOutput {
 
     private int lastSampleValue;
 
-    public Covox(AudioPlayer audioPlayer, Computer computer) {
-        super(audioPlayer, computer);
+    public Covox(int sampleRate, int samplesBufferSize, Computer computer) {
+        super(sampleRate, samplesBufferSize, computer);
     }
 
     @Override

@@ -33,13 +33,13 @@ public abstract class PcmOutput extends AudioOutput<PcmOutput.PcmSample> {
     // Last output value
     private short lastOutputValue = 0;
 
-    static class PcmSample extends AudioOutputUpdate {
+    public static class PcmSample extends AudioOutputUpdate {
         // PCM sample value
         private short value;
     }
 
-    PcmOutput(AudioPlayer audioPlayer, Computer computer) {
-        super(audioPlayer, computer);
+    PcmOutput(int sampleRate, int samplesBufferSize, Computer computer) {
+        super(sampleRate, samplesBufferSize, computer);
         setupOutputLowPassFilter(getOutputLowPassFilterCutoffFrequency());
     }
 
@@ -79,11 +79,10 @@ public abstract class PcmOutput extends AudioOutput<PcmOutput.PcmSample> {
     }
 
     @Override
-    protected int writeSamples(short[] samplesBuffer, int sampleIndex, int numSamples) {
-        while (numSamples-- > 0) {
-            samplesBuffer[sampleIndex++] = getFilteredOutputValue();
-        }
-        return sampleIndex;
+    protected void writeSample(short[] sample) {
+        short value = getFilteredOutputValue();
+        sample[0] = value;
+        sample[1] = value; // mono duplicated to stereo
     }
 
     private short getFilteredOutputValue() {

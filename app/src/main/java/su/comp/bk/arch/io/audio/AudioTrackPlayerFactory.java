@@ -23,7 +23,7 @@ package su.comp.bk.arch.io.audio;
  */
 public class AudioTrackPlayerFactory implements AudioPlayerFactory {
     @Override
-    public AudioPlayer createAudioPlayer(boolean isStereo) {
-        return new AudioTrackPlayer(isStereo);
+    public AudioPlayer createAudioPlayer() {
+        return new AudioTrackPlayer();
     }
 }

@@ -616,8 +616,8 @@ public class Menestrel extends AudioOutput<Menestrel.MenestrelCommand> {
         }
     }
 
-    public Menestrel(AudioPlayer player, Computer computer) {
-        super(player, computer);
+    public Menestrel(int sampleRate, int samplesBufferSize, Computer computer) {
+        super(sampleRate, samplesBufferSize, computer);
         int updateStep = computeUpdateStep();
         leftTimer = new Timer53(updateStep);
         rightTimer = new Timer53(updateStep);
@@ -739,17 +739,13 @@ public class Menestrel extends AudioOutput<Menestrel.MenestrelCommand> {
     }
 
     @Override
-    protected synchronized int writeSamples(short[] samplesBuffer, int sampleIndex, int numSamples) {
-        for (int s = 0; s < numSamples; s++) {
-            int l = (int) ((long) leftTimer.computeOutput() * MAX_OUTPUT / Counter53.STEP);
-            int r = (int) ((long) rightTimer.computeOutput() * MAX_OUTPUT / Counter53.STEP);
-            samplesBuffer[sampleIndex * 2] = (short) ((l * (100 - CHANNELS_CROSS_MIX_PERCENT)
-                    + r * CHANNELS_CROSS_MIX_PERCENT) / 100);
-            samplesBuffer[sampleIndex * 2 + 1] = (short) ((r * (100 - CHANNELS_CROSS_MIX_PERCENT)
-                    + l * CHANNELS_CROSS_MIX_PERCENT) / 100);
-            sampleIndex++;
-        }
-        return sampleIndex;
+    protected synchronized void writeSample(short[] sample) {
+        int l = (int) ((long) leftTimer.computeOutput() * MAX_OUTPUT / Counter53.STEP);
+        int r = (int) ((long) rightTimer.computeOutput() * MAX_OUTPUT / Counter53.STEP);
+        sample[0] = (short) ((l * (100 - CHANNELS_CROSS_MIX_PERCENT)
+                + r * CHANNELS_CROSS_MIX_PERCENT) / 100);
+        sample[1] = (short) ((r * (100 - CHANNELS_CROSS_MIX_PERCENT)
+                + l * CHANNELS_CROSS_MIX_PERCENT) / 100);
     }
 
     @Override
