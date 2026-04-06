@@ -633,11 +633,11 @@ public class Computer implements Runnable, StatefulEntity {
     }
 
     /**
-     * Get list of available {@link AudioOutput}s.
-     * @return audio outputs list
+     * Get {@link AudioMixer} reference.
+     * @return audio mixer reference or <code>null</code> if it is not configured
      */
-    public List<AudioOutput<?>> getAudioOutputs() {
-        return (audioMixer != null) ? audioMixer.getAudioOutputs() : null;
+    public AudioMixer getAudioMixer() {
+        return audioMixer;
     }
 
     /**

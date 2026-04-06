@@ -39,6 +39,7 @@ import java.util.Map;
 import java.util.Objects;
 
 import su.comp.bk.R;
+import su.comp.bk.arch.io.audio.AudioMixer;
 import su.comp.bk.arch.io.audio.AudioOutput;
 import su.comp.bk.arch.io.audio.Ay8910;
 import su.comp.bk.arch.io.audio.Covox;
@@ -86,6 +87,7 @@ public class BkEmuVolumeDialog extends DialogFragment implements SeekBar.OnSeekB
     public void onStart() {
         super.onStart();
         Dialog dialog = Objects.requireNonNull(getDialog());
+        setupOutputVolumeControls(dialog.findViewById(R.id.controls_master), AudioMixer.MASTER_OUTPUT_NAME);
         setupOutputVolumeControls(dialog.findViewById(R.id.controls_speaker), Speaker.OUTPUT_NAME);
         setupOutputVolumeControls(dialog.findViewById(R.id.controls_ay8910), Ay8910.OUTPUT_NAME);
         setupOutputVolumeControls(dialog.findViewById(R.id.controls_menestrel), Menestrel.OUTPUT_NAME);
@@ -140,8 +142,12 @@ public class BkEmuVolumeDialog extends DialogFragment implements SeekBar.OnSeekB
         setMuted(outputName, !isMuted(outputName));
     }
 
+    private AudioMixer getAudioMixer() {
+        return getBkEmuActivity().getComputer().getAudioMixer();
+    }
+
     private List<AudioOutput<?>> getAudioOutputs() {
-        return getBkEmuActivity().getComputer().getAudioOutputs();
+        return getAudioMixer().getAudioOutputs();
     }
 
     private AudioOutput<?> getAudioOutput(String outputName) {
@@ -166,11 +172,18 @@ public class BkEmuVolumeDialog extends DialogFragment implements SeekBar.OnSeekB
     }
 
     private void setVolume(String outputName, int volume) {
-        Objects.requireNonNull(getAudioOutput(outputName)).setVolume(volume);
-        checkOutputStates(outputName);
+        if (AudioMixer.MASTER_OUTPUT_NAME.equals(outputName)) {
+            getAudioMixer().setMasterVolume(volume);
+        } else {
+            Objects.requireNonNull(getAudioOutput(outputName)).setVolume(volume);
+            checkOutputStates(outputName);
+        }
     }
 
     private int getVolume(String outputName) {
+        if (AudioMixer.MASTER_OUTPUT_NAME.equals(outputName)) {
+            return getAudioMixer().getMasterVolume();
+        }
         return Objects.requireNonNull(getAudioOutput(outputName)).getVolume();
     }
 

@@ -66,6 +66,7 @@
     <string name="toast_state_restore_error">Ошибка загрузки состояния</string>
     <string name="app_name">BkEmu</string>
     <string name="volume">Громкость</string>
+    <string name="master_volume">Общая</string>
     <string name="speaker">Аудиовыход</string>
     <string name="write_protect">Защита записи</string>
     <string name="hdd_detached">(Не подключен)</string>

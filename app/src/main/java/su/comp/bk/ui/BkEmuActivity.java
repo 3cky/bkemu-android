@@ -93,6 +93,7 @@ import su.comp.bk.arch.cpu.opcode.EmtOpcode;
 import su.comp.bk.arch.cpu.opcode.JmpOpcode;
 import su.comp.bk.arch.io.VideoController;
 import su.comp.bk.arch.io.VideoControllerFrameRenderer;
+import su.comp.bk.arch.io.audio.AudioMixer;
 import su.comp.bk.arch.io.audio.AudioOutput;
 import su.comp.bk.arch.io.audio.AudioTrackPlayerFactory;
 import su.comp.bk.arch.io.disk.DiskImage;
@@ -849,10 +850,13 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
                 computer.getCpu().setOnOpcodeListener(JmpOpcode.OPCODE | Cpu.R0
                             | (IndexDeferredAddressingMode.CODE << 3), handler);
             }
-            for (AudioOutput<?> audioOutput : computer.getAudioOutputs()) {
+            AudioMixer audioMixer = computer.getAudioMixer();
+            for (AudioOutput<?> audioOutput : audioMixer.getAudioOutputs()) {
                 audioOutput.setVolume(readAudioOutputVolume(audioOutput.getName(),
                         audioOutput.getDefaultVolume()));
             }
+            audioMixer.setMasterVolume(readAudioOutputVolume(AudioMixer.MASTER_OUTPUT_NAME,
+                    AudioOutput.MAX_VOLUME));
             bkEmuView.setComputer(computer);
             updateDisplayedComputerConfigurationDescription();
         } else {

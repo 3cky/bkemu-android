@@ -33,6 +33,9 @@ public class AudioMixer implements Runnable {
 
     private final AudioPlayer player;
 
+    public static final String MASTER_OUTPUT_NAME = "master";
+    private int masterVolume = AudioOutput.MAX_VOLUME;
+
     private final List<AudioOutput<?>> audioOutputs = new ArrayList<>();
 
     // Mix buffer written to AudioPlayer
@@ -55,6 +58,19 @@ public class AudioMixer implements Runnable {
 
     public int getSamplesBufferSize() {
         return player.getBufferSize() / 4; // 2 channels (left/right) x 2 bytes per channel
+    }
+
+    public int getMasterVolume() {
+        return masterVolume;
+    }
+
+    public void setMasterVolume(int volume) {
+        masterVolume = Math.max(AudioOutput.MIN_VOLUME, Math.min(AudioOutput.MAX_VOLUME, volume));
+        updateAudioPlayerGain();
+    }
+
+    private void updateAudioPlayerGain() {
+        player.setGain(convertVolumeToGain(masterVolume));
     }
 
     public void addOutput(AudioOutput<?> audioOutput) {
@@ -107,6 +123,7 @@ public class AudioMixer implements Runnable {
     public void resume() {
         logger.debug("resuming audio mixer");
         player.resume();
+        updateAudioPlayerGain();
         isPaused = false;
         synchronized (this) {
             this.notify();

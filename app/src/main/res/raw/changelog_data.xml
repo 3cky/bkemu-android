@@ -4,6 +4,7 @@
         <changes>
             <change>Implemented Menestrel sound card emulation.</change>
             <change>Audio subsystem emulation refactoring.</change>
+            <change>Added master audio volume control.</change>
         </changes>
     </release>
     <release version="1.1.2" date="2026-03-17">

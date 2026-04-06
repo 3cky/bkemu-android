@@ -66,6 +66,7 @@
     <string name="toast_state_restore_success">State successfully restored</string>
     <string name="toast_state_restore_error">State restore error</string>
     <string name="volume">Audio volume</string>
+    <string name="master_volume">Master</string>
     <string name="speaker">Speaker</string>
     <string name="covox" translatable="false">Covox</string>
     <string name="ay8910" translatable="false">AY8910</string>
