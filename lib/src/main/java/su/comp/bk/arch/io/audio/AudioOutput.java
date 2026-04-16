@@ -37,6 +37,9 @@ public abstract class AudioOutput<U extends AudioOutputUpdate> implements Device
     public static final short MIN_OUTPUT = 0;
     public static final short MAX_OUTPUT = Short.MAX_VALUE;
 
+    // Output band pass filter low cutoff frequency
+    private static final int OUTPUT_BAND_PASS_LOW_CUTOFF_FREQUENCY = 10; // Hz
+
     // Audio sample rate
     private final int sampleRate;
 
@@ -56,6 +59,36 @@ public abstract class AudioOutput<U extends AudioOutputUpdate> implements Device
 
     private int volume = MAX_VOLUME;
 
+    private final BandPassFilter leftChannelBandPassFilter;
+    private final BandPassFilter rightChannelBandPassFilter;
+
+    static class BandPassFilter {
+        // https://en.wikipedia.org/wiki/Low-pass_filter#Simple_infinite_impulse_response_filter
+        // https://en.wikipedia.org/wiki/High-pass_filter#Discrete-time_realization
+        private final float lpAlpha;
+        private final float hpAlpha;
+        private short lpLastOutput = 0;
+        private short hpLastInput = 0;
+        private short hpLastOutput = 0;
+
+        BandPassFilter(int sampleRate, int lowPassCutoffFrequency, int highPassCutoffFrequency) {
+            float T = 1f / sampleRate;
+            lpAlpha = T / (T + 1f / lowPassCutoffFrequency);
+            hpAlpha = (1f / highPassCutoffFrequency) / (1f / highPassCutoffFrequency + T);
+        }
+
+        short apply(short input) {
+            // Low pass stage
+            short lpOutput = (short) (lpLastOutput + lpAlpha * (input - lpLastOutput));
+            lpLastOutput = lpOutput;
+            // High pass stage
+            short hpOutput = (short) (hpAlpha * (hpLastOutput + lpOutput - hpLastInput));
+            hpLastInput = lpOutput;
+            hpLastOutput = hpOutput;
+            return hpOutput;
+        }
+    }
+
     AudioOutput(int sampleRate, int samplesBufferSize, Computer computer) {
         this.computer = computer;
         this.sampleRate = sampleRate;
@@ -66,6 +99,10 @@ public abstract class AudioOutput<U extends AudioOutputUpdate> implements Device
         int audioOutputUpdatesSize = (int) (2 * samplesBufferSize * computer.getNativeClockFrequency()
                 * 1000L / (getSampleRate() * BaseOpcode.getBaseExecutionTime()));
         audioOutputUpdates = createAudioOutputUpdates(audioOutputUpdatesSize);
+        leftChannelBandPassFilter = new BandPassFilter(getSampleRate(), getBandPassFilterHighCutoffFrequency(),
+                OUTPUT_BAND_PASS_LOW_CUTOFF_FREQUENCY);
+        rightChannelBandPassFilter = new BandPassFilter(getSampleRate(), getBandPassFilterHighCutoffFrequency(),
+                OUTPUT_BAND_PASS_LOW_CUTOFF_FREQUENCY);
         logger.debug("created audio output, samples buffer size: {}, updates buffer size: {}",
                 samplesBufferSize, audioOutputUpdatesSize);
     }
@@ -81,6 +118,15 @@ public abstract class AudioOutput<U extends AudioOutputUpdate> implements Device
     @Override
     public void init(long cpuTime, boolean isHardwareReset) {
         resetAudioOutputUpdates();
+    }
+
+    /**
+     * Get output band pass filter high cutoff frequency.
+     *
+     * @return high cutoff frequency (in Hz)
+     */
+    protected int getBandPassFilterHighCutoffFrequency() {
+        return getSampleRate() / 2;
     }
 
     /**
@@ -179,6 +225,8 @@ public abstract class AudioOutput<U extends AudioOutputUpdate> implements Device
             nextAudioOutputUpdate = getAudioOutputUpdate();
         }
         writeSample(sample);
+        sample[0] = leftChannelBandPassFilter.apply(sample[0]);
+        sample[1] = rightChannelBandPassFilter.apply(sample[1]);
     }
 
     /**

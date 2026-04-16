@@ -29,7 +29,7 @@ public class Covox extends PcmOutput {
 
     public static final String OUTPUT_NAME = "covox";
 
-    public static final int LOW_PASS_FILTER_CUTOFF_FREQUENCY_HZ = 12000;
+    public static final int BAND_PASS_FILTER_HIGH_CUTOFF_FREQUENCY_HZ = 12000;
 
     private int lastSampleValue;
 
@@ -38,8 +38,8 @@ public class Covox extends PcmOutput {
     }
 
     @Override
-    protected int getOutputLowPassFilterCutoffFrequency() {
-        return LOW_PASS_FILTER_CUTOFF_FREQUENCY_HZ;
+    protected int getBandPassFilterHighCutoffFrequency() {
+        return BAND_PASS_FILTER_HIGH_CUTOFF_FREQUENCY_HZ;
     }
 
     @Override

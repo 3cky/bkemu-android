@@ -27,12 +27,6 @@ public abstract class PcmOutput extends AudioOutput<PcmOutput.PcmSample> {
     // Current PCM sample value
     private short pcmSampleValue;
 
-    // Output low pass IIR filter alpha coefficient
-    private float outputLowPassFilterAlpha;
-
-    // Last output value
-    private short lastOutputValue = 0;
-
     public static class PcmSample extends AudioOutputUpdate {
         // PCM sample value
         private short value;
@@ -40,20 +34,6 @@ public abstract class PcmOutput extends AudioOutput<PcmOutput.PcmSample> {
 
     PcmOutput(int sampleRate, int samplesBufferSize, Computer computer) {
         super(sampleRate, samplesBufferSize, computer);
-        setupOutputLowPassFilter(getOutputLowPassFilterCutoffFrequency());
-    }
-
-    /**
-     * Get output low pass IIR filter cutoff frequency.
-     *
-     * @return cutoff frequency (in Hz)
-     */
-    protected abstract int getOutputLowPassFilterCutoffFrequency();
-
-    private void setupOutputLowPassFilter(int cutoffFrequency) {
-        // https://en.wikipedia.org/wiki/Low-pass_filter#Simple_infinite_impulse_response_filter
-        float T = 1f / getSampleRate();
-        outputLowPassFilterAlpha = T / (T + 1f / cutoffFrequency);
     }
 
     @Override
@@ -84,16 +64,7 @@ public abstract class PcmOutput extends AudioOutput<PcmOutput.PcmSample> {
 
     @Override
     protected void writeSample(short[] sample) {
-        short value = getFilteredOutputValue();
-        sample[0] = value;
-        sample[1] = value; // mono duplicated to stereo
-    }
-
-    private short getFilteredOutputValue() {
-        // Apply low pass first order IIR filter to the input PCM samples
-        short outputValue = (short) (lastOutputValue + outputLowPassFilterAlpha
-                * (pcmSampleValue - lastOutputValue));
-        lastOutputValue = outputValue;
-        return outputValue;
+        sample[0] = pcmSampleValue;
+        sample[1] = pcmSampleValue; // mono duplicated to stereo
     }
 }
