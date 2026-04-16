@@ -399,7 +399,7 @@ public class Computer implements Runnable, StatefulEntity {
         // Notify video controller about computer time updates
         addUptimeListener(videoController);
         // Add audio outputs
-        audioMixer = new AudioMixer(audioPlayerFactory.createAudioPlayer());
+        audioMixer = new AudioMixer(audioPlayerFactory.createAudioPlayer(), this);
         int sampleRate = audioMixer.getSampleRate();
         int samplesBufferSize = audioMixer.getSamplesBufferSize();
         addAudioOutput(new Speaker(sampleRate, samplesBufferSize, this));

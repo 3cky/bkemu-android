@@ -25,13 +25,19 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import su.comp.bk.arch.Computer;
+
 /**
  * Audio mixer: mixes all registered {@link AudioOutput}s into a single stereo {@link AudioPlayer}.
  */
 public class AudioMixer implements Runnable {
     private final Logger logger = LoggerFactory.getLogger(getClass().getSimpleName());
 
+    private static final long NANOSECS_IN_SECOND = 1000000000L;
+
     private final AudioPlayer player;
+
+    private final Computer computer;
 
     public static final String MASTER_OUTPUT_NAME = "master";
     private int masterVolume = AudioOutput.MAX_VOLUME;
@@ -43,12 +49,19 @@ public class AudioMixer implements Runnable {
     // Reusable single stereo sample scratch buffer [left, right]
     private final short[] sampleBuf = new short[2];
 
+    private long nextSampleTimestamp;
+
+    private static final float PLAYBACK_DELAY_SMOOTHING_ALPHA = 0.15f;
+    private static final float PLAYBACK_DELAY_COMPENSATION_BETA = 0.005f;
+    private long playbackDelay = 0L;
+
     private Thread mixerThread;
     private volatile boolean isRunning;
     private volatile boolean isPaused = true;
 
-    public AudioMixer(AudioPlayer player) {
+    public AudioMixer(AudioPlayer player, Computer computer) {
         this.player = player;
+        this.computer = computer;
         this.mixBuffer = new short[getSamplesBufferSize() * 2]; // [left, right] * number of samples
     }
 
@@ -138,8 +151,7 @@ public class AudioMixer implements Runnable {
     @Override
     public void run() {
         logger.debug("audio mixer started");
-        syncAudioOutputLastUpdateTimestamps();
-        Arrays.fill(mixBuffer, (short) 0);
+        resetNextSampleTimestamp();
         MixerLoop:
         while (true) {
             if (isPaused) {
@@ -152,10 +164,8 @@ public class AudioMixer implements Runnable {
                     } catch (InterruptedException ignored) {
                     }
                 }
-                syncAudioOutputLastUpdateTimestamps();
-                Arrays.fill(mixBuffer, (short) 0);
+                resetNextSampleTimestamp();
             } else {
-                player.play(mixBuffer, 0, mixBuffer.length);
                 if (!isRunning) {
                     break MixerLoop;
                 }
@@ -163,30 +173,53 @@ public class AudioMixer implements Runnable {
                     continue MixerLoop;
                 }
                 mixAudioOutputs();
+                player.play(mixBuffer, 0, mixBuffer.length);
             }
         }
         logger.debug("audio mixer stopped");
     }
 
-    private void syncAudioOutputLastUpdateTimestamps() {
-        for (AudioOutput<?> audioOutput : audioOutputs) {
-            audioOutput.syncLastUpdateTimestamp();
-        }
+    private long samplesToCpuTime(long numSamples) {
+        return computer.nanosToCpuTime(numSamples * NANOSECS_IN_SECOND / getSampleRate());
     }
 
-    private void mixAudioOutputs() {
-        int i = 0;
-        while (i < mixBuffer.length) {
+    private long getSamplesBufferSizeInCpuTicks() {
+        return samplesToCpuTime(getSamplesBufferSize());
+    }
+
+    private long getSamplesBufferStartTimestamp() {
+        return computer.getUptimeTicks() - getSamplesBufferSizeInCpuTicks();
+    }
+
+    private void resetNextSampleTimestamp() {
+        nextSampleTimestamp = getSamplesBufferStartTimestamp();
+        playbackDelay = 0L;
+    }
+
+     private void mixAudioOutputs() {
+        long currentPlaybackDelay = getSamplesBufferStartTimestamp() - nextSampleTimestamp;
+        playbackDelay = (long) (PLAYBACK_DELAY_SMOOTHING_ALPHA * currentPlaybackDelay
+                + (1f - PLAYBACK_DELAY_SMOOTHING_ALPHA) * playbackDelay);
+        if (playbackDelay < 0) {
+            Arrays.fill(mixBuffer, (short) 0);
+            return;
+        }
+        long playbackDelayCompensation = (long) (PLAYBACK_DELAY_COMPENSATION_BETA * playbackDelay);
+        long sampleTimestep = (getSamplesBufferSizeInCpuTicks() + playbackDelayCompensation)
+                / getSamplesBufferSize();
+        int bufferIndex = 0;
+        while (bufferIndex < mixBuffer.length) {
             int leftChannelAccum = 0;
             int rightChannelAccum = 0;
             for (AudioOutput<?> audioOutput : audioOutputs) {
-                audioOutput.getSample(sampleBuf);
+                audioOutput.getSample(sampleBuf, nextSampleTimestamp);
                 float audioOutputGain = convertVolumeToGain(audioOutput.getVolume());
                 leftChannelAccum += (int) (sampleBuf[0] * audioOutputGain);
                 rightChannelAccum += (int) (sampleBuf[1] * audioOutputGain);
             }
-            mixBuffer[i++] = clipSample(leftChannelAccum);
-            mixBuffer[i++] = clipSample(rightChannelAccum);
+            mixBuffer[bufferIndex++] = clipSample(leftChannelAccum);
+            mixBuffer[bufferIndex++] = clipSample(rightChannelAccum);
+            nextSampleTimestamp += sampleTimestep;
         }
     }
 

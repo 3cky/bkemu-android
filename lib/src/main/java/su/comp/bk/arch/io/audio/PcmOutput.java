@@ -66,6 +66,10 @@ public abstract class PcmOutput extends AudioOutput<PcmOutput.PcmSample> {
     }
 
     synchronized void putPcmSample(short pcmSampleValue, long pcmSampleTimestamp) {
+        if (getComputer().getClockFrequency() <= 0) {
+            // Drop PCM samples in CPU free running mode
+            return;
+        }
         PcmSample pcmSample = putAudioOutputUpdate();
         if (pcmSample != null) {
             pcmSample.value = pcmSampleValue;

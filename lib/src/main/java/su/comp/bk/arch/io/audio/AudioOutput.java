@@ -31,8 +31,6 @@ import su.comp.bk.state.State;
 public abstract class AudioOutput<U extends AudioOutputUpdate> implements Device {
     private final Logger logger = LoggerFactory.getLogger(getClass().getSimpleName());
 
-    private static final long NANOSECS_IN_SECOND = 1000000000L;
-
     public static final int MIN_VOLUME = 0;
     public static final int MAX_VOLUME = 100;
 
@@ -41,9 +39,6 @@ public abstract class AudioOutput<U extends AudioOutputUpdate> implements Device
 
     // Audio sample rate
     private final int sampleRate;
-
-    // Number of stereo sample frames in one mixer buffer
-    private final int samplesBufferSize;
 
     // Audio output updates circular buffer, one per output state change
     private final U[] audioOutputUpdates;
@@ -54,8 +49,8 @@ public abstract class AudioOutput<U extends AudioOutputUpdate> implements Device
     // Audio output updates circular buffer current capacity
     private int audioOutputUpdatesCapacity;
 
-    private long lastUpdateTimestamp;
-    private int numSamples;
+    // Next audio update
+    private U nextAudioOutputUpdate;
 
     private final Computer computer;
 
@@ -68,24 +63,19 @@ public abstract class AudioOutput<U extends AudioOutputUpdate> implements Device
         if (samplesBufferSize <= 0) {
             throw new IllegalStateException("Invalid audio buffer size: " + samplesBufferSize);
         }
-        this.samplesBufferSize = samplesBufferSize;
-        int audioOutputUpdatesSize = (int) (2 * getSamplesBufferSize() * computer.getNativeClockFrequency()
+        int audioOutputUpdatesSize = (int) (2 * samplesBufferSize * computer.getNativeClockFrequency()
                 * 1000L / (getSampleRate() * BaseOpcode.getBaseExecutionTime()));
         audioOutputUpdates = createAudioOutputUpdates(audioOutputUpdatesSize);
-        logger.debug("created audio output, buffer frames: {}, updates buffer size: {}",
-                this.samplesBufferSize, audioOutputUpdatesSize);
+        logger.debug("created audio output, samples buffer size: {}, updates buffer size: {}",
+                samplesBufferSize, audioOutputUpdatesSize);
+    }
+
+    public Computer getComputer() {
+        return computer;
     }
 
     public int getSampleRate() {
         return sampleRate;
-    }
-
-    public int getSamplesBufferSize() {
-        return samplesBufferSize;
-    }
-
-    Computer getComputer() {
-        return computer;
     }
 
     @Override
@@ -142,16 +132,16 @@ public abstract class AudioOutput<U extends AudioOutputUpdate> implements Device
         if (audioOutputUpdatesCapacity == 0) {
             // Warn about buffer overflows only if we are not in the free running CPU mode
             if (computer.getClockFrequency() > 0) {
-                logger.warn("PCM samples buffer overflow!");
+                logger.warn("Audio output updates buffer overflow!");
             }
-            // Discard least recent element from the circular buffer
+            // Discard the least recent element from the circular buffer
             getAudioOutputUpdateIndex = ++getAudioOutputUpdateIndex % audioOutputUpdates.length;
             audioOutputUpdatesCapacity++;
         }
-        U pcmSample = audioOutputUpdates[putAudioOutputUpdateIndex++];
+        U audioOutputUpdate = audioOutputUpdates[putAudioOutputUpdateIndex++];
         putAudioOutputUpdateIndex %= audioOutputUpdates.length;
         audioOutputUpdatesCapacity--;
-        return pcmSample;
+        return audioOutputUpdate;
     }
 
     private synchronized U getAudioOutputUpdate() {
@@ -174,44 +164,20 @@ public abstract class AudioOutput<U extends AudioOutputUpdate> implements Device
         }
     }
 
-    private long samplesToCpuTime(long numSamples) {
-        return computer.nanosToCpuTime(numSamples * NANOSECS_IN_SECOND / getSampleRate());
-    }
-
-    private long cpuTimeToSamples(long cpuTime) {
-        return computer.cpuTimeToNanos(cpuTime) * getSampleRate() / NANOSECS_IN_SECOND;
-    }
-
-    void syncLastUpdateTimestamp() {
-        lastUpdateTimestamp = getComputer().getUptimeTicks() -
-                samplesToCpuTime(getSamplesBufferSize());
-    }
-
     /**
-     * Advance timing by one frame, consuming update events as needed, then fill
-     * {@code sample[0]} (left) and {@code sample[1]} (right) with the current output value.
-     * Called once per frame by {@link AudioMixer}.
+     * Fill {@code sample[0]} (left) and {@code sample[1]} (right) with the sample data.
      *
      * @param sample two-element array to receive the stereo sample [left, right]
+     * @param sampleTimestamp sample timestamp in CPU ticks since computer start
      */
-    void getSample(short[] sample) {
-        while (numSamples <= 0) {
-            U audioOutputUpdate = getAudioOutputUpdate();
-            if (audioOutputUpdate != null) {
-                handleAudioOutputUpdate(audioOutputUpdate);
-                if (audioOutputUpdate.timestamp < lastUpdateTimestamp) {
-                    continue;
-                }
-                numSamples = (int) cpuTimeToSamples(audioOutputUpdate.timestamp
-                        - lastUpdateTimestamp);
-                lastUpdateTimestamp += samplesToCpuTime(numSamples);
-            } else {
-                // No pending updates — hold current state for one more frame
-                numSamples = 1;
-                lastUpdateTimestamp += samplesToCpuTime(1);
-            }
+    void getSample(short[] sample, long sampleTimestamp) {
+        if (nextAudioOutputUpdate == null) {
+            nextAudioOutputUpdate = getAudioOutputUpdate();
         }
-        numSamples--;
+        while (nextAudioOutputUpdate != null && nextAudioOutputUpdate.timestamp <= sampleTimestamp) {
+            handleAudioOutputUpdate(nextAudioOutputUpdate);
+            nextAudioOutputUpdate = getAudioOutputUpdate();
+        }
         writeSample(sample);
     }
 
