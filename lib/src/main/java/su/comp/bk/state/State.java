@@ -47,6 +47,10 @@ public class State {
       return (value != null) ? value : defaultValue;
    }
 
+   public boolean containsKey(String key) {
+      return stateMap.containsKey(key);
+   }
+
    public void putBoolean(String key, boolean value) {
       putValue(key, value);
    }
