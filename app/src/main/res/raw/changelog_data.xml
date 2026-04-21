@@ -3,7 +3,8 @@
     <release version="1.2.0-dev">
         <changes>
             <change>Implemented Menestrel sound card emulation.</change>
-            <change>Audio subsystem emulation refactoring.</change>
+            <change>Implemented 2xAY mode by TurboSound standard.</change>
+            <change>Refactored audio subsystem emulation.</change>
             <change>Added master audio volume control.</change>
         </changes>
     </release>

@@ -23,12 +23,16 @@ import su.comp.bk.arch.cpu.Cpu;
 import su.comp.bk.state.State;
 
 /**
- * AY-3-8910 / YM2149 sound chip attached to the peripheral port.
+ * 2x AY-3-8910 / YM2149 sound chips attached to the peripheral port with TurboSound support.
  * Based on <a href="https://github.com/georgemoralis/arcadeflex/blob/master/emulator/src/main/java/arcadeflex/v036/sound/ay8910.java"/>ay8910.java</a>
  */
 public class Ay8910 extends AudioOutput<Ay8910.Ay8910Command> {
     private static final String STATE_PREFIX = "Ay8910";
+    private static final String STATE_PRIMARY_CHIP_PREFIX = STATE_PREFIX + "PrimaryChip";
+    private static final String STATE_SECONDARY_CHIP_PREFIX = STATE_PREFIX + "SecondaryChip";
     public static final String STATE_CURRENT_REGISTER = STATE_PREFIX + "#current_register";
+    private static final String STATE_SELECTED_CHIP_INDEX = STATE_PREFIX + "#selected_chip";
+    private static final String STATE_TURBOSOUND_MODE = STATE_PREFIX + "#turbosound_mode";
 
     private final static int[] ADDRESSES = { Cpu.REG_SEL2 };
 
@@ -37,16 +41,26 @@ public class Ay8910 extends AudioOutput<Ay8910.Ay8910Command> {
     /** Default AY8910 clock frequency (12 MHz / 7) */
     public static final int DEFAULT_CLOCK_FREQUENCY = 12000000 / 7;
 
-    private final Ay8910Chip ay8910Chip;
+    public static final int NUM_CHIPS = 2;
+    public static final int PRIMARY_CHIP_INDEX = 0;
+    public static final int SECONDARY_CHIP_INDEX = 1;
+    private final Ay8910Chip[] ay8910Chips = new Ay8910Chip[NUM_CHIPS];
+    private int selectedChipIndex = PRIMARY_CHIP_INDEX;
+    private long lastChipSelectTimestamp;
 
     private int currentRegister;
 
+    public static final long TURBOSOUND_DEACTIVATE_TIMEOUT_NANOS = 3 * 1000 * 1000 * 1000L; // 3s
+    public static final int TURBOSOUND_CHIP_SELECT_PRIMARY = 0xff;
+    public static final int TURBOSOUND_CHIP_SELECT_SECONDARY = 0xfe;
+    private boolean isTurbosoundMode = false;
+
     static class Ay8910Chip {
-        public static final String STATE_REG_PREFIX = STATE_PREFIX + "#reg_";
-        public static final String STATE_OUTPUT_A = STATE_PREFIX + "#output_a";
-        public static final String STATE_OUTPUT_B = STATE_PREFIX + "#output_b";
-        public static final String STATE_OUTPUT_C = STATE_PREFIX + "#output_c";
-        public static final String STATE_OUTPUT_N = STATE_PREFIX + "#output_n";
+        public static final String STATE_REG_PREFIX = "#reg_";
+        public static final String STATE_OUTPUT_A = "#output_a";
+        public static final String STATE_OUTPUT_B = "#output_b";
+        public static final String STATE_OUTPUT_C = "#output_c";
+        public static final String STATE_OUTPUT_N = "#output_n";
 
         // Register ID's
         private static final int AY_AFINE = 0;
@@ -526,28 +540,30 @@ public class Ay8910 extends AudioOutput<Ay8910.Ay8910Command> {
             sample[1] = (short) ((2 * bufC + bufB) / 3);
         }
 
-        void saveState(State outState) {
+        void saveState(String statePrefix, State outState) {
             for (int r = 0; r < AY_PORTA; r++) {
-                outState.putInt(STATE_REG_PREFIX + r, regs[r] & 0xffff);
+                outState.putInt(statePrefix + STATE_REG_PREFIX + r, regs[r] & 0xffff);
             }
-            outState.putInt(STATE_OUTPUT_A, outputA & 0xffff);
-            outState.putInt(STATE_OUTPUT_B, outputB & 0xffff);
-            outState.putInt(STATE_OUTPUT_C, outputC & 0xffff);
-            outState.putInt(STATE_OUTPUT_N, outputN & 0xffff);
+            outState.putInt(statePrefix + STATE_OUTPUT_A, outputA & 0xffff);
+            outState.putInt(statePrefix + STATE_OUTPUT_B, outputB & 0xffff);
+            outState.putInt(statePrefix + STATE_OUTPUT_C, outputC & 0xffff);
+            outState.putInt(statePrefix + STATE_OUTPUT_N, outputN & 0xffff);
         }
 
-        void restoreState(State inState) {
+        void restoreState(String statePrefix, State inState) {
             for (int r = 0; r < AY_PORTA; r++) {
-                regs[r] = (char) inState.getInt(STATE_REG_PREFIX + r);
+                regs[r] = (char) inState.getInt(statePrefix + STATE_REG_PREFIX + r);
             }
-            outputA = (char) inState.getInt(STATE_OUTPUT_A);
-            outputB = (char) inState.getInt(STATE_OUTPUT_B);
-            outputC = (char) inState.getInt(STATE_OUTPUT_C);
-            outputN = (char) inState.getInt(STATE_OUTPUT_N);
+            outputA = (char) inState.getInt(statePrefix + STATE_OUTPUT_A);
+            outputB = (char) inState.getInt(statePrefix + STATE_OUTPUT_B);
+            outputC = (char) inState.getInt(statePrefix + STATE_OUTPUT_C);
+            outputN = (char) inState.getInt(statePrefix + STATE_OUTPUT_N);
         }
     }
 
     public static class Ay8910Command extends AudioOutputUpdate {
+        // Chip index
+        private int chipIndex;
         // Command register
         private int register;
         // Command value
@@ -556,7 +572,9 @@ public class Ay8910 extends AudioOutput<Ay8910.Ay8910Command> {
 
     public Ay8910(int sampleRate, int samplesBufferSize, Computer computer) {
         super(sampleRate, samplesBufferSize, computer);
-        ay8910Chip = new Ay8910Chip(DEFAULT_CLOCK_FREQUENCY, sampleRate);
+        for (int i = 0; i < ay8910Chips.length; i++) {
+            ay8910Chips[i] = new Ay8910Chip(DEFAULT_CLOCK_FREQUENCY, sampleRate);
+        }
     }
 
     @Override
@@ -581,13 +599,19 @@ public class Ay8910 extends AudioOutput<Ay8910.Ay8910Command> {
     @Override
     public synchronized void init(long cpuTime, boolean isHardwareReset) {
         super.init(cpuTime, isHardwareReset);
+        isTurbosoundMode = false;
+        this.selectedChipIndex = PRIMARY_CHIP_INDEX;
         this.currentRegister = 0;
-        ay8910Chip.reset();
+        for (Ay8910Chip ay8910Chip : ay8910Chips) {
+            ay8910Chip.reset();
+        }
     }
 
-    private synchronized void putCommand(int cmdRegister, int cmdValue, long cmdTimestamp) {
+    private synchronized void putCommand(int chipIndex, int cmdRegister,
+                                         int cmdValue, long cmdTimestamp) {
         Ay8910Command ay8910Command = putAudioOutputUpdate();
         if (ay8910Command != null) {
+            ay8910Command.chipIndex = chipIndex;
             ay8910Command.register = cmdRegister;
             ay8910Command.value = cmdValue;
             ay8910Command.timestamp = cmdTimestamp;
@@ -595,38 +619,95 @@ public class Ay8910 extends AudioOutput<Ay8910.Ay8910Command> {
     }
 
     @Override
-    public boolean write(long cpuTime, boolean isByteMode, int address, int value) {
+    public synchronized boolean write(long cpuTime, boolean isByteMode, int address, int value) {
         int v = ~value & 0xff;
         if (isByteMode) {
-            putCommand(currentRegister, v, cpuTime);
+            putCommand(selectedChipIndex, currentRegister, v, cpuTime);
         } else {
-            // Set last selected register number
+            // Set current selected register number
             currentRegister = v & 0x0f;
+            // Check for TurboSound mode
+            checkTurbosoundMode(cpuTime, v);
         }
+        return true;
+    }
+
+    private boolean isTurbosoundRegister(int r) {
+        return (r == TURBOSOUND_CHIP_SELECT_PRIMARY || r == TURBOSOUND_CHIP_SELECT_SECONDARY);
+    }
+
+    private void checkTurbosoundMode(long cpuTime, int r) {
+        if (isTurbosoundRegister(r)) {
+            if (r == TURBOSOUND_CHIP_SELECT_SECONDARY) {
+                if (!isTurbosoundMode) {
+                    // Activate TurboSound mode
+                    ay8910Chips[SECONDARY_CHIP_INDEX].reset();
+                    isTurbosoundMode = true;
+                }
+                lastChipSelectTimestamp = cpuTime;
+            }
+            selectedChipIndex = (r == TURBOSOUND_CHIP_SELECT_PRIMARY)
+                    ? PRIMARY_CHIP_INDEX
+                    : SECONDARY_CHIP_INDEX;
+        } else {
+            checkDeactivateTurbosoundMode(cpuTime);
+        }
+    }
+
+    private boolean checkDeactivateTurbosoundMode(long cpuTime) {
+        if (!isTurbosoundMode || getComputer().cpuTimeToNanos(cpuTime
+                - lastChipSelectTimestamp) < TURBOSOUND_DEACTIVATE_TIMEOUT_NANOS) {
+            return false;
+        }
+        // Deactivate TurboSound mode
+        isTurbosoundMode = false;
+        selectedChipIndex = PRIMARY_CHIP_INDEX;
         return true;
     }
 
     @Override
     protected synchronized void handleAudioOutputUpdate(Ay8910Command ay8910Command) {
-        ay8910Chip.writeRegister(ay8910Command.register, ay8910Command.value);
+        ay8910Chips[ay8910Command.chipIndex].writeRegister(ay8910Command.register,
+                ay8910Command.value);
     }
 
     @Override
     protected synchronized void writeSample(short[] sample) {
-        ay8910Chip.writeSample(sample);
+        ay8910Chips[PRIMARY_CHIP_INDEX].writeSample(sample);
+        if (isTurbosoundMode && !checkDeactivateTurbosoundMode(getComputer().getUptimeTicks())) {
+            int l = sample[0];
+            int r = sample[1];
+            ay8910Chips[SECONDARY_CHIP_INDEX].writeSample(sample);
+            l += sample[0];
+            r += sample[1];
+            sample[0] = (short) (l / 2);
+            sample[1] = (short) (r / 2);
+        }
     }
 
     @Override
     public void saveState(State outState) {
         super.saveState(outState);
         outState.putInt(STATE_CURRENT_REGISTER, currentRegister);
-        ay8910Chip.saveState(outState);
+        outState.putInt(STATE_SELECTED_CHIP_INDEX, selectedChipIndex);
+        outState.putBoolean(STATE_TURBOSOUND_MODE, isTurbosoundMode);
+        ay8910Chips[PRIMARY_CHIP_INDEX].saveState(STATE_PRIMARY_CHIP_PREFIX, outState);
+        ay8910Chips[SECONDARY_CHIP_INDEX].saveState(STATE_SECONDARY_CHIP_PREFIX, outState);
     }
 
     @Override
     public void restoreState(State inState) {
         super.restoreState(inState);
         currentRegister = inState.getInt(STATE_CURRENT_REGISTER);
-        ay8910Chip.restoreState(inState);
+        selectedChipIndex = inState.getInt(STATE_SELECTED_CHIP_INDEX, PRIMARY_CHIP_INDEX);
+        isTurbosoundMode = inState.getBoolean(STATE_TURBOSOUND_MODE);
+        lastChipSelectTimestamp = getComputer().getUptimeTicks();
+        if (inState.containsKey(STATE_TURBOSOUND_MODE)) {
+            ay8910Chips[PRIMARY_CHIP_INDEX].restoreState(STATE_PRIMARY_CHIP_PREFIX, inState);
+        } else {
+            // Preserve old single AY chip state compatibility
+            ay8910Chips[PRIMARY_CHIP_INDEX].restoreState(STATE_PREFIX, inState);
+        }
+        ay8910Chips[SECONDARY_CHIP_INDEX].restoreState(STATE_SECONDARY_CHIP_PREFIX, inState);
     }
 }
