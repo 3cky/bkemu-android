@@ -24,12 +24,16 @@ import su.comp.bk.arch.Computer;
  * Abstract base class for PCM audio outputs (speaker/covox).
  */
 public abstract class PcmOutput extends AudioOutput<PcmOutput.PcmSample> {
-    // Current PCM sample value
-    private short pcmSampleValue;
+    // Current left channel PCM sample value
+    private short leftChannelPcmSampleValue;
+    // Current right channel PCM sample value
+    private short rightChannelPcmSampleValue;
 
     public static class PcmSample extends AudioOutputUpdate {
-        // PCM sample value
-        private short value;
+        // Left channel PCM sample value
+        short leftChannelValue;
+        // Right channel PCM sample value
+        short rightChannelValue;
     }
 
     PcmOutput(int sampleRate, int samplesBufferSize, Computer computer) {
@@ -45,26 +49,29 @@ public abstract class PcmOutput extends AudioOutput<PcmOutput.PcmSample> {
         return pcmSamples;
     }
 
-    synchronized void putPcmSample(short pcmSampleValue, long pcmSampleTimestamp) {
+    synchronized void putPcmSample(short leftChannelPcmSampleValue, short rightChannelPcmSampleValue,
+                                   long pcmSampleTimestamp) {
         if (getComputer().getClockFrequency() <= 0) {
             // Drop PCM samples in CPU free running mode
             return;
         }
         PcmSample pcmSample = putAudioOutputUpdate();
         if (pcmSample != null) {
-            pcmSample.value = pcmSampleValue;
+            pcmSample.leftChannelValue = leftChannelPcmSampleValue;
+            pcmSample.rightChannelValue = rightChannelPcmSampleValue;
             pcmSample.timestamp = pcmSampleTimestamp;
         }
     }
 
     @Override
-    protected void handleAudioOutputUpdate(PcmSample pcmSample) {
-        pcmSampleValue = pcmSample.value;
+    protected synchronized void handleAudioOutputUpdate(PcmSample pcmSample) {
+        leftChannelPcmSampleValue = pcmSample.leftChannelValue;
+        rightChannelPcmSampleValue = pcmSample.rightChannelValue;
     }
 
     @Override
-    protected void writeSample(short[] sample) {
-        sample[0] = pcmSampleValue;
-        sample[1] = pcmSampleValue; // mono duplicated to stereo
+    protected synchronized void writeSample(short[] sample) {
+        sample[0] = leftChannelPcmSampleValue;
+        sample[1] = rightChannelPcmSampleValue;
     }
 }

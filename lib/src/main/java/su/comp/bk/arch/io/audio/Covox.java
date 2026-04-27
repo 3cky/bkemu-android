@@ -23,6 +23,8 @@ import su.comp.bk.arch.cpu.Cpu;
 
 /**
  * Covox audio output (8-bit, attached to the peripheral port).
+ * Supports stereo mode when a word write's high byte is not 0x00 or 0xFF.
+ * Stereo mode deactivates after {@link #STEREO_DEACTIVATE_TIMEOUT_NANOS} of inactivity.
  */
 public class Covox extends PcmOutput {
     private final static int[] ADDRESSES = { Cpu.REG_SEL2 };
@@ -31,7 +33,13 @@ public class Covox extends PcmOutput {
 
     public static final int BAND_PASS_FILTER_HIGH_CUTOFF_FREQUENCY_HZ = 12000;
 
-    private int lastSampleValue;
+    public static final long STEREO_DEACTIVATE_TIMEOUT_NANOS = 3 * 1000 * 1000 * 1000L; // 3s
+
+    private int lastLeftSampleValue;
+    private int lastRightSampleValue;
+
+    private boolean isStereoMode = false;
+    private long lastStereoActivationTimestamp;
 
     public Covox(int sampleRate, int samplesBufferSize, Computer computer) {
         super(sampleRate, samplesBufferSize, computer);
@@ -58,12 +66,48 @@ public class Covox extends PcmOutput {
     }
 
     @Override
-    public boolean write(long cpuTime, boolean isByteMode, int address, int value) {
-        int sampleValue = value & 0377;
-        if (sampleValue != lastSampleValue) {
-            putPcmSample((short)(((sampleValue + Byte.MIN_VALUE) << 8) | sampleValue), cpuTime);
+    public synchronized void init(long cpuTime, boolean isHardwareReset) {
+        super.init(cpuTime, isHardwareReset);
+        isStereoMode = false;
+        lastLeftSampleValue = 0;
+        lastRightSampleValue = 0;
+    }
+
+    private void checkDeactivateStereoMode(long cpuTime) {
+        if (!isStereoMode || getComputer().cpuTimeToNanos(cpuTime
+                - lastStereoActivationTimestamp) < STEREO_DEACTIVATE_TIMEOUT_NANOS) {
+            return;
         }
-        lastSampleValue = sampleValue;
+        isStereoMode = false;
+    }
+
+    private static short toPcmSampleValue(int byteValue) {
+        return (short) (((byteValue + Byte.MIN_VALUE) << 8) | byteValue);
+    }
+
+    @Override
+    public synchronized boolean write(long cpuTime, boolean isByteMode, int address, int value) {
+        int l = ~value & 0xff;
+        int r = (~value >> 8) & 0xff;
+
+        if (!isByteMode && r != 0x00 && r != 0xff) {
+            isStereoMode = true;
+            lastStereoActivationTimestamp = cpuTime;
+        } else {
+            checkDeactivateStereoMode(cpuTime);
+        }
+
+        if (!isStereoMode) {
+            r = l;
+        }
+
+        if (l != lastLeftSampleValue || r != lastRightSampleValue) {
+            putPcmSample(toPcmSampleValue(l), toPcmSampleValue(r), cpuTime);
+        }
+
+        lastLeftSampleValue = l;
+        lastRightSampleValue = r;
+
         return true;
     }
 }

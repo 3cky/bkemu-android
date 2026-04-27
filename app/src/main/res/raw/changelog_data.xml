@@ -4,6 +4,7 @@
         <changes>
             <change>Implemented Menestrel sound card emulation.</change>
             <change>Implemented 2xAY mode by TurboSound standard.</change>
+            <change>Added stereo mode support to Covox.</change>
             <change>Refactored audio subsystem emulation.</change>
             <change>Added master audio volume control.</change>
         </changes>
