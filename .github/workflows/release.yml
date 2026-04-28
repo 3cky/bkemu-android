@@ -1,0 +1,162 @@
+name: BkEmu Release
+
+on:
+  push:
+    tags:
+      - 'bkemu-[0-9]*'
+
+jobs:
+  release:
+    name: Build and Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Java 11
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '11'
+          cache: gradle
+
+      - name: Extract version from tag
+        id: version
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          VERSION="${TAG#bkemu-}"
+          echo "tag=${TAG}"         >> "$GITHUB_OUTPUT"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Decode release keystore
+        run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > release.keystore
+
+      - name: Create local.properties
+        run: |
+          echo "sdk.dir=${ANDROID_SDK_ROOT}" > local.properties
+          echo "key.alias=${{ secrets.KEY_ALIAS }}"                  >> local.properties
+          echo "key.password=${{ secrets.KEY_PASSWORD }}"            >> local.properties
+          echo "key.store.password=${{ secrets.KEYSTORE_PASSWORD }}" >> local.properties
+
+      - name: Build release artifacts
+        run: ./gradlew clean build publishToMavenLocal
+        env:
+          GRADLE_OPTS: "-Xmx2g -Dorg.gradle.daemon=false"
+
+      - name: Stage artifacts
+        id: artifacts
+        run: |
+          V="${{ steps.version.outputs.version }}"
+          M2="${HOME}/.m2/repository/com/github/3cky/bkemu-android/${V}/bkemu-android-${V}"
+          cp "${M2}-signed.apk" "bkemu-android-${V}.apk"
+          echo "apk=bkemu-android-${V}.apk"  >> "$GITHUB_OUTPUT"
+          echo "aab=${M2}.aab"               >> "$GITHUB_OUTPUT"
+          echo "mapping=${M2}-mapping.txt"   >> "$GITHUB_OUTPUT"
+
+      - name: Generate release notes and Play Store what's new
+        id: notes
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          python3 - <<'PYEOF'
+          import os, sys, yaml, subprocess
+
+          VERSION = os.environ["VERSION"]
+          TAG     = os.environ["TAG"]
+          REPO    = "3cky/bkemu-android"
+
+          def load_version(path, version):
+              with open(path, encoding="utf-8") as f:
+                  data = yaml.safe_load(f)
+              for r in data["releases"]:
+                  if str(r["version"]) == version:
+                      return r["changes"]
+              return None
+
+          def bullets(changes):
+              return "\n".join(f"* {c}" for c in changes)
+
+          def truncate(text, limit=500):
+              if len(text) <= limit:
+                  return text
+              out, total = [], 0
+              for line in text.splitlines():
+                  needed = len(line) + (1 if out else 0)
+                  if total + needed > limit:
+                      break
+                  out.append(line)
+                  total += needed
+              return "\n".join(out)
+
+          en = load_version("app/src/main/res/raw/changelog_data.yaml", VERSION)
+          ru = load_version("app/src/main/res/raw-ru/changelog_data.yaml", VERSION)
+          if not en:
+              sys.exit(f"ERROR: version {VERSION} not found in English changelog")
+          if not ru:
+              sys.exit(f"ERROR: version {VERSION} not found in Russian changelog")
+
+          tags = subprocess.check_output(
+              ["git", "tag", "-l", "bkemu-[0-9]*", "--sort=-version:refname"],
+              text=True
+          ).strip().splitlines()
+          prev = None
+          for i, t in enumerate(tags):
+              if t.strip() == TAG:
+                  if i + 1 < len(tags):
+                      prev = tags[i + 1].strip()
+                  break
+
+          url = (
+              f"https://github.com/{REPO}/compare/{prev}...{TAG}"
+              if prev else
+              f"https://github.com/{REPO}/releases/tag/{TAG}"
+          )
+
+          body = (
+              f"{bullets(ru)}\n"
+              f"\n"
+              f"**Полный список изменений**: {url}\n"
+              f"\n"
+              f"---\n"
+              f"{bullets(en)}\n"
+              f"\n"
+              f"**Full Changelog**: {url}"
+          )
+
+          os.makedirs("whatsnew", exist_ok=True)
+          with open("whatsnew/whatsnew-en-US", "w", encoding="utf-8") as f:
+              f.write(truncate(bullets(en)))
+          with open("whatsnew/whatsnew-ru-RU", "w", encoding="utf-8") as f:
+              f.write(truncate(bullets(ru)))
+
+          delimiter = "RELEASE_BODY_EOF"
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as f:
+              f.write(f"body<<{delimiter}\n{body}\n{delimiter}\n")
+
+          print("Release notes generated.")
+          PYEOF
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "BkEmu v${{ steps.version.outputs.version }}"
+          tag_name: ${{ steps.version.outputs.tag }}
+          body: ${{ steps.notes.outputs.body }}
+          files: |
+            ${{ steps.artifacts.outputs.apk }}
+            ${{ steps.artifacts.outputs.mapping }}
+
+      - name: Deploy to Google Play
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: su.comp.bk
+          releaseFiles: ${{ steps.artifacts.outputs.aab }}
+          track: production
+          whatsNewDirectory: whatsnew
