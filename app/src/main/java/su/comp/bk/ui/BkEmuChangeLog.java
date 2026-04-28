@@ -30,8 +30,7 @@ import android.webkit.WebView;
 import com.samskivert.mustache.Mustache;
 import com.samskivert.mustache.Template;
 
-import org.xmlpull.v1.XmlPullParser;
-import org.xmlpull.v1.XmlPullParserFactory;
+import org.yaml.snakeyaml.Yaml;
 
 import java.io.BufferedReader;
 import java.io.InputStream;
@@ -48,14 +47,6 @@ import timber.log.Timber;
  * Provides change log dialog (with last changes information or full change log).
  */
 public class BkEmuChangeLog {
-
-    private static final String XML_TAG_RELEASES = "releases";
-    private static final String XML_TAG_RELEASE = "release";
-    private static final String XML_TAG_CHANGES = "changes";
-    private static final String XML_TAG_CHANGE = "change";
-    private static final String XML_ATTR_VERSION = "version";
-    private static final String XML_ATTR_DATE = "date";
-
     private final Context context;
 
     private static final String PREFS_KEY_LAST_VERSION_NAME = "su.comp.bk.ui.p:LAST_VERSION";
@@ -111,7 +102,7 @@ public class BkEmuChangeLog {
     }
 
     public boolean isFirstRun() {
-        return getLastVersionName().length() == 0;
+        return getLastVersionName().isEmpty();
     }
 
     public boolean isCurrentVersionGreaterThanLast() {
@@ -164,75 +155,29 @@ public class BkEmuChangeLog {
         return changelogTemplate.execute(getLogData(isFullChangelog));
     }
 
-    @SuppressWarnings("null")
+    @SuppressWarnings("unchecked")
     private Object getLogData(boolean isFullChangelog) {
-        Map<String, Object> changelogTemplateData = null;
-        List<Map<String, Object>> releasesList = null;
-        Map<String, Object> releaseData = null;
-        List<String> releaseChangesList = null;
         try {
-            XmlPullParserFactory xmlParserFactory = XmlPullParserFactory.newInstance();
-            xmlParserFactory.setNamespaceAware(true);
-            XmlPullParser xmlParser = xmlParserFactory.newPullParser();
-            InputStream changelogXmlStream = context.getResources()
+            InputStream changelogYamlStream = context.getResources()
                     .openRawResource(R.raw.changelog_data);
-            xmlParser.setInput(changelogXmlStream, null);
-            int eventType = xmlParser.getEventType();
-            while (eventType != XmlPullParser.END_DOCUMENT) {
-                String tagName;
-                switch (eventType) {
-                    case XmlPullParser.START_DOCUMENT:
-                        changelogTemplateData = new HashMap<>();
-                        break;
-                    case XmlPullParser.START_TAG:
-                        tagName = xmlParser.getName();
-                        if (XML_TAG_RELEASES.equalsIgnoreCase(tagName)) {
-                            releasesList = new ArrayList<>();
-                        } else if (XML_TAG_RELEASE.equalsIgnoreCase(tagName)) {
-                            releaseData = new HashMap<>();
-                            releaseData.put("version", xmlParser
-                                    .getAttributeValue(null, XML_ATTR_VERSION));
-                            String date = xmlParser
-                                    .getAttributeValue(null, XML_ATTR_DATE);
-                            boolean hasDate = (date != null);
-                            releaseData.put("hasDate", hasDate);
-                            if (hasDate) {
-                                releaseData.put("date", date);
-                            }
-                        } else if (XML_TAG_CHANGES.equalsIgnoreCase(tagName)) {
-                            releaseChangesList = new ArrayList<>();
-                        } else if (XML_TAG_CHANGE.equalsIgnoreCase(tagName)) {
-                            releaseChangesList.add(xmlParser.nextText());
-                        } else {
-                            Timber.w("unknown changelog XML start tag: '" + tagName + "'");
-                        }
-                        break;
-                    case XmlPullParser.END_TAG:
-                        tagName = xmlParser.getName();
-                        if (XML_TAG_RELEASES.equalsIgnoreCase(tagName)) {
-                            changelogTemplateData.put("releases", releasesList);
-                        } else if (XML_TAG_RELEASE.equalsIgnoreCase(tagName)) {
-                            if (isFullChangelog || isFirstVersionGreaterThanSecond(
-                                    (String) releaseData.get("version"),
-                                    getLastVersionName())) {
-                                releasesList.add(releaseData);
-                            }
-                        } else if (XML_TAG_CHANGES.equalsIgnoreCase(tagName)) {
-                            releaseData.put("changes", releaseChangesList);
-                        } else if (XML_TAG_CHANGE.equalsIgnoreCase(tagName)) {
-                            // Do nothing
-                        } else {
-                            Timber.w("unknown changelog XML end tag: '" + tagName + "'");
-                        }
-                        break;
-                    default:
-                        break;
+            Map<String, Object> yamlData = new Yaml().load(changelogYamlStream);
+            List<Map<String, Object>> yamlReleases =
+                    (List<Map<String, Object>>) yamlData.get("releases");
+            List<Map<String, Object>> releasesList = new ArrayList<>();
+            for (Map<String, Object> yamlRelease : yamlReleases) {
+                String version = (String) yamlRelease.get("version");
+                if (isFullChangelog || isFirstVersionGreaterThanSecond(version, getLastVersionName())) {
+                    Map<String, Object> releaseData = new HashMap<>(yamlRelease);
+                    releaseData.put("hasDate", releaseData.containsKey("date"));
+                    releasesList.add(releaseData);
                 }
-                eventType = xmlParser.next();
             }
+            Map<String, Object> templateData = new HashMap<>();
+            templateData.put("releases", releasesList);
+            return templateData;
         } catch (Exception e) {
-            Timber.e(e, "can't parse changelog XML data");
+            Timber.e(e, "can't parse changelog YAML data");
+            return null;
         }
-        return changelogTemplateData;
     }
 }

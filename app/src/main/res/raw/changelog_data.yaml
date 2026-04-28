@@ -1,0 +1,147 @@
+releases:
+  - version: "1.2.0-dev"
+    changes:
+      - Implemented Menestrel sound card emulation.
+      - Implemented 2xAY mode by TurboSound standard.
+      - Added stereo mode support to Covox.
+      - Refactored audio subsystem emulation.
+      - Added master audio volume control.
+  - version: "1.1.2"
+    date: "2026-03-17"
+    changes:
+      - Fixed active HDD/FDD images unmounting by long click in disk manager.
+      - Fixed floppy disk images handling with sizes less than 800KB.
+      - Fixed bug that prevents saving of changed floppy disk image data.
+  - version: "1.1.1"
+    date: "2025-04-01"
+    changes:
+      - Remapped "ВС" BK button to "Page Up" hardware key and "Ю @" BK button to "Page Down" hardware key.
+      - Fixed low register keycode for "0" BK button.
+      - Fixed starting of autoloaded BIN images.
+      - Fixed computer configuration name displaying.
+      - Improved compatibility with some games.
+  - version: "1.1.0"
+    date: "2024-01-26"
+    changes:
+      - Moved settings-related and About menu items to the Settings dialog.
+      - Added CPU speed configuration (Auto/3 MHz/4 MHz/6 MHz/Maximum).
+      - Added on-screen keyboard display mode configuration (normal/overlay)
+      - Emulator will not attempt to autostart screen BIN images on BK-0010.
+      - Set EMT 36 / .BMB10 "STOP pressed" error code on BIN image loading error.
+      - Fixed menu loaded BIN image starting by `S` directive for BK0010/KNGMD config.
+      - Fixed on-screen joystick buttons stuck.
+      - Fixed screenshot share preview.
+  - version: "1.0.0"
+    date: "2022-06-24"
+    changes:
+      - Implemented SMK512 controller emulation (extended memory and IDE controller).
+      - Added the ability to save and restore the emulator state.
+      - Added support for hardware game controllers.
+      - Disk and program image files now are saved and loaded using the system file manager.
+      - Added support for Android TV.
+      - Improved behaviour of the on-screen keyboard.
+      - Added displaying of the selected configuration in the toolbar.
+      - Fixed screen scrolling in the extended memory mode.
+      - Improved emulation of the CRT raster effects.
+      - Added low pass filters to Covox and speaker outputs.
+      - Fixed on-screen keyboard displaying for some devices with the dark theme enabled.
+      - Floppy disk image maximum number of tracks is increased to 82.
+  - version: "0.9.0"
+    date: "2021-06-12"
+    changes:
+      - Improved handling of physical and on-screen keyboards.
+      - Fixed on-screen joystick layout.
+      - Implemented disk activity displaying in Disk Manager dialog.
+      - Added take screenshot option.
+      - Fixed application crash when screen is rotated in Audio Volume dialog.
+  - version: "0.8.0"
+    date: "2020-11-10"
+    changes:
+      - Implemented read/write mode for floppy disk images.
+      - Added full-screen mode.
+      - Fixed 50 Hz timer interrupt timings.
+  - version: "0.7.0"
+    date: "2020-06-05"
+    changes:
+      - Implemented AY-3-8910 programmable sound generator emulation.
+      - Implemented 8-bit Covox emulation.
+      - Added audio volume adjustment dialog.
+      - Fixed loading of binary images containing spaces in the file name.
+  - version: "0.6.0"
+    date: "2020-05-01"
+    changes:
+      - Added grayscale display mode.
+      - Tape loader handler now automatically adds .BIN extension to the file name if needed.
+      - Fixed an emulator lockup on some phones.
+      - Improved compatibility with games that using downloadable overlays.
+      - Improved handling of program and disk images from the external file managers.
+      - User interface improvements.
+  - version: "0.5.0"
+    date: "2020-04-22"
+    changes:
+      - Implemented base CRT raster effects emulation functionality.
+      - Timer 50 Hz now is clocked by the vertical sync.
+      - Fixed SHIFT+CAPS+RUS/LAT keyboard combinations handling.
+      - Implemented BK0011 RAM pages mapping when BIN image is loaded.
+      - Added recently used floppy disk images automounting on the emulator start.
+      - Fixed RESET opcode handling.
+      - Corrected colors for some BK0011 palettes.
+  - version: "0.4.4"
+    date: "2020-02-05"
+    changes:
+      - Fixed open BIN file dialog error on Android 10.
+  - version: "0.4.3"
+    date: "2019-11-21"
+    changes:
+      - Fixed WAIT opcode handling.
+      - Fixed loading of disk images with file name containing spaces.
+      - Fixed EMT36 syscall handling with non-zero file loading address.
+      - Added support for 81-track floppy disk images.
+  - version: "0.4.2"
+    date: "2019-03-01"
+    changes:
+      - Fixes and improvements in file chooser dialog.
+      - Changed on-screen keyboard and joystick animation.
+  - version: "0.4.1"
+    date: "2018-08-27"
+    changes:
+      - Fixed on-screen keyboard buttons handling.
+      - Fixed configuration reset bug after app update.
+  - version: "0.4.0"
+    date: "2016-02-08"
+    changes:
+      - Added six-button on-screen joystick.
+      - Implemented file save using standard BK0010/11 system calls.
+      - Fixed double quotes input on some hardware keyboards.
+      - On-screen keyboard now is not hiding after screen rotation.
+      - Added "Cancel" button to image file open dialog.
+      - New Material Design icons.
+  - version: "0.3.0"
+    date: "2013-02-08"
+    changes:
+      - Implemented emulation of BK-0011M with MSTD or floppy controller blocks attached.
+      - Now .BIN images are loaded without emulation restart for BK-0011M and BK-0010 with floppy controller.
+      - Fixed minor bugs in CPU emulation code.
+  - version: "0.2.1"
+    date: "2013-01-13"
+    changes:
+      - Fixed loading of files with Cyrillic characters in name. Fixed Basic files loading with name shorter than 6 characters.
+      - Fixed NPE while startup on Android < 2.3.
+      - ROM write access now generates bus error.
+      - Fixed refreshing of effective CPU frequency in About dialog.
+  - version: "0.2.0"
+    date: "2012-12-31"
+    changes:
+      - Added BK-0010 configuration with floppy controller with 16 kB of SRAM and 4 floppy drives attached. Standard 800 kB disk images (.BKD, .IMG) mounting in write protected mode is supported.
+      - Cancel of file image dialog doesn't break EMT interrupt now.
+      - Fixed menu icon sizes.
+  - version: "0.1.1"
+    date: "2012-10-02"
+    changes:
+      - Added standard two-button joystick emulation. Use single tap to press left joystick button, double tap to press right joystick button, scroll to move joystick handle in given direction.
+      - Implemented change log displaying.
+      - Added "Share" menu item.
+  - version: "0.1.0"
+    date: "2012-09-04"
+    changes:
+      - First public release.
