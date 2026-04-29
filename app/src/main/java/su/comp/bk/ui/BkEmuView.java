@@ -18,6 +18,7 @@
  */
 package su.comp.bk.ui;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
@@ -27,12 +28,15 @@ import android.graphics.Color;
 import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.Rect;
+import android.graphics.RectF;
 import android.graphics.SurfaceTexture;
 import android.util.AttributeSet;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
+import android.view.ScaleGestureDetector;
 import android.view.TextureView;
 
+import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
 
 import su.comp.bk.R;
@@ -124,8 +128,24 @@ public class BkEmuView extends TextureView implements TextureView.SurfaceTexture
     private BkEmuViewUpdateThread uiUpdateThread;
 
     private GestureDetector gestureDetector;
+    private final ScaleGestureDetector scaleGestureDetector;
 
-    protected volatile Matrix videoBufferBitmapTransformMatrix;
+    // Min screen width (dp) at which zoom/pan will be disabled
+    private static final int ZOOM_PAN_DISABLE_MIN_SCREEN_WIDTH_DP = 600;
+
+    // Minimum zoom level (no zoom)
+    private static final float MIN_ZOOM = 1f;
+    // Maximum zoom level
+    private static final float MAX_ZOOM = 10f;
+    // Current zoom level
+    private float currentZoom = MIN_ZOOM;
+
+    // Base video buffer bitmap transform matrix: maps emulator bitmap to fit the view
+    private final Matrix baseVideoBufferBitmapTransformMatrix = new Matrix();
+    // User-controlled zoom/pan video buffer bitmap transform matrix
+    private final Matrix userVideoBufferBitmapTransformMatrix = new Matrix();
+    // Composite video buffer bitmap transform matrix
+    protected volatile Matrix compositeVideoBufferBitmapTransformMatrix;
 
     protected Computer computer;
 
@@ -137,6 +157,31 @@ public class BkEmuView extends TextureView implements TextureView.SurfaceTexture
     // Video controller frames per UI update
     private static final int FRAMES_PER_UPDATE = 3;
     private long lastUpdateFrameNumber;
+
+    /*
+     * Scale gesture listener for pinch-to-zoom
+     */
+    class ZoomListener extends ScaleGestureDetector.SimpleOnScaleGestureListener {
+        @Override
+        public boolean onScale(ScaleGestureDetector detector) {
+            float newZoom = Math.min(MAX_ZOOM,
+                    Math.max(MIN_ZOOM, currentZoom * detector.getScaleFactor()));
+            float actualFactor = newZoom / currentZoom;
+            currentZoom = newZoom;
+            userVideoBufferBitmapTransformMatrix.postScale(actualFactor, actualFactor,
+                    detector.getFocusX(), detector.getFocusY());
+            clampUserVideoBufferBitmapTransformMatrix();
+            rebuildCompositeVideoBufferBitmapTransformMatrix();
+            return true;
+        }
+
+        @Override
+        public void onScaleEnd(@NonNull ScaleGestureDetector detector) {
+            if (currentZoom <= MIN_ZOOM) {
+                resetZoomAndPan();
+            }
+        }
+    }
 
     /*
      * Emulator view update thread
@@ -182,7 +227,7 @@ public class BkEmuView extends TextureView implements TextureView.SurfaceTexture
                                 canvas.drawColor(bgColor);
                                 videoController.renderFrame();
                                 canvas.drawBitmap(frameRenderer.getFrameBuffer(),
-                                        videoBufferBitmapTransformMatrix, null);
+                                        compositeVideoBufferBitmapTransformMatrix, null);
                                 drawIndicators(canvas);
                             }
                         } finally {
@@ -220,6 +265,10 @@ public class BkEmuView extends TextureView implements TextureView.SurfaceTexture
         initFpsIndicator();
         initFloppyActivityIndicator();
         initDisplayModeIndicator();
+        // Initialize scale gesture detector for pinch-to-zoom (disabled on large screens)
+        scaleGestureDetector = isZoomAndPanEnabled()
+                ? new ScaleGestureDetector(context, new ZoomListener())
+                : null;
         // Set surface events listener
         this.setSurfaceTextureListener(this);
     }
@@ -371,7 +420,7 @@ public class BkEmuView extends TextureView implements TextureView.SurfaceTexture
         drawDisplayModeIndicator(canvas, currentTime);
     }
 
-    public void updateVideoBufferBitmapTransformMatrix(int viewWidth, int viewHeight) {
+    public void updateBaseVideoBufferBitmapTransformMatrix(int viewWidth, int viewHeight) {
         lastViewWidth = viewWidth;
         lastViewHeight = viewHeight;
         int bitmapWidth = VideoControllerFrameRenderer.FRAME_BUFFER_WIDTH;
@@ -385,17 +434,79 @@ public class BkEmuView extends TextureView implements TextureView.SurfaceTexture
             bitmapScaleY = (float) viewHeight / bitmapHeight;
             bitmapScaleX = bitmapScaleY * COMPUTER_SCREEN_ASPECT_RATIO / bitmapAspectRatio;
             bitmapTranslateX = (viewWidth - bitmapWidth * bitmapScaleX) / 2f;
-            bitmapTranslateY = 0f;
         } else {
             bitmapScaleX = (float) viewWidth / bitmapWidth;
             bitmapScaleY = bitmapAspectRatio * bitmapScaleX / COMPUTER_SCREEN_ASPECT_RATIO;
             bitmapTranslateX = 0f;
-            bitmapTranslateY = 0f;
         }
-        Matrix m = new Matrix();
-        m.setScale(bitmapScaleX, bitmapScaleY);
-        m.postTranslate(bitmapTranslateX, bitmapTranslateY);
-        videoBufferBitmapTransformMatrix = m;
+        bitmapTranslateY = 0f;
+        baseVideoBufferBitmapTransformMatrix.setScale(bitmapScaleX, bitmapScaleY);
+        baseVideoBufferBitmapTransformMatrix.postTranslate(bitmapTranslateX, bitmapTranslateY);
+        rebuildCompositeVideoBufferBitmapTransformMatrix();
+    }
+
+    private void rebuildCompositeVideoBufferBitmapTransformMatrix() {
+        Matrix m = new Matrix(baseVideoBufferBitmapTransformMatrix);
+        m.postConcat(userVideoBufferBitmapTransformMatrix);
+        compositeVideoBufferBitmapTransformMatrix = m;
+    }
+
+    // Clamps video buffer bitmap transform matrix translation
+    // so the emulator screen edges never move inside the view bounds
+    private void clampUserVideoBufferBitmapTransformMatrix() {
+        if (currentZoom <= MIN_ZOOM) {
+            userVideoBufferBitmapTransformMatrix.reset();
+            return;
+        }
+
+        if (lastViewWidth == 0 || lastViewHeight == 0) {
+            return;
+        }
+
+        RectF mappedRect = new RectF(0, 0,
+                VideoControllerFrameRenderer.FRAME_BUFFER_WIDTH,
+                VideoControllerFrameRenderer.FRAME_BUFFER_HEIGHT);
+        baseVideoBufferBitmapTransformMatrix.mapRect(mappedRect);
+        userVideoBufferBitmapTransformMatrix.mapRect(mappedRect);
+
+        float[] v = new float[9];
+        userVideoBufferBitmapTransformMatrix.getValues(v);
+
+        float tx = v[Matrix.MTRANS_X];
+        float ty = v[Matrix.MTRANS_Y];
+        if (mappedRect.left > 0) {
+            tx -= mappedRect.left;
+        } else if (mappedRect.right < lastViewWidth) {
+            tx += lastViewWidth - mappedRect.right;
+        }
+        if (mappedRect.top > 0) {
+            ty -= mappedRect.top;
+        } else if (mappedRect.bottom < lastViewHeight) {
+            ty += lastViewHeight - mappedRect.bottom;
+        }
+        v[Matrix.MTRANS_X] = tx;
+        v[Matrix.MTRANS_Y] = ty;
+
+        userVideoBufferBitmapTransformMatrix.setValues(v);
+    }
+
+    public void resetZoomAndPan() {
+        currentZoom = MIN_ZOOM;
+        userVideoBufferBitmapTransformMatrix.reset();
+        rebuildCompositeVideoBufferBitmapTransformMatrix();
+    }
+
+    private boolean isZoomAndPanEnabled() {
+        return getResources().getConfiguration().smallestScreenWidthDp
+                < ZOOM_PAN_DISABLE_MIN_SCREEN_WIDTH_DP;
+    }
+
+    public void onScroll(float distanceX, float distanceY) {
+        if (scaleGestureDetector != null && currentZoom > MIN_ZOOM) {
+            userVideoBufferBitmapTransformMatrix.postTranslate(-distanceX, -distanceY);
+            clampUserVideoBufferBitmapTransformMatrix();
+            rebuildCompositeVideoBufferBitmapTransformMatrix();
+        }
     }
 
     public float getUiUpdateThreadCpuLoad() {
@@ -421,48 +532,63 @@ public class BkEmuView extends TextureView implements TextureView.SurfaceTexture
     }
 
     @Override
-    public void onSurfaceTextureAvailable(SurfaceTexture surface, int width, int height) {
+    public void onSurfaceTextureAvailable(@NonNull SurfaceTexture surface,
+                                          int width, int height) {
         Timber.d("onSurfaceTextureAvailable");
         // Update emulator screen bitmap scale matrix
-        updateVideoBufferBitmapTransformMatrix(getWidth(), getHeight());
+        updateBaseVideoBufferBitmapTransformMatrix(getWidth(), getHeight());
         // Start emulator screen update thread
         this.uiUpdateThread = new BkEmuViewUpdateThread(this);
         this.uiUpdateThread.start();
     }
 
     @Override
-    public void onSurfaceTextureSizeChanged(SurfaceTexture surface, int width, int height) {
+    public void onSurfaceTextureSizeChanged(@NonNull SurfaceTexture surface,
+                                            int width, int height) {
         Timber.d("onSurfaceTextureSizeChanged");
         if (width != lastViewWidth || height != lastViewHeight) {
-            // Update emulator screen bitmap scale matrix
-            updateVideoBufferBitmapTransformMatrix(width, height);
+            resetZoomAndPan();
+            updateBaseVideoBufferBitmapTransformMatrix(width, height);
         }
     }
 
     @Override
-    public boolean onSurfaceTextureDestroyed(SurfaceTexture surface) {
+    public boolean onSurfaceTextureDestroyed(@NonNull SurfaceTexture surface) {
         Timber.d("onSurfaceTextureDestroyed");
         uiUpdateThread.scheduleStop();
         while (uiUpdateThread.isAlive()) {
             try {
                 uiUpdateThread.join();
-            } catch (InterruptedException e) {
+            } catch (InterruptedException ignored) {
             }
         }
         return true;
     }
 
     @Override
-    public void onSurfaceTextureUpdated(SurfaceTexture surface) {
+    public void onSurfaceTextureUpdated(@NonNull SurfaceTexture surface) {
     }
 
     /* (non-Javadoc)
      * @see android.view.View#onTouchEvent(android.view.MotionEvent)
      */
+    @SuppressLint("ClickableViewAccessibility")
     @Override
     public boolean onTouchEvent(MotionEvent event) {
-        return (gestureDetector != null) ? gestureDetector.onTouchEvent(event)
-                    : super.onTouchEvent(event);
+        if (scaleGestureDetector != null) {
+            boolean isEventHandled = scaleGestureDetector.onTouchEvent(event);
+            if (!scaleGestureDetector.isInProgress()) {
+                isEventHandled |= tryGestureDetectorOnTouchEvent(event);
+            }
+            return isEventHandled;
+        }
+        return tryGestureDetectorOnTouchEvent(event);
+    }
+
+    private boolean tryGestureDetectorOnTouchEvent(MotionEvent event) {
+        return (gestureDetector != null)
+                ? gestureDetector.onTouchEvent(event)
+                : super.onTouchEvent(event);
     }
 
     @Override

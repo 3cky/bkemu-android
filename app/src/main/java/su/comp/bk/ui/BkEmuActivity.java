@@ -311,18 +311,24 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
     /**
      * Gesture listener
      */
-    class GestureListener extends GestureDetector.SimpleOnGestureListener {
+    public class GestureListener extends GestureDetector.SimpleOnGestureListener {
         @Override
-        public boolean onDown(MotionEvent e) {
+        public boolean onDown(@NonNull MotionEvent e) {
             return true;
         }
         @Override
-        public void onLongPress(MotionEvent e) {
+        public void onLongPress(@NonNull MotionEvent e) {
             bkEmuView.setFpsDrawingEnabled(!bkEmuView.isFpsDrawingEnabled());
         }
         @Override
-        public boolean onDoubleTap(MotionEvent e) {
+        public boolean onDoubleTap(@NonNull MotionEvent e) {
             toggleOnScreenControlsVisibility();
+            return true;
+        }
+        @Override
+        public boolean onScroll(MotionEvent e1, @NonNull MotionEvent e2,
+                                float distanceX, float distanceY) {
+            bkEmuView.onScroll(distanceX, distanceY);
             return true;
         }
     }
