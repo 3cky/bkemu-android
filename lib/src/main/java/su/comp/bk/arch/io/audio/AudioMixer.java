@@ -211,7 +211,8 @@ public class AudioMixer implements Runnable {
         while (bufferIndex < mixBuffer.length) {
             int leftChannelAccum = 0;
             int rightChannelAccum = 0;
-            for (AudioOutput<?> audioOutput : audioOutputs) {
+            for (int i = 0, audioOutputsSize = audioOutputs.size(); i < audioOutputsSize; i++) {
+                AudioOutput<?> audioOutput = audioOutputs.get(i);
                 audioOutput.getSample(sampleBuf, nextSampleTimestamp);
                 float audioOutputGain = convertVolumeToGain(audioOutput.getVolume());
                 leftChannelAccum += (int) (sampleBuf[0] * audioOutputGain);
