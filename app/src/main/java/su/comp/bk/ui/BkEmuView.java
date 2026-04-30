@@ -539,6 +539,7 @@ public class BkEmuView extends TextureView implements TextureView.SurfaceTexture
         updateBaseVideoBufferBitmapTransformMatrix(getWidth(), getHeight());
         // Start emulator screen update thread
         this.uiUpdateThread = new BkEmuViewUpdateThread(this);
+        this.uiUpdateThread.setName("UiUpdateThread");
         this.uiUpdateThread.start();
     }
 
