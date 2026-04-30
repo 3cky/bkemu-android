@@ -163,6 +163,8 @@ public class Computer implements Runnable, StatefulEntity {
     // IDE controller reference (<code>null</code> if no IDE controller present)
     private IdeController ideController;
 
+    private MemoryRange lastReadMemoryRange;
+
     /**
      * Computer uptime updates listener.
      */
@@ -810,17 +812,25 @@ public class Computer implements Runnable, StatefulEntity {
 
         int wordAddress = address & 0177776;
 
-        // Check for memories at given address
-        List<MemoryRange> memoryRanges = getMemoryRanges(address);
-        if (memoryRanges != null) {
-            for (int i = 0, memoryRangesSize = memoryRanges.size(); i < memoryRangesSize; i++) {
-                MemoryRange memoryRange = memoryRanges.get(i);
-                if (memoryRange.isRelatedAddress(address)) {
-                    int memoryReadValue = memoryRange.getMemory().read(
-                            wordAddress - memoryRange.getStartAddress());
-                    if (memoryReadValue != BUS_ERROR) {
-                        readValue = memoryReadValue;
-                        break;
+        // First do check the last read memory range
+        if (lastReadMemoryRange != null && lastReadMemoryRange.isRelatedAddress(address)) {
+            readValue = lastReadMemoryRange.getMemory().read(wordAddress
+                    - lastReadMemoryRange.getStartAddress());
+        }
+
+        if (readValue == BUS_ERROR) {
+            // Do full check for the memories at given address
+            List<MemoryRange> memoryRanges = getMemoryRanges(address);
+            if (memoryRanges != null) {
+                for (int i = 0, memoryRangesSize = memoryRanges.size(); i < memoryRangesSize; i++) {
+                    MemoryRange memoryRange = memoryRanges.get(i);
+                    if (memoryRange.isRelatedAddress(address)) {
+                        readValue = memoryRange.getMemory().read(wordAddress
+                                - memoryRange.getStartAddress());
+                        if (readValue != BUS_ERROR) {
+                            lastReadMemoryRange = memoryRange;
+                            break;
+                        }
                     }
                 }
             }
