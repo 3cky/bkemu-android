@@ -1,5 +1,6 @@
 releases:
-  - version: "1.2.0-dev"
+  - version: "1.2.0"
+    date: "2026-05-04"
     changes:
       - Implemented Menestrel sound card emulation.
       - Implemented 2xAY mode by TurboSound standard.
