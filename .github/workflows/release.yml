@@ -39,8 +39,9 @@ jobs:
       - name: Create local.properties
         run: |
           echo "sdk.dir=${ANDROID_SDK_ROOT}" > local.properties
-          echo "key.alias=${{ secrets.KEY_ALIAS }}"                  >> local.properties
-          echo "key.password=${{ secrets.KEY_PASSWORD }}"            >> local.properties
+          echo "key.store.file=${{ github.workspace }}/release.keystore" >> local.properties
+          echo "key.alias=${{ secrets.KEY_ALIAS }}" >> local.properties
+          echo "key.password=${{ secrets.KEY_PASSWORD }}" >> local.properties
           echo "key.store.password=${{ secrets.KEYSTORE_PASSWORD }}" >> local.properties
 
       - name: Build release artifacts
