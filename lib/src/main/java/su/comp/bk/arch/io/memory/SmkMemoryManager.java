@@ -218,6 +218,7 @@ public class SmkMemoryManager implements Device {
                 setupMemorySegment(5, pageStartIndex + 1);
                 romSegment6.setSelected(true);
                 romSegment7.setSelected(true);
+                selectBk11BosRom(false);
                 selectBk11SecondBankedMemory(false);
                 break;
             case MODE_STD10:
@@ -240,6 +241,7 @@ public class SmkMemoryManager implements Device {
                 setupMemorySegment(6, pageStartIndex + 6);
                 setupMemorySegment7(pageStartIndex + 7, false, false);
                 selectBk10MonitorRom(false);
+                selectBk11BosRom(false);
                 selectBk11SecondBankedMemory(false);
                 break;
             case MODE_ALL:
@@ -277,6 +279,8 @@ public class SmkMemoryManager implements Device {
                 setupMemorySegment(6, pageStartIndex + 6);
                 setupMemorySegment7(pageStartIndex + 7, false, true);
                 selectBk10MonitorRom(false);
+                selectBk11BosRom(false);
+                selectBk11SecondBankedMemory(false);
                 break;
             case MODE_HLT11:
                 setupMemorySegment(4, pageStartIndex + 4);
