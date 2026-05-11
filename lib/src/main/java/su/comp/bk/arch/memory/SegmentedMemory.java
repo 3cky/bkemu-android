@@ -52,7 +52,7 @@ public class SegmentedMemory extends AbstractMemory {
      * @param readableSize segment readable size (in words)
      */
     public void setReadableSize(int readableSize) {
-        this.maxReadableOffset = (readableSize > 0) ? (readableSize - 1) * 2 : -1;
+        this.maxReadableOffset = (readableSize > 0) ? (readableSize * 2) - 1 : -1;
     }
 
     /**
@@ -60,7 +60,7 @@ public class SegmentedMemory extends AbstractMemory {
      * @param writableSize segment writable size (in words)
      */
     public void setWritableSize(int writableSize) {
-        this.maxWritableOffset = (writableSize > 0) ? (writableSize - 1) * 2 : -1;
+        this.maxWritableOffset = (writableSize > 0) ? (writableSize * 2) - 1 : -1;
     }
 
     @Override
