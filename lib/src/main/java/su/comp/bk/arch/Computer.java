@@ -820,6 +820,7 @@ public class Computer implements Runnable, StatefulEntity {
 
         if (readValue == BUS_ERROR) {
             // Do full check for the memories at given address
+            lastReadMemoryRange = null;
             List<MemoryRange> memoryRanges = getMemoryRanges(address);
             if (memoryRanges != null) {
                 for (int i = 0, memoryRangesSize = memoryRanges.size(); i < memoryRangesSize; i++) {
