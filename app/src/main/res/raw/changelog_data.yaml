@@ -1,4 +1,8 @@
 releases:
+  - version: "1.2.1"
+    date: "2026-05-11"
+    changes:
+      - Fixed SMK512 controller memory management bugs.
   - version: "1.2.0"
     date: "2026-05-04"
     changes:
