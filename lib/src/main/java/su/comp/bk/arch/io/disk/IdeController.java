@@ -435,6 +435,8 @@ public class IdeController {
         public static final int ER_NONE = 0x00;
         /** Error register: Command aborted */
         public static final int ER_ABRT = 0x04;
+        /** Error register: Uncorrectable data error */
+        public static final int ER_UNC = 0x40;
 
         /** Drive/head register: Head select bit 0 */
         public static final int DHR_HS0 = 0x01;
@@ -910,6 +912,17 @@ public class IdeController {
             putInt16(dataBuffer, IDENTIFY_MAX_LBA + 2, (short) (drive.getTotalNumSectors() >>> 16));
         }
 
+        /**
+         * Abort a sector transfer on a drive I/O error, leaving the task registers
+         * pointing at the sector in error.
+         */
+        private void abortTransfer(int errorCode) {
+            status = SR_DRDY | SR_DSC | SR_ERR;
+            error = errorCode;
+            stopTransfer();
+            updateLastActivityTimestamp();
+        }
+
         private void writeSector() {
             status = SR_DRDY | SR_DSC;
             long sectorNumber = getCurrentSectorNumber();
@@ -917,18 +930,23 @@ public class IdeController {
             if (n > requiredNumberOfSectors) {
                 n = requiredNumberOfSectors;
             }
-            drive.write(dataBuffer, sectorNumber, n);
+            if (drive.write(dataBuffer, sectorNumber, n) < 0) {
+                abortTransfer(ER_UNC);
+                return;
+            }
             sectorCount -= n;
             if (sectorCount == 0) {
+                // Leave the task registers pointing at the last transferred sector
+                setCurrentSectorNumber(sectorNumber + n - 1);
                 stopTransfer();
             } else {
+                setCurrentSectorNumber(sectorNumber + n);
                 int n1 = sectorCount;
                 if (n1 > requiredNumberOfSectors) {
                     n1 = requiredNumberOfSectors;
                 }
                 startTransfer(SECTOR_SIZE * n1, ETF_SECTOR_WRITE);
             }
-            setCurrentSectorNumber(sectorNumber + n);
             updateLastActivityTimestamp();
         }
 
@@ -938,11 +956,17 @@ public class IdeController {
             long sectorNumber = getCurrentSectorNumber();
             int n = sectorCount;
             if (n == 0) {
-                // No more sectors to read from disk
+                // No more sectors to read: leave the task registers pointing at the
+                // last transferred sector (getCurrentSectorNumber() already advanced past it)
+                setCurrentSectorNumber(sectorNumber - 1);
                 stopTransfer();
             } else {
                 n = Math.min(n, requiredNumberOfSectors);
-                drive.read(dataBuffer, sectorNumber, n);
+                if (drive.read(dataBuffer, sectorNumber, n) < 0) {
+                    // Transfer error: registers already point at the failing sector
+                    abortTransfer(ER_UNC);
+                    return;
+                }
                 startTransfer( SECTOR_SIZE * n, ETF_SECTOR_READ);
                 setCurrentSectorNumber(sectorNumber + n);
                 sectorCount -= n;

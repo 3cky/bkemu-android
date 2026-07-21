@@ -66,11 +66,22 @@ public class IdeControllerTest extends ResourceFileTestBase {
 
         private final byte[] data;
 
+        // Linear sector number at which read/write must report a failure (-1 to disable)
+        private long failSector = -1;
+
         public TestIdeDrive(int numCylinders, int numHeads, int numSectors) {
             this.numCylinders = numCylinders;
             this.numHeads = numHeads;
             this.numSectors = numSectors;
             data = new byte[(int) (getTotalNumSectors() * IdeController.SECTOR_SIZE)];
+        }
+
+        public void setFailSector(long failSector) {
+            this.failSector = failSector;
+        }
+
+        private boolean isFailingRange(long sectorIndex, int numSectors) {
+            return failSector >= sectorIndex && failSector < sectorIndex + numSectors;
         }
 
         @Override
@@ -85,6 +96,9 @@ public class IdeControllerTest extends ResourceFileTestBase {
 
         @Override
         public int read(byte[] buffer, long sectorIndex, int numSectors) {
+            if (isFailingRange(sectorIndex, numSectors)) {
+                return -1;
+            }
             for (int i = 0; i < numSectors * IdeController.SECTOR_SIZE; i++) {
                 buffer[i] = data[(int) (sectorIndex * IdeController.SECTOR_SIZE + i)];
             }
@@ -93,6 +107,9 @@ public class IdeControllerTest extends ResourceFileTestBase {
 
         @Override
         public int write(byte[] buffer, long sectorIndex, int numSectors) {
+            if (isFailingRange(sectorIndex, numSectors)) {
+                return -1;
+            }
             for (int i = 0; i < numSectors * IdeController.SECTOR_SIZE; i++) {
                 data[(int) (sectorIndex * IdeController.SECTOR_SIZE + i)] = buffer[i];
             }
@@ -116,7 +133,7 @@ public class IdeControllerTest extends ResourceFileTestBase {
 
         @Override
         public long getTotalNumSectors() {
-            return (long) numSectors * numCylinders * numSectors;
+            return (long) numHeads * numCylinders * numSectors;
         }
 
         public byte[] getData() {
@@ -162,6 +179,42 @@ public class IdeControllerTest extends ResourceFileTestBase {
             ideController.writeTaskRegister(IdeController.REG_DATA, shortBuf.get(i) & 0xFFFF);
         }
         assertEquals(IdeInterface.SR_DRDY | IdeInterface.SR_DSC, ideController.readTaskRegister(IdeController.REG_STATUS));
+    }
+
+    /**
+     * Program the task registers (CHS mode, master drive) to point at the given linear
+     * sector number using the drive geometry.
+     */
+    private void setChsAddress(TestIdeDrive drive, int lbaSector) {
+        int sectorsPerCylinder = drive.getNumHeads() * drive.getNumSectors();
+        int cylinder = lbaSector / sectorsPerCylinder;
+        int remainder = lbaSector % sectorsPerCylinder;
+        int head = remainder / drive.getNumSectors();
+        int sector = remainder % drive.getNumSectors() + 1;
+        ideController.writeTaskRegister(IdeController.REG_CYLINDER_LOW, cylinder & 0xFF);
+        ideController.writeTaskRegister(IdeController.REG_CYLINDER_HIGH, (cylinder >> 8) & 0xFF);
+        ideController.writeTaskRegister(IdeController.REG_DRIVE_HEAD, head & 0x0F);
+        ideController.writeTaskRegister(IdeController.REG_SECTOR_NUMBER, sector);
+    }
+
+    /**
+     * Assert the task registers (CHS mode, master drive) hold the address of the given
+     * linear sector number.
+     */
+    private void assertChsAddress(TestIdeDrive drive, int lbaSector) {
+        int sectorsPerCylinder = drive.getNumHeads() * drive.getNumSectors();
+        int cylinder = lbaSector / sectorsPerCylinder;
+        int remainder = lbaSector % sectorsPerCylinder;
+        int head = remainder / drive.getNumSectors();
+        int sector = remainder % drive.getNumSectors() + 1;
+        assertEquals("Cylinder low mismatch for sector " + lbaSector,
+                cylinder & 0xFF, ideController.readTaskRegister(IdeController.REG_CYLINDER_LOW));
+        assertEquals("Cylinder high mismatch for sector " + lbaSector,
+                (cylinder >> 8) & 0xFF, ideController.readTaskRegister(IdeController.REG_CYLINDER_HIGH));
+        assertEquals("Head mismatch for sector " + lbaSector,
+                head, ideController.readTaskRegister(IdeController.REG_DRIVE_HEAD) & 0x0F);
+        assertEquals("Sector number mismatch for sector " + lbaSector,
+                sector, ideController.readTaskRegister(IdeController.REG_SECTOR_NUMBER));
     }
 
     private static void compareData(byte[] expectedData, byte[] data, int expectedDataOffset) {
@@ -223,16 +276,17 @@ public class IdeControllerTest extends ResourceFileTestBase {
         assertEquals(testIdeDrive0.getNumCylinders(), getInt16(identifyData, IdeInterface.IDENTIFY_NUM_CYLINDERS));
         assertEquals(testIdeDrive0.getNumHeads(), getInt16(identifyData, IdeInterface.IDENTIFY_NUM_HEADS));
         assertEquals(testIdeDrive0.getNumSectors(), getInt16(identifyData, IdeInterface.IDENTIFY_NUM_SECTORS));
-        // Single sector read
+        // Single sector read (address is set explicitly before every command, as real
+        // software must do - after a command the registers hold the last transferred
+        // sector, not the next one)
         byte[] driveData = testIdeDrive0.getData();
-        ideController.writeTaskRegister(IdeController.REG_CYLINDER_LOW, 0);
-        ideController.writeTaskRegister(IdeController.REG_CYLINDER_HIGH, 0);
-        ideController.writeTaskRegister(IdeController.REG_DRIVE_HEAD, 0);
-        ideController.writeTaskRegister(IdeController.REG_SECTOR_NUMBER, 1);
         for (int s = 0; s < testIdeDrive0.getTotalNumSectors(); s++) {
+            setChsAddress(testIdeDrive0, s);
             ideController.writeTaskRegister(IdeController.REG_SECTOR_COUNT, 1);
             ideController.writeTaskRegister(IdeController.REG_COMMAND, IdeInterface.CMD_READ);
             compareData(driveData, readData(), IdeController.SECTOR_SIZE * s);
+            // After the read the registers point at the just-transferred sector
+            assertChsAddress(testIdeDrive0, s);
         }
         // Multiple sector read
         ideController.writeTaskRegister(IdeController.REG_CYLINDER_LOW, 0);
@@ -242,18 +296,20 @@ public class IdeControllerTest extends ResourceFileTestBase {
         ideController.writeTaskRegister(IdeController.REG_SECTOR_COUNT, 0);
         ideController.writeTaskRegister(IdeController.REG_COMMAND, IdeInterface.CMD_READ);
         compareData(driveData, readData(IdeController.SECTOR_SIZE * 256), IdeController.SECTOR_SIZE);
-        // Single sector write
-        ideController.writeTaskRegister(IdeController.REG_CYLINDER_LOW, 0);
-        ideController.writeTaskRegister(IdeController.REG_CYLINDER_HIGH, 0);
-        ideController.writeTaskRegister(IdeController.REG_DRIVE_HEAD, 0);
-        ideController.writeTaskRegister(IdeController.REG_SECTOR_NUMBER, 1);
+        // Registers hold the last transferred sector (started at LBA 1, read 256 sectors
+        // across cylinder/head boundaries)
+        assertChsAddress(testIdeDrive0, 1 + 256 - 1);
+        // Single sector write (address is set explicitly before every command)
         byte[] writeData = new byte[IdeController.SECTOR_SIZE];
         for (int s = 0; s < testIdeDrive0.getTotalNumSectors(); s++) {
             new Random(s).nextBytes(writeData);
+            setChsAddress(testIdeDrive0, s);
             ideController.writeTaskRegister(IdeController.REG_SECTOR_COUNT, 1);
             ideController.writeTaskRegister(IdeController.REG_COMMAND, IdeInterface.CMD_WRITE);
             writeData(writeData);
             compareData(driveData, writeData, IdeController.SECTOR_SIZE * s);
+            // After the write the registers point at the just-transferred sector
+            assertChsAddress(testIdeDrive0, s);
         }
         // Multiple sector write
         ideController.writeTaskRegister(IdeController.REG_CYLINDER_LOW, 0);
@@ -266,6 +322,61 @@ public class IdeControllerTest extends ResourceFileTestBase {
         ideController.writeTaskRegister(IdeController.REG_COMMAND, IdeInterface.CMD_WRITE);
         writeData(writeData);
         compareData(driveData, writeData, IdeController.SECTOR_SIZE);
+        // Registers hold the last transferred sector (started at LBA 1, wrote 256 sectors
+        // across cylinder/head boundaries)
+        assertChsAddress(testIdeDrive0, 1 + 256 - 1);
+    }
+
+    @Test
+    public void testTransferError() {
+        TestIdeDrive testIdeDrive = createTestIdeDrive(IdeController.IF_0);
+        ideController.attachDrive(IdeController.IF_0, testIdeDrive);
+        ideController.writeTaskRegister(IdeController.REG_DRIVE_HEAD, 0); // master, CHS mode
+        // Fail on the first sector of the second cylinder (a cylinder boundary)
+        int failSector = testIdeDrive.getNumHeads() * testIdeDrive.getNumSectors();
+        testIdeDrive.setFailSector(failSector);
+
+        // Single sector read of the failing sector: error is reported and the task
+        // registers point at the failing sector (no data is made available)
+        setChsAddress(testIdeDrive, failSector);
+        ideController.writeTaskRegister(IdeController.REG_SECTOR_COUNT, 1);
+        ideController.writeTaskRegister(IdeController.REG_COMMAND, IdeInterface.CMD_READ);
+        assertEquals(IdeInterface.SR_DRDY | IdeInterface.SR_DSC | IdeInterface.SR_ERR,
+                ideController.readTaskRegister(IdeController.REG_STATUS));
+        assertEquals(IdeInterface.ER_UNC, ideController.readTaskRegister(IdeController.REG_ERROR));
+        assertChsAddress(testIdeDrive, failSector);
+
+        // Multi-sector read failing on the third sector (which crosses a cylinder
+        // boundary): the two good sectors are transferred, then the error is raised
+        // with the registers left at the failing sector
+        int startSector = failSector - 2;
+        setChsAddress(testIdeDrive, startSector);
+        ideController.writeTaskRegister(IdeController.REG_SECTOR_COUNT, 5);
+        ideController.writeTaskRegister(IdeController.REG_COMMAND, IdeInterface.CMD_READ);
+        // Drain the two good sectors; reading the last word triggers the failing read
+        for (int i = 0; i < 2 * IdeController.SECTOR_SIZE / 2; i++) {
+            assertEquals(IdeInterface.SR_DRDY | IdeInterface.SR_DRQ | IdeInterface.SR_DSC,
+                    ideController.readTaskRegister(IdeController.REG_STATUS));
+            ideController.readTaskRegister(IdeController.REG_DATA);
+        }
+        assertEquals(IdeInterface.SR_DRDY | IdeInterface.SR_DSC | IdeInterface.SR_ERR,
+                ideController.readTaskRegister(IdeController.REG_STATUS));
+        assertEquals(IdeInterface.ER_UNC, ideController.readTaskRegister(IdeController.REG_ERROR));
+        assertChsAddress(testIdeDrive, failSector);
+
+        // Single sector write of the failing sector behaves the same way
+        setChsAddress(testIdeDrive, failSector);
+        ideController.writeTaskRegister(IdeController.REG_SECTOR_COUNT, 1);
+        ideController.writeTaskRegister(IdeController.REG_COMMAND, IdeInterface.CMD_WRITE);
+        for (int i = 0; i < IdeController.SECTOR_SIZE / 2; i++) {
+            assertEquals(IdeInterface.SR_DRDY | IdeInterface.SR_DRQ | IdeInterface.SR_DSC,
+                    ideController.readTaskRegister(IdeController.REG_STATUS));
+            ideController.writeTaskRegister(IdeController.REG_DATA, 0);
+        }
+        assertEquals(IdeInterface.SR_DRDY | IdeInterface.SR_DSC | IdeInterface.SR_ERR,
+                ideController.readTaskRegister(IdeController.REG_STATUS));
+        assertEquals(IdeInterface.ER_UNC, ideController.readTaskRegister(IdeController.REG_ERROR));
+        assertChsAddress(testIdeDrive, failSector);
     }
 
     @Test
