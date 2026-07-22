@@ -1,4 +1,8 @@
 releases:
+  - version: "1.2.2"
+    date: "22.07.2026"
+    changes:
+      - Улучшена эмуляция контроллера IDE.
   - version: "1.2.1"
     date: "11.05.2026"
     changes:

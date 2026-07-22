@@ -1,4 +1,8 @@
 releases:
+  - version: "1.2.2"
+    date: "2026-07-22"
+    changes:
+      - Improved IDE controller emulation.
   - version: "1.2.1"
     date: "2026-05-11"
     changes:
