@@ -26,7 +26,6 @@ import static su.comp.bk.arch.io.disk.IdeController.IF_1;
 import static su.comp.bk.util.StringUtils.isFileNameExtensionMatched;
 
 import android.Manifest;
-import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
@@ -51,6 +50,7 @@ import android.view.ViewGroup;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
@@ -623,6 +623,8 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
         joystickManager.init(this, computer.getPeripheralPort());
         joystickManager.addHardwareJoystickEventListener(hardwareJoystickEventListener);
 
+        setupOnBackPressedHandler();
+
         // Show change log with latest changes once after application update
         checkShowChangelog();
 
@@ -799,6 +801,26 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
         tvNavigationView.getBackground().setAlpha((int) (0.8 * 255));
         tvNavigationView.setNavigationItemSelectedListener(this);
         tvNavigationDrawerLayout.addDrawerListener(this);
+    }
+
+    private void setupOnBackPressedHandler() {
+        OnBackPressedCallback callback = new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                if (keyboardManager.isOnScreenKeyboardVisible()) {
+                    startOnScreenControlsTransition();
+                    keyboardManager.setOnScreenKeyboardVisibility(false);
+                } else if (joystickManager.isOnScreenJoystickVisible()) {
+                    startOnScreenControlsTransition();
+                    joystickManager.setOnScreenJoystickVisibility(false);
+                } else if (isTvUiMode()) {
+                    toggleTvNavigationMenu();
+                } else {
+                    showExitDialog();
+                }
+            }
+        };
+        getOnBackPressedDispatcher().addCallback(this, callback);
     }
 
     public boolean isEmulationPaused() {
@@ -1077,22 +1099,6 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
                         && !JoystickManager.isHardwareJoystickKeyEvent(event)
                         && keyboardManager.handleKeyCode(keyCode, isKeyPress)) ||
                 (isKeyPress ? super.onKeyDown(keyCode, event) : super.onKeyUp(keyCode, event));
-    }
-
-    @SuppressLint("MissingSuperCall")
-    @Override
-    public void onBackPressed() {
-        if (keyboardManager.isOnScreenKeyboardVisible()) {
-            startOnScreenControlsTransition();
-            keyboardManager.setOnScreenKeyboardVisibility(false);
-        } else if (joystickManager.isOnScreenJoystickVisible()) {
-            startOnScreenControlsTransition();
-            joystickManager.setOnScreenJoystickVisibility(false);
-        } else if (isTvUiMode()) {
-            toggleTvNavigationMenu();
-        } else {
-            showExitDialog();
-        }
     }
 
     private boolean isTvNavigationMenuOpened() {
