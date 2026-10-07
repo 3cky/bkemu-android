@@ -1,5 +1,7 @@
 releases:
   - version: "1.2.3-dev"
+    changes:
+      - Added quick configuration selection by tapping the toolbar configuration name.
   - version: "1.2.2"
     date: "2026-07-22"
     changes:

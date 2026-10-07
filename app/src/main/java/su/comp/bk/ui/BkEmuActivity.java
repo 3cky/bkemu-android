@@ -791,9 +791,15 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
         setSupportActionBar(toolbar);
         final ActionBar actionBar = getSupportActionBar();
         if (actionBar != null) {
+            actionBar.setDisplayShowTitleEnabled(false);
             actionBar.setHomeAsUpIndicator(R.drawable.icon_toolbar);
             actionBar.setDisplayHomeAsUpEnabled(true);
         }
+        toolbar.findViewById(R.id.toolbar_configuration).setOnClickListener(view -> {
+            if (getSupportFragmentManager().findFragmentByTag("configuration") == null) {
+                new BkEmuConfigurationDialog().showNow(getSupportFragmentManager(), "configuration");
+            }
+        });
     }
 
     private void initTvUi() {
@@ -899,10 +905,10 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
             TextView textView = headerView.findViewById(R.id.tv_navigation_menu_header_text);
             textView.setText(configurationDescription);
         } else {
-            ActionBar actionBar = getSupportActionBar();
-            if (actionBar != null) {
-                actionBar.setSubtitle(configurationDescription);
-            }
+            TextView textView = toolbar.findViewById(R.id.toolbar_configuration_description);
+            textView.setText(configurationDescription);
+            toolbar.findViewById(R.id.toolbar_configuration).setContentDescription(
+                    getString(R.string.menu_select_config) + ": " + configurationDescription);
         }
     }
 

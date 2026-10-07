@@ -8,4 +8,35 @@
     android:minHeight="?attr/actionBarSize"
     android:background="?attr/colorPrimary"
     app:theme="@style/ThemeOverlay.AppCompat"
-    app:popupTheme="@style/ThemeOverlay.AppCompat" />
+    app:popupTheme="@style/ThemeOverlay.AppCompat">
+
+    <LinearLayout
+        android:id="@+id/toolbar_configuration"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="start|center_vertical"
+        android:layout_marginStart="16dp"
+        android:minHeight="?attr/actionBarSize"
+        android:orientation="vertical"
+        android:gravity="center_vertical"
+        android:background="?attr/selectableItemBackground"
+        android:clickable="true"
+        android:focusable="true">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/app_name"
+            android:textAppearance="@style/TextAppearance.Widget.AppCompat.Toolbar.Title"
+            android:singleLine="true"
+            android:ellipsize="end" />
+
+        <TextView
+            android:id="@+id/toolbar_configuration_description"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textAppearance="@style/TextAppearance.Widget.AppCompat.Toolbar.Subtitle"
+            android:singleLine="true"
+            android:ellipsize="end" />
+    </LinearLayout>
+</androidx.appcompat.widget.Toolbar>
