@@ -57,29 +57,40 @@ public class DataUtils {
         return Uri.parse(uriString);
     }
 
-    private static void writeUriContentToStream(Context context, Uri uri, OutputStream stream)
+    private static void writeUriContentToStream(Context context, Uri uri, OutputStream stream,
+                                               int maxBytes)
             throws IOException {
         ContentResolver contentResolver = context.getContentResolver();
         try (BufferedInputStream bufferedInputStream = new BufferedInputStream(
                 Objects.requireNonNull(contentResolver.openInputStream(uri)))) {
-            int readByte;
-            while ((readByte = bufferedInputStream.read()) != -1) {
-                stream.write(readByte);
+            byte[] buffer = new byte[BUFFER_SIZE];
+            int total = 0;
+            int count;
+            while ((count = bufferedInputStream.read(buffer)) != -1) {
+                if (count > maxBytes - total) {
+                    throw new IOException("URI content exceeds maximum size: " + maxBytes);
+                }
+                stream.write(buffer, 0, count);
+                total += count;
             }
         }
     }
 
     /**
-     * Get URI content as byte array.
+     * Get URI content as byte array with a size limit
      * @param context context reference
      * @param uri URI to get content
+     * @param maxBytes maximum number of bytes to read
      * @return read URI content as byte array
-     * @throws IOException if given URI content can't be read
+     * @throws IOException if given URI content can't be read or exceeds the size limit
      */
-    public static byte[] getUriContentData(Context context, Uri uri)
+    public static byte[] getUriContentData(Context context, Uri uri, int maxBytes)
             throws IOException {
+        if (maxBytes < 0) {
+            throw new IllegalArgumentException("Negative URI content size limit: " + maxBytes);
+        }
         ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-        writeUriContentToStream(context, uri, byteArrayOutputStream);
+        writeUriContentToStream(context, uri, byteArrayOutputStream, maxBytes);
         return byteArrayOutputStream.toByteArray();
     }
 

@@ -199,6 +199,9 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
     private static final String APPLICATION_SHARE_URL = "https://play.google.com" +
             "/store/apps/details?id=" + APP_PACKAGE_NAME;
 
+    /** Maximum supported BIN image file size */
+    public static final int MAX_BIN_IMAGE_FILE_SIZE = 0200000;
+
     public static final int MAX_TAPE_FILE_NAME_LENGTH = 16;
 
     public static final String PREFS_KEY_COMPUTER_CONFIGURATION = APP_PACKAGE_NAME + ".a.c";
@@ -2446,9 +2449,11 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
      */
     protected int loadBinImageFile(Uri binImageFileUri) throws Exception {
         Timber.d("Trying to load binary image: %s", binImageFileUri);
-        byte[] binImageData = DataUtils.getUriContentData(getApplicationContext(), binImageFileUri);
+        byte[] binImageData = DataUtils.getUriContentData(getApplicationContext(), binImageFileUri,
+                MAX_BIN_IMAGE_FILE_SIZE);
+        int startAddress = loadBinImage(binImageData);
         this.lastBinImageFileUri = binImageFileUri.toString();
-        return loadBinImage(binImageData);
+        return startAddress;
     }
 
     /**
@@ -2458,7 +2463,7 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
      * @throws IOException in case of loading error
      */
     public int loadBinImage(byte[] binImageData) throws IOException {
-        if (binImageData.length < 5 || binImageData.length > 01000000) {
+        if (binImageData.length < 5 || binImageData.length > MAX_BIN_IMAGE_FILE_SIZE) {
             throw new IllegalArgumentException("Invalid binary image file length: " +
                     binImageData.length);
         }
@@ -2466,11 +2471,16 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
                 new ByteArrayInputStream(binImageData, 0, binImageData.length));
         int binImageAddress = (imageDataInputStream.readByte() & 0377)
                 | ((imageDataInputStream.readByte() & 0377) << 8);
+        int binImageLength = (imageDataInputStream.readByte() & 0377)
+                | ((imageDataInputStream.readByte() & 0377) << 8);
+        if (binImageLength > binImageData.length - 4) {
+            throw new IOException("Truncated binary image payload: expected " + binImageLength
+                    + " bytes, got " + (binImageData.length - 4));
+        }
         if (lastBinImageAddress == 0) {
             lastBinImageAddress = binImageAddress;
         }
-        lastBinImageLength = (imageDataInputStream.readByte() & 0377)
-                | ((imageDataInputStream.readByte() & 0377) << 8);
+        lastBinImageLength = binImageLength;
         final Computer comp = computer;
         for (int imageIndex = 0; imageIndex < lastBinImageLength; imageIndex++) {
             if (!comp.writeMemory(true, lastBinImageAddress + imageIndex,
