@@ -1865,6 +1865,23 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
         keyboardSetupDialog.show(getSupportFragmentManager(), "keyboard_settings");
     }
 
+    /**
+     * Persist disk image permissions granted by the document picker
+     */
+    protected void persistDiskImageUriPermission(Uri uri, int resultFlags) {
+        int takeFlags = resultFlags & (Intent.FLAG_GRANT_READ_URI_PERMISSION
+                | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+        if (!DataUtils.isContentProviderUri(uri) || takeFlags == 0
+                || (resultFlags & Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION) == 0) {
+            return;
+        }
+        try {
+            getContentResolver().takePersistableUriPermission(uri, takeFlags);
+        } catch (SecurityException e) {
+            Timber.w(e, "Can't persist disk image URI permission: %s", uri);
+        }
+    }
+
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
@@ -1926,11 +1943,7 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
                         break;
                     }
                     boolean isFloppyDiskImageMounted = false;
-                    if (DataUtils.isContentProviderUri(floppyDiskImageUri)) {
-                        getContentResolver().takePersistableUriPermission(floppyDiskImageUri,
-                                Intent.FLAG_GRANT_READ_URI_PERMISSION
-                                        | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
-                    }
+                    persistDiskImageUriPermission(floppyDiskImageUri, data.getFlags());
                     DiskImage floppyDiskImage = openDiskImage(floppyDiskImageUri);
                     if (floppyDiskImage != null) {
                         isFloppyDiskImageMounted = mountFloppyDiskImage(lastFloppyDiskImageDrive,
@@ -1951,11 +1964,7 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
                         break;
                     }
                     boolean isIdeDriveAttached = false;
-                    if (DataUtils.isContentProviderUri(ideDriveImageUri)) {
-                        getContentResolver().takePersistableUriPermission(ideDriveImageUri,
-                                Intent.FLAG_GRANT_READ_URI_PERMISSION
-                                        | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
-                    }
+                    persistDiskImageUriPermission(ideDriveImageUri, data.getFlags());
                     DiskImage ideDriveImage = openDiskImage(ideDriveImageUri);
                     if (ideDriveImage != null) {
                         isIdeDriveAttached = attachIdeDrive(lastIdeDriveImageInterfaceId,

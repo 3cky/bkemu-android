@@ -40,6 +40,8 @@ import java.util.zip.Deflater;
 import java.util.zip.DeflaterOutputStream;
 import java.util.zip.InflaterInputStream;
 
+import timber.log.Timber;
+
 public class DataUtils {
     /** Internal I/O buffer default size */
     private static final int BUFFER_SIZE = 8 * 1024;
@@ -105,13 +107,15 @@ public class DataUtils {
         String uriScheme = uri.getScheme();
         if (ContentResolver.SCHEME_CONTENT.equals(uriScheme)) {
             try (Cursor cursor = context.getContentResolver().query(uri,
-                    null, null, null, null)) {
+                    new String[] { OpenableColumns.DISPLAY_NAME }, null, null, null)) {
                 if (cursor != null && cursor.moveToFirst()) {
                     int columnIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME);
                     if (columnIndex >= 0) {
                         result = cursor.getString(columnIndex);
                     }
                 }
+            } catch (SecurityException e) {
+                Timber.w(e, "Can't resolve URI file name: %s", uri);
             }
         }
         return (result != null) ? result : uri.getLastPathSegment();
@@ -135,13 +139,15 @@ public class DataUtils {
         if (length < 0) {
             if (ContentResolver.SCHEME_CONTENT.equals(uri.getScheme())) {
                 try (Cursor cursor = context.getContentResolver().query(uri,
-                        null, null, null, null)) {
+                        new String[] { OpenableColumns.SIZE }, null, null, null)) {
                     if (cursor != null && cursor.moveToFirst()) {
                         int columnIndex = cursor.getColumnIndex(OpenableColumns.SIZE);
                         if (columnIndex >= 0) {
                             length = cursor.getLong(columnIndex);
                         }
                     }
+                } catch (SecurityException e) {
+                    Timber.w(e, "Can't resolve URI file length: %s", uri);
                 }
             }
         }

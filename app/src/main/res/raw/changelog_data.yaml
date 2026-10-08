@@ -4,7 +4,8 @@ releases:
       - Added quick configuration selection by tapping the toolbar configuration name.
       - Optimized displaying of action icons in the toolbar.
       - Fixed opening emulator files from file managers.
-      - Improved handling of oversized or truncated BIN images.
+      - Improved handling of incorrect BIN images.
+      - Added catching of disk image mount permissions errors.
   - version: "1.2.2"
     date: "2026-07-22"
     changes:
