@@ -116,17 +116,17 @@ dependencies {
     implementation project(':lib')
 
     api 'androidx.legacy:legacy-support-v4:1.0.0'
-    implementation 'androidx.appcompat:appcompat:1.7.1'
+    implementation 'androidx.appcompat:appcompat:1.8.0'
     implementation 'androidx.preference:preference:1.2.1'
-    implementation 'com.google.android.material:material:1.13.0'
+    implementation 'com.google.android.material:material:1.14.0'
 
     implementation 'com.samskivert:jmustache:1.16'
-    implementation 'org.msgpack:jackson-dataformat-msgpack:0.9.3'
-    implementation 'org.yaml:snakeyaml:2.6'
+    implementation 'org.msgpack:jackson-dataformat-msgpack:0.9.12'
+    implementation 'org.yaml:snakeyaml:2.7'
     implementation 'com.github.hedzr:android-file-chooser:v1.2.0-final'
 
-    implementation("org.slf4j:slf4j-api:2.0.17")
-    implementation("uk.uuid.slf4j:slf4j-android:2.0.17-0")
+    implementation("org.slf4j:slf4j-api:2.0.20")
+    implementation("uk.uuid.slf4j:slf4j-android:2.0.20-0")
     implementation("com.jakewharton.timber:timber:5.0.1")
 
     testImplementation 'junit:junit:4.13.2'

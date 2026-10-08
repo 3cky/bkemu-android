@@ -23,7 +23,7 @@ allprojects {
 
 ext {
     versions = [
-            sdk: [min: 21, target: 36, compile: 36],
+            sdk: [min: 23, target: 36, compile: 36],
             project: [major: projectVersionMajor,
                       minor: projectVersionMinor,
                       patch: projectVersionPatch,
