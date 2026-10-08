@@ -26,6 +26,7 @@ import static su.comp.bk.arch.io.disk.IdeController.IF_1;
 import static su.comp.bk.util.StringUtils.isFileNameExtensionMatched;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
@@ -47,6 +48,7 @@ import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageButton;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -54,6 +56,7 @@ import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.ActionMenuView;
 import androidx.appcompat.widget.Toolbar;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -273,6 +276,7 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
     private VideoControllerFrameRenderer frameRenderer;
 
     private Toolbar toolbar;
+    private int toolbarActionItemSlots = -1;
 
     private DrawerLayout tvNavigationDrawerLayout;
     private NavigationView tvNavigationView;
@@ -800,6 +804,14 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
                 new BkEmuConfigurationDialog().showNow(getSupportFragmentManager(), "configuration");
             }
         });
+        toolbar.addOnLayoutChangeListener((view, left, top, right, bottom,
+                                           oldLeft, oldTop, oldRight, oldBottom) -> {
+            int availableSlots = getToolbarActionItemSlots();
+            if (availableSlots != toolbarActionItemSlots) {
+                toolbarActionItemSlots = availableSlots;
+                invalidateOptionsMenu();
+            }
+        });
     }
 
     private void initTvUi() {
@@ -1170,7 +1182,79 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
     @Override
     public boolean onPrepareOptionsMenu(Menu menu) {
         prepareMenu(menu);
+        if (toolbar != null) {
+            toolbarActionItemSlots = getToolbarActionItemSlots();
+            updateToolbarActionItems(menu, toolbarActionItemSlots);
+        }
         return true;
+    }
+
+    private int getToolbarActionItemSlots() {
+        int itemWidth = getResources().getDimensionPixelSize(R.dimen.toolbar_action_item_width);
+        int overflowWidth = itemWidth;
+        int navigationWidth = toolbar.getMinimumHeight();
+        // Use the rendered button sizes instead of the larger action-menu cell size
+        for (int i = 0; i < toolbar.getChildCount(); i++) {
+            View child = toolbar.getChildAt(i);
+            if (child.getVisibility() != View.VISIBLE || child.getMeasuredWidth() == 0) {
+                continue;
+            }
+            if (child instanceof ImageButton) {
+                navigationWidth = getMeasuredWidthWithMargins(child);
+            } else if (child instanceof ActionMenuView) {
+                ActionMenuView menuView = (ActionMenuView) child;
+                for (int j = 0; j < menuView.getChildCount(); j++) {
+                    View button = menuView.getChildAt(j);
+                    if (button.getVisibility() != View.VISIBLE || button.getMeasuredWidth() == 0) {
+                        continue;
+                    }
+                    if (button instanceof TextView) {
+                        itemWidth = Math.max(itemWidth, getMeasuredWidthWithMargins(button));
+                    } else {
+                        overflowWidth = getMeasuredWidthWithMargins(button);
+                    }
+                }
+            }
+        }
+        View configurationView = toolbar.findViewById(R.id.toolbar_configuration);
+        int reservedWidth = getToolbarReservedWidth(configurationView, navigationWidth, overflowWidth);
+        return Math.max(1, (toolbar.getWidth() - reservedWidth) / itemWidth);
+    }
+
+    private int getToolbarReservedWidth(View configurationView, int navigationWidth, int overflowWidth) {
+        ViewGroup.MarginLayoutParams configurationLayoutParams =
+                (ViewGroup.MarginLayoutParams) configurationView.getLayoutParams();
+        // Reserve a stable label width: its measured width can shrink as icons are added
+        return configurationView.getMinimumWidth()
+                + configurationLayoutParams.getMarginStart()
+                + configurationLayoutParams.getMarginEnd()
+                + toolbar.getPaddingLeft() + toolbar.getPaddingRight()
+                + Math.max(navigationWidth, toolbar.getCurrentContentInsetStart())
+                // Insets and buttons occupy the same space, rather than adding together
+                + Math.max(overflowWidth, toolbar.getCurrentContentInsetEnd());
+    }
+
+    private int getMeasuredWidthWithMargins(View view) {
+        ViewGroup.MarginLayoutParams layoutParams =
+                (ViewGroup.MarginLayoutParams) view.getLayoutParams();
+        return view.getMeasuredWidth() + layoutParams.getMarginStart() + layoutParams.getMarginEnd();
+    }
+
+    @SuppressLint("AlwaysShowAction") // the count is limited by the available toolbar width
+    private void updateToolbarActionItems(Menu menu, int availableSlots) {
+        for (int i = 0; i < menu.size(); i++) {
+            MenuItem item = menu.getItem(i);
+            if (!item.isVisible() || item.getIcon() == null) {
+                continue;
+            }
+            // Always bypasses AppCompat's action-count cap; our width budget limits the count
+            boolean showInToolbar = availableSlots > 0;
+            item.setShowAsAction(showInToolbar
+                    ? MenuItem.SHOW_AS_ACTION_ALWAYS : MenuItem.SHOW_AS_ACTION_NEVER);
+            if (showInToolbar) {
+                availableSlots--;
+            }
+        }
     }
 
     private void prepareMenu(Menu menu) {

@@ -16,6 +16,7 @@
         android:layout_height="wrap_content"
         android:layout_gravity="start|center_vertical"
         android:layout_marginStart="16dp"
+        android:minWidth="@dimen/toolbar_configuration_min_width"
         android:minHeight="?attr/actionBarSize"
         android:orientation="vertical"
         android:gravity="center_vertical"
