@@ -106,4 +106,5 @@
     <string name="clock_speed_desc_6mhz">6 MHz (turbo mode)</string>
     <string name="clock_speed_desc_maximum">Maximum (unlimited)</string>
     <string name="menestrel">Menestrel</string>
+    <string name="toast_unsupported_file_type">Unsupported file type. Open a BIN, BKD, HDI, IMG, or BKEMU_STATE file.</string>
 </resources>

@@ -41,58 +41,19 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
                 <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
             </intent-filter>
+            <!-- Local files with a generic binary MIME type -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
-                <action android:name="su.comp.bk.intent.action.LOAD_BIN_IMAGE" />
-                <action android:name="su.comp.bk.intent.action.RESTORE_STATE" />
                 <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data android:host="*" />
-                <data android:scheme="http" />
-                <data android:scheme="https" />
-                <data android:scheme="file" />
                 <data android:scheme="content" />
-                <data android:mimeType="*/*" />
-                <data android:pathPattern=".*\\.bin"/>
-                <data android:pathPattern=".*\\..*\\.bin"/>
-                <data android:pathPattern=".*\\..*\\..*\\.bin"/>
-                <data android:pathPattern=".*\\..*\\..*\\..*\\.bin"/>
-                <data android:pathPattern=".*\\.BIN"/>
-                <data android:pathPattern=".*\\..*\\.BIN"/>
-                <data android:pathPattern=".*\\..*\\..*\\.BIN"/>
-                <data android:pathPattern=".*\\..*\\..*\\..*\\.BIN"/>
-                <data android:pathPattern=".*\\.img"/>
-                <data android:pathPattern=".*\\..*\\.img"/>
-                <data android:pathPattern=".*\\..*\\..*\\.img"/>
-                <data android:pathPattern=".*\\..*\\..*\\..*\\.img"/>
-                <data android:pathPattern=".*\\.IMG" />
-                <data android:pathPattern=".*\\..*\\.IMG" />
-                <data android:pathPattern=".*\\..*\\..*\\.IMG" />
-                <data android:pathPattern=".*\\..*\\..*\\..*\\.IMG" />
-                <data android:pathPattern=".*\\.bkd"/>
-                <data android:pathPattern=".*\\..*\\.bkd"/>
-                <data android:pathPattern=".*\\..*\\..*\\.bkd"/>
-                <data android:pathPattern=".*\\..*\\..*\\..*\\.bkd"/>
-                <data android:pathPattern=".*\\.BKD"/>
-                <data android:pathPattern=".*\\..*\\.BKD"/>
-                <data android:pathPattern=".*\\..*\\..*\\.BKD"/>
-                <data android:pathPattern=".*\\..*\\..*\\..*\\.BKD"/>
-                <data android:pathPattern=".*\\.hdi"/>
-                <data android:pathPattern=".*\\..*\\.hdi"/>
-                <data android:pathPattern=".*\\..*\\..*\\.hdi"/>
-                <data android:pathPattern=".*\\..*\\..*\\..*\\.hdi"/>
-                <data android:pathPattern=".*\\.HDI"/>
-                <data android:pathPattern=".*\\..*\\.HDI"/>
-                <data android:pathPattern=".*\\..*\\..*\\.HDI"/>
-                <data android:pathPattern=".*\\..*\\..*\\..*\\.HDI"/>
-                <data android:pathPattern=".*\\.bkemu_state"/>
-                <data android:pathPattern=".*\\..*\\.bkemu_state"/>
-                <data android:pathPattern=".*\\..*\\..*\\.bkemu_state"/>
-                <data android:pathPattern=".*\\..*\\..*\\..*\\.bkemu_state"/>
-                <data android:pathPattern=".*\\.BKEMU_STATE"/>
-                <data android:pathPattern=".*\\..*\\.BKEMU_STATE"/>
-                <data android:pathPattern=".*\\..*\\..*\\.BKEMU_STATE"/>
-                <data android:pathPattern=".*\\..*\\..*\\..*\\.BKEMU_STATE"/>
+                <data android:scheme="file" />
+                <data android:mimeType="application/octet-stream" />
+            </intent-filter>
+            <!-- Legacy file URIs without a MIME type -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="file" />
             </intent-filter>
         </activity>
     </application>

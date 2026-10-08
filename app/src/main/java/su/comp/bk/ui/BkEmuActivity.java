@@ -722,6 +722,8 @@ public class BkEmuActivity extends AppCompatActivity implements View.OnSystemUiV
                 } else if (intentDataLength > 0) {
                     this.intentDataFloppyDiskImageUri = intentDataString;
                 }
+            } else {
+                Toast.makeText(this, R.string.toast_unsupported_file_type, Toast.LENGTH_LONG).show();
             }
         }
     }

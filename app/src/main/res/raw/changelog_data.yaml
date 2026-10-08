@@ -3,6 +3,7 @@ releases:
     changes:
       - Added quick configuration selection by tapping the toolbar configuration name.
       - Optimized displaying of action icons in the toolbar.
+      - Fixed opening emulator files from file managers.
   - version: "1.2.2"
     date: "2026-07-22"
     changes:
