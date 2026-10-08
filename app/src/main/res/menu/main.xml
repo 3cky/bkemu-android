@@ -1,6 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
+    <item android:id="@+id/menu_disk_manager"
+        android:icon="@drawable/ic_save_white_24dp"
+        android:title="@string/menu_disk_manager"
+        android:visible="false"
+        android:enabled="false"
+        app:showAsAction="ifRoom" />
     <item android:id="@+id/menu_switch_display_mode"
         android:icon="@drawable/ic_tv_white_24dp"
         android:title="@string/menu_switch_display_mode"
@@ -16,12 +22,6 @@
     <item android:id="@+id/menu_fullscreen_mode"
         android:icon="@drawable/ic_fullscreen_white_24"
         android:title="@string/menu_fullscreen_mode"
-        app:showAsAction="ifRoom" />
-    <item android:id="@+id/menu_disk_manager"
-        android:icon="@drawable/ic_save_white_24dp"
-        android:title="@string/menu_disk_manager"
-        android:visible="false"
-        android:enabled="false"
         app:showAsAction="ifRoom" />
     <item android:id="@+id/menu_screenshot"
         android:icon="@drawable/ic_photo_camera_white_24"
