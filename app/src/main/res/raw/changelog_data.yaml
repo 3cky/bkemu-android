@@ -1,5 +1,6 @@
 releases:
-  - version: "1.2.3-dev"
+  - version: "1.2.3"
+    date: "2026-10-08"
     changes:
       - Added quick configuration selection by tapping the toolbar configuration name.
       - Optimized displaying of action icons in the toolbar.
